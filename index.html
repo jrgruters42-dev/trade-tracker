@@ -1,0 +1,2790 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Trade Tracker - Cloud Sync</title>
+    <script src="https://cdn.plot.ly/plotly-2.26.0.min.js"></script>
+    
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 12px;
+        }
+
+        .container {
+            max-width: 1600px;
+            margin: 0 auto;
+        }
+
+        h1 {
+            color: white;
+            text-align: center;
+            margin-bottom: 20px;
+            font-size: 2.2em;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+        }
+
+        .sync-status {
+            background: white;
+            border-radius: 12px;
+            padding: 15px 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.15);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .sync-indicator {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-weight: 600;
+        }
+
+        .sync-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: #10b981;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .account-setup {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.15);
+        }
+
+        .account-setup h3 {
+            color: #667eea;
+            margin-bottom: 15px;
+        }
+
+        .account-input-group {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr 1fr;
+            gap: 15px;
+        }
+
+        .tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+
+        .tab {
+            background: rgba(255,255,255,0.2);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 15px;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+
+        .tab:hover {
+            background: rgba(255,255,255,0.3);
+        }
+
+        .tab.active {
+            background: white;
+            color: #667eea;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .card {
+            background: white;
+            border-radius: 12px;
+            padding: 25px;
+            margin-bottom: 20px;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.15);
+        }
+
+        h2 {
+            color: #667eea;
+            margin-bottom: 20px;
+            font-size: 1.4em;
+            border-bottom: 3px solid #667eea;
+            padding-bottom: 10px;
+        }
+
+        .form-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+
+        .form-group {
+            margin-bottom: 0;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 5px;
+            color: #333;
+            font-weight: 600;
+            font-size: 13px;
+        }
+
+        input, select, textarea {
+            width: 100%;
+            padding: 10px;
+            border: 2px solid #e0e0e0;
+            border-radius: 6px;
+            font-size: 14px;
+            transition: border-color 0.3s;
+        }
+
+        input:focus, select:focus, textarea:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 6px;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-secondary {
+            background: #6b7280;
+        }
+
+        .btn-success {
+            background: #10b981;
+            padding: 8px 16px;
+            font-size: 13px;
+        }
+
+        .btn-danger {
+            background: #ef4444;
+            padding: 8px 16px;
+            font-size: 13px;
+        }
+
+        .btn-small {
+            padding: 6px 12px;
+            font-size: 12px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+        }
+
+        th, td {
+            padding: 10px 8px;
+            text-align: left;
+            border-bottom: 1px solid #e0e0e0;
+        }
+
+        th {
+            background: #f5f5f5;
+            color: #667eea;
+            font-weight: 700;
+            position: sticky;
+            top: 0;
+        }
+        
+        /* Highlight important columns */
+        th.highlight-col, td.highlight-col {
+            background: #fffbeb;
+            font-weight: 700;
+        }
+        
+        th.highlight-col {
+            background: #fef3c7;
+            color: #92400e;
+        }
+
+        tr:hover td:not(.highlight-col) {
+            background: #e0e7ff;
+        }
+
+        .tooltip {
+            position: relative;
+            display: inline-block;
+            cursor: help;
+        }
+
+        .tooltip .tooltiptext {
+            visibility: hidden;
+            width: 300px;
+            background-color: #333;
+            color: #fff;
+            text-align: left;
+            border-radius: 6px;
+            padding: 10px;
+            position: absolute;
+            z-index: 1000;
+            bottom: 125%;
+            left: 50%;
+            margin-left: -150px;
+            opacity: 0;
+            transition: opacity 0.3s;
+            font-size: 13px;
+            line-height: 1.4;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+        }
+
+        .tooltip:hover .tooltiptext {
+            visibility: visible;
+            opacity: 1;
+        }
+        
+        /* Notes cell specific styling */
+        .notes-cell {
+            position: relative;
+            max-width: 200px;
+        }
+        
+        .notes-preview {
+            cursor: pointer;
+            padding: 4px 8px;
+            border-radius: 4px;
+            background: #f9fafb;
+            border: 1px solid #e5e7eb;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            display: block;
+        }
+        
+        .notes-preview:hover {
+            background: #e5e7eb;
+        }
+        
+        .notes-tooltip {
+            display: none;
+            position: fixed;
+            z-index: 9999;
+            background: white;
+            border: 2px solid #667eea;
+            border-radius: 8px;
+            padding: 12px;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+            min-width: 300px;
+            max-width: 500px;
+            white-space: normal;
+            word-wrap: break-word;
+            line-height: 1.5;
+            font-size: 13px;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .profit {
+            color: #10b981;
+            font-weight: 600;
+        }
+
+        .loss {
+            color: #ef4444;
+            font-weight: 600;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 15px;
+            margin-top: 15px;
+        }
+
+        .stat-box {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 18px;
+            border-radius: 10px;
+            text-align: center;
+        }
+
+        .stat-label {
+            font-size: 0.85em;
+            opacity: 0.95;
+            margin-bottom: 5px;
+            font-weight: 500;
+        }
+
+        .stat-value {
+            font-size: 1.6em;
+            font-weight: 700;
+        }
+
+        .portfolio-stats-compact {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+
+        .stat-box-compact {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 12px;
+            border-radius: 8px;
+            text-align: center;
+        }
+
+        .stat-box-compact .stat-label {
+            font-size: 0.75em;
+            opacity: 0.95;
+            margin-bottom: 4px;
+            font-weight: 500;
+        }
+
+        .stat-box-compact .stat-value {
+            font-size: 1.3em;
+            font-weight: 700;
+        }
+
+        .table-scroll {
+            overflow-x: auto;
+            max-height: 600px;
+            overflow-y: auto;
+        }
+
+        .empty-state {
+            text-align: center;
+            color: #999;
+            padding: 40px;
+            font-style: italic;
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 5px;
+            flex-wrap: wrap;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+        }
+
+        .modal-content {
+            background-color: white;
+            margin: 5% auto;
+            padding: 30px;
+            border-radius: 12px;
+            width: 90%;
+            max-width: 600px;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .close {
+            color: #aaa;
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+            line-height: 1;
+        }
+
+        .close:hover {
+            color: #000;
+        }
+
+        .tooltip {
+            position: relative;
+            display: inline-block;
+            cursor: help;
+            color: #667eea;
+            font-weight: bold;
+            margin-left: 5px;
+        }
+
+        .tooltip .tooltiptext {
+            visibility: hidden;
+            width: 200px;
+            background-color: #555;
+            color: #fff;
+            text-align: center;
+            border-radius: 6px;
+            padding: 8px;
+            position: absolute;
+            z-index: 1;
+            bottom: 125%;
+            left: 50%;
+            margin-left: -100px;
+            opacity: 0;
+            transition: opacity 0.3s;
+            font-size: 12px;
+            font-weight: normal;
+        }
+
+        .tooltip:hover .tooltiptext {
+            visibility: visible;
+            opacity: 1;
+        }
+
+        .refresh-controls {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .toggle-switch {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .toggle-switch input[type="checkbox"] {
+            width: auto;
+        }
+
+        .firebase-setup {
+            background: #fffbeb;
+            border: 2px solid #f59e0b;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+
+        .firebase-setup h3 {
+            color: #f59e0b;
+            margin-bottom: 15px;
+        }
+
+        .firebase-setup pre {
+            background: #f3f4f6;
+            padding: 15px;
+            border-radius: 6px;
+            overflow-x: auto;
+            font-size: 12px;
+        }
+    </style>
+</head>
+<body>
+    <!-- Password Protection -->
+    <div id="passwordScreen" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); display: flex; align-items: center; justify-content: center; z-index: 99999;">
+        <div style="background: white; padding: 40px; border-radius: 12px; box-shadow: 0 8px 32px rgba(0,0,0,0.3); max-width: 400px; width: 90%;">
+            <h2 style="text-align: center; color: #667eea; margin-bottom: 20px;">🔒 Trade Tracker</h2>
+            <p style="text-align: center; color: #666; margin-bottom: 25px;">Enter your password to access the tracker</p>
+            <input type="password" id="passwordInput" placeholder="Enter password" style="width: 100%; padding: 12px; border: 2px solid #e0e0e0; border-radius: 8px; font-size: 16px; margin-bottom: 15px; box-sizing: border-box;" onkeypress="if(event.key === 'Enter') checkPassword()">
+            <button onclick="checkPassword()" style="width: 100%; padding: 12px; background: #667eea; color: white; border: none; border-radius: 8px; font-size: 16px; font-weight: 600; cursor: pointer;">Unlock</button>
+            <p id="passwordError" style="color: #ef4444; text-align: center; margin-top: 15px; display: none;">❌ Incorrect password</p>
+        </div>
+    </div>
+
+    <script>
+        // Password Protection
+        const TRACKER_PASSWORD = 'trading2026'; // Change this to your preferred password
+        
+        function checkPassword() {
+            const input = document.getElementById('passwordInput').value;
+            if (input === TRACKER_PASSWORD) {
+                document.getElementById('passwordScreen').style.display = 'none';
+                // Store authentication in session (clears when browser closes)
+                sessionStorage.setItem('trackerAuth', 'true');
+            } else {
+                document.getElementById('passwordError').style.display = 'block';
+                document.getElementById('passwordInput').value = '';
+                document.getElementById('passwordInput').focus();
+            }
+        }
+        
+        // Check if already authenticated in this session
+        window.addEventListener('load', function() {
+            if (sessionStorage.getItem('trackerAuth') === 'true') {
+                document.getElementById('passwordScreen').style.display = 'none';
+            }
+        });
+        
+        // Focus password input on load
+        document.getElementById('passwordInput')?.focus();
+    </script>
+
+    <div class="container">
+        <h1 style="margin-bottom: 10px; font-size: 1.8em;">📊 Trade Tracker</h1>
+
+        <!-- Sync Status -->
+        <div class="sync-status" style="padding: 10px 15px; margin-bottom: 12px;">
+            <div class="sync-indicator">
+                <div class="sync-dot" id="syncDot"></div>
+                <span id="syncStatus" style="font-size: 13px;">Connecting to cloud...</span>
+            </div>
+        </div>
+
+        <!-- Account Setup -->
+        <div class="account-setup" style="padding: 10px;">
+            <h3 style="font-size: 1em; margin-bottom: 8px;">Account Stats</h3>
+            
+            <!-- Current Values (for daily updates) -->
+            <div style="background: #f0f9ff; padding: 8px; border-radius: 6px; border: 2px solid #667eea; margin-bottom: 8px;">
+                <div style="font-weight: bold; color: #667eea; margin-bottom: 6px; font-size: 0.8em;">📊 Daily Update</div>
+                <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px;">
+                    <div class="form-group" style="margin-bottom: 0;">
+                        <label style="font-size: 10px;">Trading Account ($)</label>
+                        <input type="number" id="accountSize" value="250000" style="padding: 4px; font-size: 12px;">
+                    </div>
+                    <div class="form-group" style="margin-bottom: 0;">
+                        <label style="font-size: 10px;">My Roth ($)</label>
+                        <input type="number" id="myRoth" value="0" style="padding: 4px; font-size: 12px;">
+                    </div>
+                    <div class="form-group" style="margin-bottom: 0;">
+                        <label style="font-size: 10px;">Wife Roth ($)</label>
+                        <input type="number" id="wifeRoth" value="0" style="padding: 4px; font-size: 12px;">
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Jan 1 Starting Values -->
+            <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 8px;">
+                <div class="form-group" style="margin-bottom: 0;">
+                    <label style="font-size: 10px;">Trading Jan 1 ($)</label>
+                    <input type="number" id="startingAccount" value="248288" style="padding: 4px; font-size: 12px;">
+                </div>
+                <div class="form-group" style="margin-bottom: 0;">
+                    <label style="font-size: 10px;">My Roth Jan 1 ($)</label>
+                    <input type="number" id="myRothJan1" value="0" style="padding: 4px; font-size: 12px;">
+                </div>
+                <div class="form-group" style="margin-bottom: 0;">
+                    <label style="font-size: 10px;">Wife Roth Jan 1 ($)</label>
+                    <input type="number" id="wifeRothJan1" value="0" style="padding: 4px; font-size: 12px;">
+                </div>
+            </div>
+            
+            <!-- API Key and Buttons -->
+            <div style="display: grid; grid-template-columns: 1fr auto auto auto auto; gap: 6px; align-items: end; margin-bottom: 6px;">
+                <div class="form-group" style="margin-bottom: 0;">
+                    <label style="font-size: 10px;">Finnhub API Key</label>
+                    <input type="text" id="apiKey" placeholder="Optional" style="padding: 4px; font-size: 11px;">
+                </div>
+                <button onclick="takeSnapshot()" class="btn-success" style="padding: 5px 10px; font-size: 11px;">📸</button>
+                <button onclick="openFirebaseSetup()" class="btn-secondary btn-small" style="padding: 5px 10px; font-size: 10px;">⚙️</button>
+                <button onclick="testFirebaseConnection()" class="btn-success btn-small" style="padding: 5px 10px; font-size: 10px;">🔄</button>
+                <span id="lastSnapshot" style="color: #666; font-size: 10px; font-style: italic; white-space: nowrap;"></span>
+            </div>
+            
+            <!-- YTD Stats -->
+            <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; padding-top: 8px; border-top: 1px solid #e0e0e0;">
+                <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 6px; border-radius: 6px; text-align: center;">
+                    <div style="font-size: 0.65em; opacity: 0.95; margin-bottom: 2px;">Trading YTD</div>
+                    <div style="font-size: 1.1em; font-weight: 700;" id="tradingYTD">0.00%</div>
+                </div>
+                <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 6px; border-radius: 6px; text-align: center;">
+                    <div style="font-size: 0.65em; opacity: 0.95; margin-bottom: 2px;">My Roth YTD</div>
+                    <div style="font-size: 1.1em; font-weight: 700;" id="myRothYTD">0.00%</div>
+                </div>
+                <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 6px; border-radius: 6px; text-align: center;">
+                    <div style="font-size: 0.65em; opacity: 0.95; margin-bottom: 2px;">Wife Roth YTD</div>
+                    <div style="font-size: 1.1em; font-weight: 700;" id="wifeRothYTD">0.00%</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tabs -->
+        <div class="tabs">
+            <button class="tab active" onclick="switchTab('open-positions')">Open Positions</button>
+            <button class="tab" onclick="switchTab('closed-trades')">Closed Trades</button>
+            <button class="tab" onclick="switchTab('position-sizing')">Position Sizing</button>
+            <button class="tab" onclick="switchTab('stock1')"><span id="stock1Symbol">Stock 1</span></button>
+            <button class="tab" onclick="switchTab('stock2')"><span id="stock2Symbol">Stock 2</span></button>
+            <button class="tab" onclick="switchTab('stock3')"><span id="stock3Symbol">Stock 3</span></button>
+            <button class="tab" onclick="switchTab('stock4')"><span id="stock4Symbol">Stock 4</span></button>
+            <button class="tab" onclick="switchTab('stock5')"><span id="stock5Symbol">Stock 5</span></button>
+            <button class="tab" onclick="switchTab('stock6')"><span id="stock6Symbol">Stock 6</span></button>
+            <button class="tab" onclick="switchTab('equity-curves')">Equity Curves</button>
+        </div>
+
+        <!-- Open Positions Tab -->
+        <div id="open-positions" class="tab-content active">
+            <!-- Portfolio Stats -->
+            <div class="card" style="padding: 10px; margin-bottom: 12px;">
+                <h2 style="font-size: 1em; margin-bottom: 8px;">Portfolio Summary</h2>
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(100px, 1fr)); gap: 6px;">
+                    <div class="stat-box-compact" style="padding: 6px;">
+                        <div class="stat-label" style="font-size: 0.65em;">Exposure</div>
+                        <div class="stat-value" style="font-size: 1em;" id="portfolioExposure">0%</div>
+                    </div>
+                    <div class="stat-box-compact" style="padding: 6px;">
+                        <div class="stat-label" style="font-size: 0.65em;">Total Risk %</div>
+                        <div class="stat-value" style="font-size: 1em;" id="totalPortfolioRisk">0%</div>
+                    </div>
+                    <div class="stat-box-compact" style="padding: 6px;">
+                        <div class="stat-label" style="font-size: 0.65em;">Total Drawdown</div>
+                        <div class="stat-value" style="font-size: 1em;" id="totalPortfolioDrawdown">0%</div>
+                    </div>
+                    <div class="stat-box-compact" style="padding: 6px;">
+                        <div class="stat-label" style="font-size: 0.65em;">Open P&L %</div>
+                        <div class="stat-value" style="font-size: 1em;" id="openPnlPercent">0%</div>
+                    </div>
+                    <div class="stat-box-compact" style="padding: 6px;">
+                        <div class="stat-label" style="font-size: 0.65em;">Closed P&L %</div>
+                        <div class="stat-value" style="font-size: 1em;" id="closedPnlPercent">0%</div>
+                    </div>
+                    <div class="stat-box-compact" style="padding: 6px;">
+                        <div class="stat-label" style="font-size: 0.65em;">Avg W/L</div>
+                        <div class="stat-value" style="font-size: 1em;" id="avgWLRatio">0.00</div>
+                    </div>
+                    <div class="stat-box-compact" style="padding: 6px;">
+                        <div class="stat-label" style="font-size: 0.65em;">Avg R</div>
+                        <div class="stat-value" style="font-size: 1em;" id="avgRMultiple">0.00R</div>
+                    </div>
+                    <div class="stat-box-compact" style="padding: 6px;">
+                        <div class="stat-label" style="font-size: 0.65em;">Last 10 P/L</div>
+                        <div class="stat-value" style="font-size: 1em;" id="last10Pnl">0%</div>
+                    </div>
+                    <div class="stat-box-compact" style="padding: 6px;">
+                        <div class="stat-label" style="font-size: 0.65em;">Last 10 Win%</div>
+                        <div class="stat-value" style="font-size: 1em;" id="last10WinRate">0%</div>
+                    </div>
+                    <div class="stat-box-compact" style="padding: 6px;">
+                        <div class="stat-label" style="font-size: 0.65em;">Total Closed</div>
+                        <div class="stat-value" style="font-size: 1em;" id="totalClosedPnl">0%</div>
+                    </div>
+                    <div class="stat-box-compact" style="padding: 6px;">
+                        <div class="stat-label" style="font-size: 0.65em;">Overall Win%</div>
+                        <div class="stat-value" style="font-size: 1em;" id="overallWinRate">0%</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card" style="padding: 12px; margin-bottom: 12px;">
+                <h2 style="font-size: 1em; margin-bottom: 10px;">Add New Position</h2>
+                <form id="addPositionForm" style="display: grid; grid-template-columns: 1fr auto; gap: 10px; align-items: end;">
+                    <div class="form-grid" style="margin-bottom: 0;">
+                        <div class="form-group">
+                            <label>Symbol</label>
+                            <input type="text" id="symbol" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Entry Price</label>
+                            <input type="number" id="entryPrice" step="0.01" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Initial Stop Loss</label>
+                            <input type="number" id="initialStop" step="0.01" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Shares (QTY)</label>
+                            <input type="number" id="shares" step="1" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Initial Account Weight (%)</label>
+                            <input type="number" id="initialWeight" step="0.01" required>
+                        </div>
+                    </div>
+                    <button type="submit" style="height: fit-content; padding: 10px 20px;">Add Position</button>
+                </form>
+            </div>
+
+            <div class="card" style="padding: 12px;">
+                <h2 style="font-size: 1em; margin-bottom: 10px;">Current Open Positions</h2>
+                <div class="refresh-controls">
+                    <button onclick="updateAllPrices()" class="btn-success">🔄 Update All Prices</button>
+                    <div class="toggle-switch">
+                        <input type="checkbox" id="autoRefresh">
+                        <label for="autoRefresh" style="font-weight: normal; margin: 0;">Auto-refresh every 60s</label>
+                    </div>
+                    <span id="lastUpdate" style="color: #666; font-size: 12px;"></span>
+                </div>
+                <p style="color: #666; font-size: 13px; margin-bottom: 10px; font-style: italic;">
+                    💡 Tip: Click "Update All Prices" anytime to refresh, or enable auto-refresh. You can also manually edit Current Price in any position.
+                </p>
+                <div class="table-scroll" id="openPositionsTable">
+                    <div class="empty-state">No open positions</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Closed Trades Tab -->
+        <div id="closed-trades" class="tab-content">
+            <div class="card">
+                <h2>Closed Trade History</h2>
+                <div class="table-scroll" id="closedTradesTable">
+                    <div class="empty-state">No closed trades</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Position Sizing Calculator Tab -->
+        <div id="position-sizing" class="tab-content">
+            <div class="card">
+                <h2>Position Sizing Calculator</h2>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+                    <div>
+                        <h3 style="color: #667eea; font-size: 1.1em; margin-bottom: 15px;">Calculate Risk %</h3>
+                        <div class="form-group">
+                            <label>Trigger Price (Entry)</label>
+                            <input type="number" id="calcTriggerPrice" step="0.01" placeholder="0.00">
+                        </div>
+                        <div class="form-group">
+                            <label>Stop Price</label>
+                            <input type="number" id="calcStopPrice" step="0.01" placeholder="0.00">
+                        </div>
+                        <button onclick="calculateRisk()" class="btn-success">Calculate</button>
+                        
+                        <div style="margin-top: 20px; padding: 15px; background: #f9f9f9; border-radius: 8px;">
+                            <div style="font-size: 0.9em; color: #666; margin-bottom: 5px;">Risk %:</div>
+                            <div style="font-size: 1.8em; font-weight: bold; color: #667eea;" id="calculatedRisk">0.00%</div>
+                            <div style="font-size: 0.9em; color: #666; margin-top: 10px; margin-bottom: 5px;">Risk $ Per Share:</div>
+                            <div style="font-size: 1.4em; font-weight: bold; color: #667eea;" id="riskPerShare">$0.00</div>
+                        </div>
+                    </div>
+                    
+                    <div>
+                        <h3 style="color: #667eea; font-size: 1.1em; margin-bottom: 15px;">Position Size for Risk %</h3>
+                        <div class="form-group">
+                            <label>Account Size</label>
+                            <input type="number" id="posCalcAccount" step="1" placeholder="250000">
+                        </div>
+                        <div class="form-group">
+                            <label>Risk % of Account</label>
+                            <input type="number" id="posRiskPercent" step="0.01" placeholder="0.75">
+                        </div>
+                        <div class="form-group">
+                            <label>Risk $ Per Share (from above)</label>
+                            <input type="number" id="posRiskPerShare" step="0.01" placeholder="0.00" readonly style="background: #f5f5f5;">
+                        </div>
+                        <button onclick="calculatePositionSize()" class="btn-success">Calculate Position</button>
+                        
+                        <div style="margin-top: 20px; padding: 15px; background: #f9f9f9; border-radius: 8px;">
+                            <div style="font-size: 0.9em; color: #666; margin-bottom: 5px;">Shares to Buy:</div>
+                            <div style="font-size: 1.8em; font-weight: bold; color: #10b981;" id="sharesToBuy">0</div>
+                            <div style="font-size: 0.9em; color: #666; margin-top: 10px; margin-bottom: 5px;">Position Value:</div>
+                            <div style="font-size: 1.4em; font-weight: bold; color: #10b981;" id="positionValue">$0.00</div>
+                            <div style="font-size: 0.9em; color: #666; margin-top: 10px; margin-bottom: 5px;">Account Weight %:</div>
+                            <div style="font-size: 1.4em; font-weight: bold; color: #10b981;" id="accountWeightCalc">0.00%</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Stock Risk Profile Tabs -->
+
+        <!-- Stock Risk Profile Tabs -->
+        <!-- Stock 1 Tab -->
+        <div id="stock1" class="tab-content">
+            <div class="card">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                    <h2 id="stock1Title">Stock Risk Profile</h2>
+                    <div style="display: flex; gap: 10px; align-items: center;">
+                        <input type="text" id="stock1SymbolInput" placeholder="Symbol" style="width: 100px; padding: 8px;">
+                        <input type="number" id="stock1Price" placeholder="Price" step="0.01" style="width: 120px; padding: 8px;">
+                        <input type="number" id="stock1Stop" placeholder="Stop" step="0.01" style="width: 120px; padding: 8px;">
+                        <button onclick="updateStockProfile(1)" class="btn-success">Update</button>
+                    </div>
+                </div>
+                <div id="stock1Profile"></div>
+            </div>
+        </div>
+
+        <!-- Stock 2 Tab -->
+        <div id="stock2" class="tab-content">
+            <div class="card">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                    <h2 id="stock2Title">Stock Risk Profile</h2>
+                    <div style="display: flex; gap: 10px; align-items: center;">
+                        <input type="text" id="stock2SymbolInput" placeholder="Symbol" style="width: 100px; padding: 8px;">
+                        <input type="number" id="stock2Price" placeholder="Price" step="0.01" style="width: 120px; padding: 8px;">
+                        <input type="number" id="stock2Stop" placeholder="Stop" step="0.01" style="width: 120px; padding: 8px;">
+                        <button onclick="updateStockProfile(2)" class="btn-success">Update</button>
+                    </div>
+                </div>
+                <div id="stock2Profile"></div>
+            </div>
+        </div>
+
+        <!-- Stock 3 Tab -->
+        <div id="stock3" class="tab-content">
+            <div class="card">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                    <h2 id="stock3Title">Stock Risk Profile</h2>
+                    <div style="display: flex; gap: 10px; align-items: center;">
+                        <input type="text" id="stock3SymbolInput" placeholder="Symbol" style="width: 100px; padding: 8px;">
+                        <input type="number" id="stock3Price" placeholder="Price" step="0.01" style="width: 120px; padding: 8px;">
+                        <input type="number" id="stock3Stop" placeholder="Stop" step="0.01" style="width: 120px; padding: 8px;">
+                        <button onclick="updateStockProfile(3)" class="btn-success">Update</button>
+                    </div>
+                </div>
+                <div id="stock3Profile"></div>
+            </div>
+        </div>
+
+        <!-- Stock 4 Tab -->
+        <div id="stock4" class="tab-content">
+            <div class="card">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                    <h2 id="stock4Title">Stock Risk Profile</h2>
+                    <div style="display: flex; gap: 10px; align-items: center;">
+                        <input type="text" id="stock4SymbolInput" placeholder="Symbol" style="width: 100px; padding: 8px;">
+                        <input type="number" id="stock4Price" placeholder="Price" step="0.01" style="width: 120px; padding: 8px;">
+                        <input type="number" id="stock4Stop" placeholder="Stop" step="0.01" style="width: 120px; padding: 8px;">
+                        <button onclick="updateStockProfile(4)" class="btn-success">Update</button>
+                    </div>
+                </div>
+                <div id="stock4Profile"></div>
+            </div>
+        </div>
+
+        <!-- Stock 5 Tab -->
+        <div id="stock5" class="tab-content">
+            <div class="card">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                    <h2 id="stock5Title">Stock Risk Profile</h2>
+                    <div style="display: flex; gap: 10px; align-items: center;">
+                        <input type="text" id="stock5SymbolInput" placeholder="Symbol" style="width: 100px; padding: 8px;">
+                        <input type="number" id="stock5Price" placeholder="Price" step="0.01" style="width: 120px; padding: 8px;">
+                        <input type="number" id="stock5Stop" placeholder="Stop" step="0.01" style="width: 120px; padding: 8px;">
+                        <button onclick="updateStockProfile(5)" class="btn-success">Update</button>
+                    </div>
+                </div>
+                <div id="stock5Profile"></div>
+            </div>
+        </div>
+
+        <!-- Stock 6 Tab -->
+        <div id="stock6" class="tab-content">
+            <div class="card">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                    <h2 id="stock6Title">Stock Risk Profile</h2>
+                    <div style="display: flex; gap: 10px; align-items: center;">
+                        <input type="text" id="stock6SymbolInput" placeholder="Symbol" style="width: 100px; padding: 8px;">
+                        <input type="number" id="stock6Price" placeholder="Price" step="0.01" style="width: 120px; padding: 8px;">
+                        <input type="number" id="stock6Stop" placeholder="Stop" step="0.01" style="width: 120px; padding: 8px;">
+                        <button onclick="updateStockProfile(6)" class="btn-success">Update</button>
+                    </div>
+                </div>
+                <div id="stock6Profile"></div>
+            </div>
+        </div>
+
+        <!-- Equity Curves Tab -->
+        <div id="equity-curves" class="tab-content">
+            <!-- Daily Equity Tracking -->
+            <div class="card" style="margin-bottom: 20px;">
+                <h2 style="margin-bottom: 15px;">Daily Equity Tracking</h2>
+                
+                <!-- Add Daily Entry Button -->
+                <div style="margin-bottom: 15px;">
+                    <button onclick="addDailyEquityEntry()" class="btn-success">📊 Add Today's Entry</button>
+                    <span style="margin-left: 15px; color: #666; font-size: 0.9em;">Auto-fills from current account values</span>
+                </div>
+                
+                <!-- Daily Equity Table -->
+                <div style="overflow-x: auto;">
+                    <table id="dailyEquityTable" style="width: 100%;">
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Account Equity</th>
+                                <th>Daily % Change</th>
+                                <th>10-Day Avg</th>
+                                <th>Drawdown %</th>
+                                <th>Exposure %</th>
+                                <th>FOMO</th>
+                                <th>Notes</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="dailyEquityTableBody">
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            
+            <div class="card">
+                <h2>Performance Metrics</h2>
+                <div class="stats-grid">
+                    <div class="stat-box">
+                        <div class="stat-label">Cumulative P/L %</div>
+                        <div class="stat-value" id="cumPnl">0%</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-label">Last 30 Days P/L %</div>
+                        <div class="stat-value" id="last30DaysPnl">0%</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-label">Last 10 Days P/L %</div>
+                        <div class="stat-value" id="last10DaysPnl">0%</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-label">Last 10 W/L Ratio</div>
+                        <div class="stat-value" id="last10WLRatio">0.00</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-label">Last 10 Avg R</div>
+                        <div class="stat-value" id="last10AvgR">0.00R</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-label">Overall W/L Ratio</div>
+                        <div class="stat-value" id="overallWLRatio">0.00</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-label">Avg R Multiple</div>
+                        <div class="stat-value" id="avgRMultiple">0.00R</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-label">Avg Gain %</div>
+                        <div class="stat-value" id="avgGain">0%</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-label">Avg Loss %</div>
+                        <div class="stat-value" id="avgLoss">0%</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <h2>Cumulative Closed P&L %</h2>
+                <div id="closedEquityCurve"></div>
+            </div>
+            <div class="card">
+                <h2>Daily Account Value (with Open P&L)</h2>
+                <div id="accountValueCurve"></div>
+            </div>
+            <div class="card">
+                <h2>Daily Closed P&L % Distribution</h2>
+                <div id="dailyPnlChart"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Firebase Setup Modal -->
+    <div id="firebaseSetupModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>🔥 Firebase Cloud Sync Setup</h2>
+                <span class="close" onclick="closeModal('firebaseSetupModal')">&times;</span>
+            </div>
+            
+            <div class="firebase-setup">
+                <h3>One-Time Setup (5 minutes)</h3>
+                <p style="margin-bottom: 15px;">Follow these steps to enable automatic cloud sync:</p>
+                
+                <ol style="line-height: 1.8;">
+                    <li>Go to <a href="https://firebase.google.com" target="_blank" style="color: #667eea; font-weight: bold;">firebase.google.com</a></li>
+                    <li>Click "Get Started" → "Add Project"</li>
+                    <li>Name it "Trade Tracker" → Continue</li>
+                    <li>Disable Google Analytics → Create Project</li>
+                    <li>Click "Realtime Database" → Create Database → Start in <strong>test mode</strong></li>
+                    <li>Click ⚙️ Settings → Project Settings</li>
+                    <li>Scroll down → Click `</>` (web icon)</li>
+                    <li>Register app: "Trade Tracker"</li>
+                    <li>Copy the config values and paste below:</li>
+                </ol>
+            </div>
+
+            <form id="firebaseConfigForm">
+                <div class="form-group">
+                    <label>API Key</label>
+                    <input type="text" id="configApiKey" placeholder="AIza..." required>
+                </div>
+                <div class="form-group">
+                    <label>Auth Domain</label>
+                    <input type="text" id="configAuthDomain" placeholder="your-project.firebaseapp.com" required>
+                </div>
+                <div class="form-group">
+                    <label>Database URL</label>
+                    <input type="text" id="configDatabaseURL" placeholder="https://your-project.firebaseio.com" required>
+                </div>
+                <div class="form-group">
+                    <label>Project ID</label>
+                    <input type="text" id="configProjectId" placeholder="your-project-id" required>
+                </div>
+                
+                <p style="margin: 15px 0; font-size: 13px; color: #666;">
+                    ℹ️ This config is saved in your browser. You only need to do this once per computer.
+                </p>
+                
+                <div style="display: flex; gap: 10px;">
+                    <button type="submit" style="flex: 1;">Connect to Firebase</button>
+                    <button type="button" onclick="clearFirebaseConfig()" class="btn-danger" style="flex: 0;">Clear Config & Start Over</button>
+                </div>
+            </form>
+            
+            <div style="margin-top: 20px; padding: 15px; background: #fee; border-radius: 8px; border: 1px solid #fcc;">
+                <h4 style="color: #c00; margin-bottom: 10px;">Troubleshooting "Connecting to cloud..."</h4>
+                <ol style="font-size: 12px; line-height: 1.6; margin-left: 20px;">
+                    <li>Make sure Database URL starts with <code>https://</code> and ends with <code>.firebaseio.com</code></li>
+                    <li>In Firebase Console, go to <strong>Realtime Database</strong> → Click <strong>Rules</strong> tab</li>
+                    <li>Make sure rules are set to test mode:
+                        <pre style="background: #f5f5f5; padding: 8px; margin: 8px 0; font-size: 11px;">{
+  "rules": {
+    ".read": true,
+    ".write": true
+  }
+}</pre>
+                    </li>
+                    <li>Click <strong>Publish</strong> in Firebase Console after changing rules</li>
+                </ol>
+            </div>
+        </div>
+    </div>
+
+    <!-- Other Modals (partial sell, update stop, close position, edit) -->
+    <div id="partialSellModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Partial Sell</h2>
+                <span class="close" onclick="closeModal('partialSellModal')">&times;</span>
+            </div>
+            <form id="partialSellForm">
+                <input type="hidden" id="partialSellId">
+                <div class="form-group">
+                    <label>Shares to Sell</label>
+                    <input type="number" id="partialShares" step="1" required>
+                </div>
+                <div class="form-group">
+                    <label>Sell Price</label>
+                    <input type="number" id="partialPrice" step="0.01" required>
+                </div>
+                <button type="submit">Execute Partial Sell</button>
+            </form>
+        </div>
+    </div>
+
+    <div id="updateStopModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Update Stop Loss</h2>
+                <span class="close" onclick="closeModal('updateStopModal')">&times;</span>
+            </div>
+            <form id="updateStopForm">
+                <input type="hidden" id="updateStopId">
+                <div class="form-group">
+                    <label>New Stop Loss Price</label>
+                    <input type="number" id="newStopPrice" step="0.01" required>
+                </div>
+                <button type="submit">Update Stop</button>
+            </form>
+        </div>
+    </div>
+
+    <div id="closePositionModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Close Position</h2>
+                <span class="close" onclick="closeModal('closePositionModal')">&times;</span>
+            </div>
+            <form id="closePositionForm">
+                <input type="hidden" id="closePositionId">
+                <div class="form-group">
+                    <label>Exit Price</label>
+                    <input type="number" id="exitPrice" step="0.01" required>
+                </div>
+                <div class="form-group">
+                    <label>Exit Date</label>
+                    <input type="date" id="exitDate" required>
+                </div>
+                <div class="form-group">
+                    <label>Notes</label>
+                    <textarea id="tradeNotes" rows="3"></textarea>
+                </div>
+                <button type="submit">Close Position</button>
+            </form>
+        </div>
+    </div>
+
+    <div id="editPositionModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Edit Position</h2>
+                <span class="close" onclick="closeModal('editPositionModal')">&times;</span>
+            </div>
+            <form id="editPositionForm">
+                <input type="hidden" id="editPositionId">
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label>Symbol</label>
+                        <input type="text" id="editSymbol" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Entry Price</label>
+                        <input type="number" id="editEntryPrice" step="0.01" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Current Price</label>
+                        <input type="number" id="editCurrentPrice" step="0.01" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Initial Stop Loss</label>
+                        <input type="number" id="editInitialStop" step="0.01" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Current Stop Loss</label>
+                        <input type="number" id="editCurrentStop" step="0.01" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Shares (QTY)</label>
+                        <input type="number" id="editShares" step="1" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Initial Account Weight (%)</label>
+                        <input type="number" id="editInitialWeight" step="0.01" required>
+                    </div>
+                </div>
+                <button type="submit">Save Changes</button>
+            </form>
+        </div>
+    </div>
+
+    <div id="editClosedTradeModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Edit Closed Trade</h2>
+                <span class="close" onclick="closeModal('editClosedTradeModal')">&times;</span>
+            </div>
+            <form id="editClosedTradeForm">
+                <input type="hidden" id="editClosedTradeIndex">
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label>Symbol</label>
+                        <input type="text" id="editClosedSymbol" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Entry Price</label>
+                        <input type="number" id="editClosedEntryPrice" step="0.01" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Exit Price</label>
+                        <input type="number" id="editClosedExitPrice" step="0.01" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Initial Stop Loss</label>
+                        <input type="number" id="editClosedInitialStop" step="0.01" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Exit Date</label>
+                        <input type="date" id="editClosedExitDate" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Account Weight (%)</label>
+                        <input type="number" id="editClosedAccountWeight" step="0.01" required>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Notes</label>
+                    <textarea id="editClosedNotes" rows="3"></textarea>
+                </div>
+                <button type="submit">Save Changes</button>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        // Firebase and data variables
+        let db = null;
+        let dbRef = null;
+        let firebaseConfig = null;
+        let isFirebaseInitialized = false;
+        
+        let openPositions = [];
+        let closedTrades = [];
+        let dailyEquity = [];
+        let positionIdCounter = 1;
+
+        // Initialize Firebase
+        function initializeFirebase(config) {
+            try {
+                console.log('Attempting to initialize Firebase...');
+                console.log('Config:', { ...config, apiKey: config.apiKey ? 'PRESENT' : 'MISSING' });
+                
+                if (!firebase.apps.length) {
+                    firebase.initializeApp(config);
+                    console.log('Firebase app initialized');
+                }
+                
+                db = firebase.database();
+                dbRef = db.ref('tradeData');
+                
+                console.log('Setting up Firebase listener...');
+                
+                // Listen for data changes with error handling
+                dbRef.on('value', (snapshot) => {
+                    console.log('Firebase data received');
+                    const data = snapshot.val();
+                    if (data) {
+                        console.log('Loading data from Firebase');
+                        loadDataFromFirebase(data);
+                    } else {
+                        console.log('No data in Firebase yet - this is normal for first time');
+                    }
+                    updateSyncStatus('Connected - Auto-syncing ✓', true);
+                }, (error) => {
+                    console.error('Firebase read error:', error);
+                    updateSyncStatus('Read error: ' + error.code, false);
+                    alert('Firebase Error: ' + error.message + '\n\nCommon fixes:\n1. Check your Database URL is correct\n2. Make sure your database is in "test mode"\n3. Try re-creating your Firebase config');
+                });
+
+                isFirebaseInitialized = true;
+                closeModal('firebaseSetupModal');
+                return true;
+            } catch (error) {
+                console.error('Firebase initialization error:', error);
+                updateSyncStatus('Init failed: ' + error.message, false);
+                alert('Failed to connect to Firebase:\n\n' + error.message + '\n\nPlease check your configuration and try again.');
+                return false;
+            }
+        }
+
+        // Firebase config form
+        document.getElementById('firebaseConfigForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const config = {
+                apiKey: document.getElementById('configApiKey').value.trim(),
+                authDomain: document.getElementById('configAuthDomain').value.trim(),
+                databaseURL: document.getElementById('configDatabaseURL').value.trim(),
+                projectId: document.getElementById('configProjectId').value.trim(),
+            };
+
+            // Save config to localStorage
+            localStorage.setItem('firebaseConfig', JSON.stringify(config));
+            firebaseConfig = config;
+
+            if (initializeFirebase(config)) {
+                alert('✅ Connected to Firebase! Your data will now sync automatically across all computers.');
+            }
+        });
+
+        // Load Firebase config from localStorage
+        function loadFirebaseConfig() {
+            const saved = localStorage.getItem('firebaseConfig');
+            if (saved) {
+                try {
+                    firebaseConfig = JSON.parse(saved);
+                    if (initializeFirebase(firebaseConfig)) {
+                        return true;
+                    }
+                } catch (error) {
+                    console.error('Error loading saved config:', error);
+                }
+            }
+            return false;
+        }
+
+        // Test Firebase connection
+        function testFirebaseConnection() {
+            console.log('=== Firebase Diagnostics ===');
+            console.log('isFirebaseInitialized:', isFirebaseInitialized);
+            console.log('db:', db ? 'Present' : 'Missing');
+            console.log('dbRef:', dbRef ? 'Present' : 'Missing');
+            
+            const savedConfig = localStorage.getItem('firebaseConfig');
+            console.log('Saved config in localStorage:', savedConfig ? 'Present' : 'Missing');
+            
+            if (!isFirebaseInitialized) {
+                alert('❌ Firebase NOT Connected\n\nThe tracker is stuck trying to connect.\n\nSteps to fix:\n1. Press F12 to open Developer Console\n2. Look for red error messages\n3. Click "⚙️ Firebase Config" to re-enter your settings\n\nCommon issue: Database URL might be wrong or database not in test mode.');
+                return;
+            }
+            
+            // Try to read from Firebase
+            if (dbRef) {
+                dbRef.once('value').then((snapshot) => {
+                    const data = snapshot.val();
+                    alert('✅ Firebase IS Connected!\n\nData found: ' + (data ? 'Yes' : 'No (empty database - this is OK for first time)') + '\n\nIf you have data on another computer, make sure you\'re using the SAME Firebase config on both computers.');
+                }).catch((error) => {
+                    alert('❌ Firebase connection error:\n\n' + error.message + '\n\nCheck:\n1. Database URL is correct\n2. Database is in TEST MODE\n3. Internet connection is working');
+                });
+            }
+        }
+
+        // Open Firebase setup modal
+        function openFirebaseSetup() {
+            document.getElementById('firebaseSetupModal').style.display = 'block';
+        }
+
+        // Clear Firebase config and start over
+        function clearFirebaseConfig() {
+            if (confirm('Clear saved Firebase config and start over?\n\nThis will NOT delete your data in Firebase, just the connection settings in this browser.')) {
+                localStorage.removeItem('firebaseConfig');
+                alert('Config cleared! Please enter your Firebase settings again.');
+                location.reload();
+            }
+        }
+
+        // Update sync status indicator
+        function updateSyncStatus(message, isConnected) {
+            document.getElementById('syncStatus').textContent = message;
+            const dot = document.getElementById('syncDot');
+            if (isConnected) {
+                dot.style.background = '#10b981';
+            } else {
+                dot.style.background = '#ef4444';
+                dot.style.animation = 'none';
+            }
+        }
+
+        // Save data to Firebase
+        function saveToFirebase() {
+            if (!isFirebaseInitialized || !dbRef) return;
+
+            const data = {
+                openPositions,
+                closedTrades,
+                dailyEquity,
+                dailyEquityEntries,
+                positionIdCounter,
+                accountSize: parseFloat(document.getElementById('accountSize').value),
+                startingAccount: parseFloat(document.getElementById('startingAccount').value),
+                myRoth: parseFloat(document.getElementById('myRoth').value),
+                myRothJan1: parseFloat(document.getElementById('myRothJan1').value),
+                wifeRoth: parseFloat(document.getElementById('wifeRoth').value),
+                wifeRothJan1: parseFloat(document.getElementById('wifeRothJan1').value),
+                apiKey: document.getElementById('apiKey').value,
+                stockProfiles: stockProfiles,
+                lastModified: new Date().toISOString()
+            };
+
+            dbRef.set(data).then(() => {
+                updateSyncStatus('Synced ✓', true);
+                console.log('Data saved to Firebase successfully');
+            }).catch((error) => {
+                console.error('Save error:', error);
+                updateSyncStatus('Sync error', false);
+                alert('Firebase sync error: ' + error.message);
+            });
+        }
+
+        // Load data from Firebase
+        function loadDataFromFirebase(data) {
+            if (!data) return;
+
+            openPositions = data.openPositions || [];
+            closedTrades = data.closedTrades || [];
+            dailyEquity = data.dailyEquity || [];
+            dailyEquityEntries = data.dailyEquityEntries || [];
+            positionIdCounter = data.positionIdCounter || 1;
+
+            document.getElementById('accountSize').value = data.accountSize || 250000;
+            document.getElementById('startingAccount').value = data.startingAccount || 248288;
+            document.getElementById('myRoth').value = data.myRoth || 0;
+            document.getElementById('myRothJan1').value = data.myRothJan1 || 0;
+            document.getElementById('wifeRoth').value = data.wifeRoth || 0;
+            document.getElementById('wifeRothJan1').value = data.wifeRothJan1 || 0;
+            document.getElementById('apiKey').value = data.apiKey || '';
+            
+            // Load stock profiles
+            if (data.stockProfiles) {
+                stockProfiles = data.stockProfiles;
+                // Restore stock profile displays
+                for (let i = 1; i <= 6; i++) {
+                    const profile = stockProfiles[i];
+                    if (profile && profile.symbol && profile.price && profile.stop) {
+                        document.getElementById(`stock${i}SymbolInput`).value = profile.symbol;
+                        document.getElementById(`stock${i}Price`).value = profile.price;
+                        document.getElementById(`stock${i}Stop`).value = profile.stop;
+                        document.getElementById(`stock${i}Symbol`).textContent = profile.symbol;
+                        document.getElementById(`stock${i}Title`).textContent = `${profile.symbol} Risk Profile`;
+                        const profileHTML = generateStockProfileTable(i, profile.symbol, profile.price, profile.stop);
+                        document.getElementById(`stock${i}Profile`).innerHTML = profileHTML;
+                    }
+                }
+            }
+
+            updateAllDisplays();
+            console.log('Data loaded from Firebase successfully');
+        }
+
+        // Get account size
+        function getAccountSize() {
+            return parseFloat(document.getElementById('accountSize').value) || 250000;
+        }
+
+        // Calculate position metrics
+        function calculatePositionMetrics(pos) {
+            const accountSize = getAccountSize();
+            
+            // Calculate realized P&L from partial sells
+            let realizedPnL = 0;
+            let adjustedPrice = pos.entryPrice;
+            
+            if (pos.partialSells && pos.partialSells.length > 0) {
+                let totalShares = pos.initialShares;
+                let weightedSum = pos.entryPrice * pos.initialShares;
+                
+                pos.partialSells.forEach(sell => {
+                    realizedPnL += (sell.price - pos.entryPrice) * sell.shares;
+                    totalShares -= sell.shares;
+                    weightedSum -= sell.price * sell.shares;
+                });
+                
+                if (totalShares > 0) {
+                    adjustedPrice = weightedSum / totalShares;
+                }
+            }
+            
+            const positionValue = pos.currentPrice * pos.shares;
+            const unrealizedPnL = (pos.currentPrice - adjustedPrice) * pos.shares;
+            const totalPnL = realizedPnL + unrealizedPnL;
+            const totalCost = pos.entryPrice * pos.initialShares;
+            
+            const accountWeight = (positionValue / accountSize) * 100;
+            const pnlPercent = (totalPnL / totalCost) * 100;
+            const portfolioPnlPercent = (totalPnL / accountSize) * 100;
+            const drawdown = ((pos.currentPrice - pos.currentStop) / pos.currentPrice) * 100;
+            const portfolioDrawdown = (drawdown / 100) * accountWeight;
+            const initialRiskPercent = ((pos.entryPrice - pos.initialStop) / pos.entryPrice) * 100;
+            const capitalRisk = Math.max(0, ((adjustedPrice - pos.currentStop) * pos.shares / totalCost) * 100);
+            const portfolioCapitalRisk = (capitalRisk / 100) * pos.initialWeight;
+            const initialR = initialRiskPercent > 0 ? ((pos.currentPrice / pos.entryPrice - 1) * 100) / initialRiskPercent : 0;
+            const twoRTarget = pos.entryPrice * (1 + (2 * (initialRiskPercent / 100)));
+            const riskDollars = (adjustedPrice - pos.currentStop) * pos.shares;
+            
+            return {
+                adjustedPrice,
+                accountWeight,
+                pnlPercent,
+                portfolioPnlPercent,
+                drawdown,
+                portfolioDrawdown,
+                initialRiskPercent,
+                capitalRisk,
+                portfolioCapitalRisk,
+                initialR,
+                twoRTarget,
+                riskDollars,
+                realizedPnL,
+                unrealizedPnL,
+                totalPnL
+            };
+        }
+
+        // Add new position
+        document.getElementById('addPositionForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const shares = parseInt(document.getElementById('shares').value);
+            const entryPrice = parseFloat(document.getElementById('entryPrice').value);
+            const initialStop = parseFloat(document.getElementById('initialStop').value);
+            
+            const position = {
+                id: positionIdCounter++,
+                symbol: document.getElementById('symbol').value.toUpperCase(),
+                entryPrice: entryPrice,
+                currentPrice: entryPrice,
+                initialStop: initialStop,
+                currentStop: initialStop,
+                shares: shares,
+                initialShares: shares,
+                initialWeight: parseFloat(document.getElementById('initialWeight').value),
+                entryDate: new Date().toISOString().split('T')[0],
+                partialSells: []
+            };
+
+            openPositions.push(position);
+            saveToFirebase();
+            updateAllDisplays();
+            this.reset();
+        });
+
+        // Update open positions table
+        function updateOpenPositionsTable() {
+            const container = document.getElementById('openPositionsTable');
+            
+            if (openPositions.length === 0) {
+                container.innerHTML = '<div class="empty-state">No open positions</div>';
+                return;
+            }
+
+            let html = `
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Symbol</th>
+                            <th>Current Price</th>
+                            <th>Entry</th>
+                            <th>Adj Price</th>
+                            <th>QTY</th>
+                            <th>Initial Stop</th>
+                            <th>Current Stop</th>
+                            <th>Init Acct Wt%</th>
+                            <th>Acct Wt%</th>
+                            <th class="highlight-col">P&L% <span class="tooltip">ℹ<span class="tooltiptext">Includes realized gains from partial sells</span></span></th>
+                            <th class="highlight-col">Port P&L%</th>
+                            <th class="highlight-col">Port Drawdown</th>
+                            <th class="highlight-col">Port Risk%</th>
+                            <th class="highlight-col">Init Risk Ratio</th>
+                            <th>2R Target</th>
+                            <th>Risk%</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+            `;
+
+            openPositions.forEach((pos, index) => {
+                const metrics = calculatePositionMetrics(pos);
+                const pnlClass = metrics.pnlPercent >= 0 ? 'profit' : 'loss';
+                
+                // Alternating row background
+                const rowBg = index % 2 === 0 ? 'background: #f9fafb;' : 'background: white;';
+                
+                // Color coding for Initial Risk Ratio
+                let riskRatioColor = '';
+                let riskRatioStyle = '';
+                if (metrics.initialR < 0) {
+                    riskRatioColor = 'loss'; // red
+                } else if (metrics.initialR < 2) {
+                    riskRatioStyle = 'background: #d1fae5; color: #065f46; font-weight: 700;'; // light green
+                } else if (metrics.initialR <= 5) {
+                    riskRatioStyle = 'background: #10b981; color: white; font-weight: 700;'; // darker green
+                } else {
+                    riskRatioStyle = 'background: #047857; color: white; font-weight: 700;'; // even darker green
+                }
+                
+                // Color coding for Portfolio Risk
+                let portRiskStyle = '';
+                let symbolStyle = '';
+                if (metrics.portfolioCapitalRisk === 0) {
+                    portRiskStyle = 'background: #10b981; color: white; font-weight: 700;'; // green
+                    symbolStyle = 'color: #10b981; font-weight: 700;'; // green symbol
+                } else if (metrics.portfolioCapitalRisk < 0.5) {
+                    // Manila/light yellow (default from highlight-col class, no extra styling needed)
+                    portRiskStyle = '';
+                } else if (metrics.portfolioCapitalRisk < 0.75) {
+                    portRiskStyle = 'background: #fca5a5; color: #7f1d1d; font-weight: 700;'; // light red
+                } else {
+                    portRiskStyle = 'background: #ef4444; color: white; font-weight: 700;'; // red
+                }
+                
+                // Color coding for Portfolio Drawdown
+                let portDrawdownStyle = '';
+                if (metrics.portfolioDrawdown >= 8) {
+                    portDrawdownStyle = 'background: #dc2626; color: white; font-weight: 700;'; // deep red
+                } else if (metrics.portfolioDrawdown >= 5) {
+                    portDrawdownStyle = 'background: #fca5a5; color: #7f1d1d; font-weight: 700;'; // light red
+                } else if (metrics.portfolioDrawdown >= 2) {
+                    portDrawdownStyle = 'background: #fbbf24; color: #78350f; font-weight: 700;'; // yellow
+                }
+                
+                html += `
+                    <tr style="${rowBg}">
+                        <td style="${symbolStyle}"><strong>${pos.symbol}</strong></td>
+                        <td>$${pos.currentPrice.toFixed(2)}</td>
+                        <td>$${pos.entryPrice.toFixed(2)}</td>
+                        <td>$${metrics.adjustedPrice.toFixed(2)}</td>
+                        <td>${pos.shares}</td>
+                        <td>$${pos.initialStop.toFixed(2)}</td>
+                        <td>$${pos.currentStop.toFixed(2)}</td>
+                        <td>${pos.initialWeight.toFixed(2)}%</td>
+                        <td>${metrics.accountWeight.toFixed(2)}%</td>
+                        <td class="highlight-col ${pnlClass}">${metrics.pnlPercent.toFixed(2)}%</td>
+                        <td class="highlight-col ${pnlClass}">${metrics.portfolioPnlPercent.toFixed(2)}%</td>
+                        <td class="highlight-col" style="${portDrawdownStyle}">${metrics.portfolioDrawdown.toFixed(2)}%</td>
+                        <td class="highlight-col" style="${portRiskStyle}">${metrics.portfolioCapitalRisk.toFixed(2)}%</td>
+                        <td class="highlight-col ${riskRatioColor}" style="${riskRatioStyle}">${metrics.initialR.toFixed(2)}R</td>
+                        <td>$${metrics.twoRTarget.toFixed(2)}</td>
+                        <td>${metrics.initialRiskPercent.toFixed(2)}%</td>
+                        <td>
+                            <div class="action-buttons">
+                                <button class="btn-secondary btn-small" onclick="openEditPositionModal(${pos.id})">Edit</button>
+                                <button class="btn-success btn-small" onclick="openPartialSellModal(${pos.id})">Partial</button>
+                                <button class="btn-secondary btn-small" onclick="openUpdateStopModal(${pos.id})">Stop</button>
+                                <button class="btn-danger btn-small" onclick="openClosePositionModal(${pos.id})">Close</button>
+                                <button class="btn-danger btn-small" onclick="deletePosition(${pos.id})">Delete</button>
+                            </div>
+                        </td>
+                    </tr>
+                `;
+            });
+
+            html += '</tbody></table>';
+            container.innerHTML = html;
+        }
+
+        // Update account stats
+        function updateAccountStats() {
+            const accountSize = getAccountSize();
+            const startingAccount = parseFloat(document.getElementById('startingAccount').value) || 248288;
+            
+            // Calculate Closed P&L %
+            let totalClosedPnlDollars = 0;
+            closedTrades.forEach(trade => {
+                // Convert portfolio P&L % to dollars based on starting account
+                totalClosedPnlDollars += (trade.portfolioPnlPercent / 100) * startingAccount;
+            });
+            const closedPnlPercent = (totalClosedPnlDollars / startingAccount) * 100;
+            
+            // Calculate Trading YTD P&L %
+            const tradingYTD = ((accountSize - startingAccount) / startingAccount) * 100;
+            
+            // Calculate Roth YTD P&L %
+            const myRoth = parseFloat(document.getElementById('myRoth').value) || 0;
+            const myRothJan1 = parseFloat(document.getElementById('myRothJan1').value) || 0;
+            const myRothYTD = myRothJan1 > 0 ? ((myRoth - myRothJan1) / myRothJan1) * 100 : 0;
+            
+            const wifeRoth = parseFloat(document.getElementById('wifeRoth').value) || 0;
+            const wifeRothJan1 = parseFloat(document.getElementById('wifeRothJan1').value) || 0;
+            const wifeRothYTD = wifeRothJan1 > 0 ? ((wifeRoth - wifeRothJan1) / wifeRothJan1) * 100 : 0;
+            
+            // Update Portfolio Summary display elements
+            document.getElementById('closedPnlPercent').textContent = closedPnlPercent.toFixed(2) + '%';
+            
+            // Update YTD displays
+            document.getElementById('tradingYTD').textContent = tradingYTD.toFixed(2) + '%';
+            document.getElementById('myRothYTD').textContent = myRothYTD.toFixed(2) + '%';
+            document.getElementById('wifeRothYTD').textContent = wifeRothYTD.toFixed(2) + '%';
+            
+            // Color code Closed P&L
+            const closedPnlElement = document.getElementById('closedPnlPercent');
+            if (closedPnlPercent > 0) {
+                closedPnlElement.parentElement.style.background = 'linear-gradient(135deg, #10b981 0%, #059669 100%)';
+            } else if (closedPnlPercent < 0) {
+                closedPnlElement.parentElement.style.background = 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)';
+            } else {
+                closedPnlElement.parentElement.style.background = 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)';
+            }
+            
+            // Color code Trading YTD
+            const tradingYTDElement = document.getElementById('tradingYTD');
+            if (tradingYTD > 0) {
+                tradingYTDElement.parentElement.style.background = 'linear-gradient(135deg, #10b981 0%, #059669 100%)';
+            } else if (tradingYTD < 0) {
+                tradingYTDElement.parentElement.style.background = 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)';
+            } else {
+                tradingYTDElement.parentElement.style.background = 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)';
+            }
+            
+            // Color code My Roth YTD
+            const myRothYTDElement = document.getElementById('myRothYTD');
+            if (myRothYTD > 0) {
+                myRothYTDElement.parentElement.style.background = 'linear-gradient(135deg, #10b981 0%, #059669 100%)';
+            } else if (myRothYTD < 0) {
+                myRothYTDElement.parentElement.style.background = 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)';
+            } else {
+                myRothYTDElement.parentElement.style.background = 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)';
+            }
+            
+            // Color code Wife Roth YTD
+            const wifeRothYTDElement = document.getElementById('wifeRothYTD');
+            if (wifeRothYTD > 0) {
+                wifeRothYTDElement.parentElement.style.background = 'linear-gradient(135deg, #10b981 0%, #059669 100%)';
+            } else if (wifeRothYTD < 0) {
+                wifeRothYTDElement.parentElement.style.background = 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)';
+            } else {
+                wifeRothYTDElement.parentElement.style.background = 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)';
+            }
+        }
+        function updatePortfolioStats() {
+            const accountSize = getAccountSize();
+            
+            let totalExposure = 0;
+            let totalOpenPnl = 0;
+            let totalPortfolioRisk = 0;
+            let totalPortfolioDrawdown = 0;
+            
+            openPositions.forEach(pos => {
+                const metrics = calculatePositionMetrics(pos);
+                totalExposure += metrics.accountWeight;
+                totalOpenPnl += metrics.portfolioPnlPercent;
+                totalPortfolioRisk += metrics.portfolioCapitalRisk;
+                totalPortfolioDrawdown += metrics.portfolioDrawdown;
+            });
+            
+            // Update values
+            document.getElementById('portfolioExposure').textContent = totalExposure.toFixed(2) + '%';
+            document.getElementById('openPnlPercent').textContent = totalOpenPnl.toFixed(2) + '%';
+            document.getElementById('totalPortfolioRisk').textContent = totalPortfolioRisk.toFixed(2) + '%';
+            document.getElementById('totalPortfolioDrawdown').textContent = totalPortfolioDrawdown.toFixed(2) + '%';
+            
+            // Calculate closed trade stats for summary
+            if (closedTrades.length > 0) {
+                const stats = calculateTradeStats(closedTrades);
+                document.getElementById('avgWLRatio').textContent = stats.wlRatio.toFixed(2);
+                document.getElementById('avgRMultiple').textContent = stats.avgR.toFixed(2) + 'R';
+                
+                // Color code Avg W/L Ratio (>= 2 is green, < 2 is red)
+                const avgWLElement = document.getElementById('avgWLRatio');
+                if (stats.wlRatio >= 2) {
+                    avgWLElement.parentElement.style.background = 'linear-gradient(135deg, #10b981 0%, #059669 100%)';
+                } else {
+                    avgWLElement.parentElement.style.background = 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)';
+                }
+                
+                // Color code Avg R Multiple (>= 3 is green, < 3 is red)
+                const avgRElement = document.getElementById('avgRMultiple');
+                if (stats.avgR >= 3) {
+                    avgRElement.parentElement.style.background = 'linear-gradient(135deg, #10b981 0%, #059669 100%)';
+                } else {
+                    avgRElement.parentElement.style.background = 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)';
+                }
+            } else {
+                document.getElementById('avgWLRatio').textContent = '0.00';
+                document.getElementById('avgRMultiple').textContent = '0.00R';
+                document.getElementById('avgWLRatio').parentElement.style.background = 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)';
+                document.getElementById('avgRMultiple').parentElement.style.background = 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)';
+            }
+            
+            // Color code Exposure (neutral)
+            const exposureElement = document.getElementById('portfolioExposure');
+            exposureElement.parentElement.style.background = 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)';
+            
+            // Color code Total Portfolio Risk (>= 3% red, 2-3% yellow, < 2% green)
+            const riskElement = document.getElementById('totalPortfolioRisk');
+            if (totalPortfolioRisk >= 3) {
+                riskElement.parentElement.style.background = 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)';
+            } else if (totalPortfolioRisk >= 2) {
+                riskElement.parentElement.style.background = 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)';
+            } else {
+                riskElement.parentElement.style.background = 'linear-gradient(135deg, #10b981 0%, #059669 100%)';
+            }
+            
+            // Color code Total Drawdown (>= 5% red, < 5% green)
+            const drawdownElement = document.getElementById('totalPortfolioDrawdown');
+            if (totalPortfolioDrawdown >= 5) {
+                drawdownElement.parentElement.style.background = 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)';
+            } else {
+                drawdownElement.parentElement.style.background = 'linear-gradient(135deg, #10b981 0%, #059669 100%)';
+            }
+
+            // Color code Open P&L
+            const pnlElement = document.getElementById('openPnlPercent');
+            if (totalOpenPnl > 0) {
+                pnlElement.parentElement.style.background = 'linear-gradient(135deg, #10b981 0%, #059669 100%)';
+            } else if (totalOpenPnl < 0) {
+                pnlElement.parentElement.style.background = 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)';
+            } else {
+                pnlElement.parentElement.style.background = 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)';
+            }
+        }
+
+        // Calculate trade statistics
+        function calculateTradeStats(trades) {
+            if (trades.length === 0) return null;
+            
+            const wins = trades.filter(t => t.pnlPercent > 0);
+            const losses = trades.filter(t => t.pnlPercent < 0);
+            
+            const winRate = (wins.length / trades.length) * 100;
+            const avgGain = wins.length > 0 ? wins.reduce((sum, t) => sum + t.pnlPercent, 0) / wins.length : 0;
+            const avgLoss = losses.length > 0 ? losses.reduce((sum, t) => sum + Math.abs(t.pnlPercent), 0) / losses.length : 0;
+            const wlRatio = avgLoss > 0 ? Math.abs(avgGain / avgLoss) : 0;
+            const avgR = trades.reduce((sum, t) => sum + t.rMultiple, 0) / trades.length;
+            const totalPnl = trades.reduce((sum, t) => sum + t.portfolioPnlPercent, 0);
+            
+            return { winRate, avgGain, avgLoss, wlRatio, avgR, totalPnl };
+        }
+
+        // Update closed trade stats
+        function updateClosedTradeStats() {
+            const last10 = closedTrades.slice(-10);
+            if (last10.length > 0) {
+                const stats = calculateTradeStats(last10);
+                document.getElementById('last10Pnl').textContent = stats.totalPnl.toFixed(2) + '%';
+                document.getElementById('last10WinRate').textContent = stats.winRate.toFixed(1) + '%';
+                document.getElementById('last10WLRatio').textContent = stats.wlRatio.toFixed(2);
+                document.getElementById('last10AvgR').textContent = stats.avgR.toFixed(2) + 'R';
+                
+                // Color code Last 10 P/L
+                const last10PnlElement = document.getElementById('last10Pnl');
+                if (stats.totalPnl > 0) {
+                    last10PnlElement.parentElement.style.background = 'linear-gradient(135deg, #10b981 0%, #059669 100%)';
+                } else if (stats.totalPnl < 0) {
+                    last10PnlElement.parentElement.style.background = 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)';
+                } else {
+                    last10PnlElement.parentElement.style.background = 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)';
+                }
+                
+                // Color code Last 10 Win Rate (>= 35% green, < 35% yellow)
+                const last10WinElement = document.getElementById('last10WinRate');
+                if (stats.winRate >= 35) {
+                    last10WinElement.parentElement.style.background = 'linear-gradient(135deg, #10b981 0%, #059669 100%)';
+                } else {
+                    last10WinElement.parentElement.style.background = 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)';
+                }
+            }
+            
+            if (closedTrades.length > 0) {
+                const stats = calculateTradeStats(closedTrades);
+                document.getElementById('totalClosedPnl').textContent = stats.totalPnl.toFixed(2) + '%';
+                document.getElementById('overallWinRate').textContent = stats.winRate.toFixed(1) + '%';
+                document.getElementById('overallWLRatio').textContent = stats.wlRatio.toFixed(2);
+                document.getElementById('avgRMultiple').textContent = stats.avgR.toFixed(2) + 'R';
+                document.getElementById('avgGain').textContent = stats.avgGain.toFixed(2) + '%';
+                document.getElementById('avgLoss').textContent = '-' + stats.avgLoss.toFixed(2) + '%';
+                
+                // Color code Total Closed P/L
+                const totalClosedElement = document.getElementById('totalClosedPnl');
+                if (stats.totalPnl > 0) {
+                    totalClosedElement.parentElement.style.background = 'linear-gradient(135deg, #10b981 0%, #059669 100%)';
+                } else if (stats.totalPnl < 0) {
+                    totalClosedElement.parentElement.style.background = 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)';
+                } else {
+                    totalClosedElement.parentElement.style.background = 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)';
+                }
+                
+                // Color code Overall Win Rate (>= 35% green, < 35% yellow)
+                const overallWinElement = document.getElementById('overallWinRate');
+                if (stats.winRate >= 35) {
+                    overallWinElement.parentElement.style.background = 'linear-gradient(135deg, #10b981 0%, #059669 100%)';
+                } else {
+                    overallWinElement.parentElement.style.background = 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)';
+                }
+            }
+        }
+
+        // Update closed trades table
+        function updateClosedTradesTable() {
+            const container = document.getElementById('closedTradesTable');
+            
+            if (closedTrades.length === 0) {
+                container.innerHTML = '<div class="empty-state">No closed trades</div>';
+                return;
+            }
+
+            let html = `
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Symbol</th>
+                            <th>Entry</th>
+                            <th>Exit</th>
+                            <th>Acct Wt%</th>
+                            <th>P&L%</th>
+                            <th>Port P&L%</th>
+                            <th>R Multiple</th>
+                            <th>Date</th>
+                            <th>Cum P/L%</th>
+                            <th>Notes</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+            `;
+
+            let cumPnl = 0;
+            closedTrades.forEach((trade, index) => {
+                cumPnl += trade.portfolioPnlPercent;
+                const pnlClass = trade.pnlPercent >= 0 ? 'profit' : 'loss';
+                
+                html += `
+                    <tr>
+                        <td><strong>${trade.symbol}</strong></td>
+                        <td>$${trade.entryPrice.toFixed(2)}</td>
+                        <td>$${trade.exitPrice.toFixed(2)}</td>
+                        <td>${trade.accountWeight.toFixed(2)}%</td>
+                        <td class="${pnlClass}">${trade.pnlPercent.toFixed(2)}%</td>
+                        <td class="${pnlClass}">${trade.portfolioPnlPercent.toFixed(2)}%</td>
+                        <td class="${pnlClass}">${trade.rMultiple.toFixed(2)}R</td>
+                        <td>${trade.exitDate}</td>
+                        <td>${cumPnl.toFixed(2)}%</td>
+                        <td style="max-width: 200px; white-space: normal;">${trade.notes || ''}</td>
+                        <td>
+                            <div class="action-buttons">
+                                <button class="btn-secondary btn-small" onclick="openEditClosedTradeModal(${index})">Edit</button>
+                                <button class="btn-danger btn-small" onclick="deleteClosedTrade(${index})">Delete</button>
+                            </div>
+                        </td>
+                    </tr>
+                `;
+            });
+
+            html += '</tbody></table>';
+            container.innerHTML = html;
+        }
+
+        // Update equity curves
+        function updateEquityCurves() {
+            if (dailyEquity.length > 0) {
+                const lastSnap = dailyEquity[dailyEquity.length - 1];
+                document.getElementById('lastSnapshot').textContent = `Last snapshot: ${lastSnap.date}`;
+            } else {
+                document.getElementById('lastSnapshot').textContent = 'No snapshots yet';
+            }
+
+            if (closedTrades.length === 0) {
+                document.getElementById('closedEquityCurve').innerHTML = '<div class="empty-state">No closed trades to display</div>';
+                document.getElementById('dailyPnlChart').innerHTML = '';
+            } else {
+                let cumPnl = 0;
+                const dates = [];
+                const pnlValues = [];
+                
+                closedTrades.forEach(trade => {
+                    cumPnl += trade.portfolioPnlPercent;
+                    dates.push(trade.exitDate);
+                    pnlValues.push(cumPnl);
+                });
+
+                const trace1 = {
+                    x: dates,
+                    y: pnlValues,
+                    type: 'scatter',
+                    mode: 'lines+markers',
+                    name: 'Cumulative P&L %',
+                    line: { color: '#667eea', width: 3 },
+                    marker: { size: 6 }
+                };
+
+                const layout1 = {
+                    xaxis: { title: 'Date' },
+                    yaxis: { title: 'Cumulative P&L %', zeroline: true },
+                    hovermode: 'closest',
+                    plot_bgcolor: '#f9f9f9',
+                    paper_bgcolor: 'white'
+                };
+
+                Plotly.newPlot('closedEquityCurve', [trace1], layout1, {responsive: true});
+
+                const today = new Date();
+                const last30Days = new Date(today - 30 * 24 * 60 * 60 * 1000);
+                const last10Days = new Date(today - 10 * 24 * 60 * 60 * 1000);
+                
+                const last30Trades = closedTrades.filter(t => new Date(t.exitDate) >= last30Days);
+                const last10Trades = closedTrades.filter(t => new Date(t.exitDate) >= last10Days);
+                
+                const last30Pnl = last30Trades.reduce((sum, t) => sum + t.portfolioPnlPercent, 0);
+                const last10Pnl = last10Trades.reduce((sum, t) => sum + t.portfolioPnlPercent, 0);
+                
+                document.getElementById('cumPnl').textContent = cumPnl.toFixed(2) + '%';
+                document.getElementById('last30DaysPnl').textContent = last30Pnl.toFixed(2) + '%';
+                document.getElementById('last10DaysPnl').textContent = last10Pnl.toFixed(2) + '%';
+
+                const dailyPnls = closedTrades.map(t => t.portfolioPnlPercent);
+                
+                const trace2 = {
+                    x: dailyPnls,
+                    type: 'histogram',
+                    marker: { color: '#667eea' },
+                    name: 'Daily P&L Distribution'
+                };
+
+                const layout2 = {
+                    xaxis: { title: 'Portfolio P&L %' },
+                    yaxis: { title: 'Frequency' },
+                    plot_bgcolor: '#f9f9f9',
+                    paper_bgcolor: 'white'
+                };
+
+                Plotly.newPlot('dailyPnlChart', [trace2], layout2, {responsive: true});
+            }
+
+            if (dailyEquity.length === 0) {
+                document.getElementById('accountValueCurve').innerHTML = '<div class="empty-state">No daily snapshots yet. Click "Save Daily Snapshot" to start tracking your equity curve.</div>';
+            } else {
+                const dates = dailyEquity.map(snap => snap.date);
+                const values = dailyEquity.map(snap => snap.accountValue);
+                
+                const trace3 = {
+                    x: dates,
+                    y: values,
+                    type: 'scatter',
+                    mode: 'lines+markers',
+                    name: 'Account Value',
+                    line: { color: '#10b981', width: 3 },
+                    marker: { size: 6 },
+                    fill: 'tozeroy',
+                    fillcolor: 'rgba(16, 185, 129, 0.1)'
+                };
+
+                const layout3 = {
+                    xaxis: { title: 'Date' },
+                    yaxis: { title: 'Account Value ($)' },
+                    hovermode: 'closest',
+                    plot_bgcolor: '#f9f9f9',
+                    paper_bgcolor: 'white'
+                };
+
+                Plotly.newPlot('accountValueCurve', [trace3], layout3, {responsive: true});
+            }
+        }
+
+        // Daily Equity Tracking Functions
+        let dailyEquityEntries = [];
+        
+        // Add today's daily equity entry
+        function addDailyEquityEntry() {
+            const accountSize = getAccountSize();
+            const today = new Date().toISOString().split('T')[0];
+            
+            // Check if entry for today already exists
+            const existingEntry = dailyEquityEntries.find(entry => entry.date === today);
+            if (existingEntry) {
+                if (!confirm('An entry for today already exists. Replace it?')) {
+                    return;
+                }
+                // Remove existing entry
+                dailyEquityEntries = dailyEquityEntries.filter(entry => entry.date !== today);
+            }
+            
+            // Calculate current portfolio metrics
+            let totalExposure = 0;
+            let totalDrawdown = 0;
+            
+            openPositions.forEach(pos => {
+                const metrics = calculatePositionMetrics(pos);
+                totalExposure += metrics.accountWeight;
+                totalDrawdown += metrics.portfolioDrawdown;
+            });
+            
+            // Calculate daily % change (if we have previous day)
+            let dailyChange = 0;
+            if (dailyEquityEntries.length > 0) {
+                const prevEntry = dailyEquityEntries[dailyEquityEntries.length - 1];
+                dailyChange = ((accountSize - prevEntry.accountValue) / prevEntry.accountValue) * 100;
+            }
+            
+            // Create new entry
+            const newEntry = {
+                date: today,
+                accountValue: accountSize,
+                dailyChange: dailyChange,
+                drawdown: totalDrawdown,
+                exposure: totalExposure,
+                fomo: '',
+                notes: ''
+            };
+            
+            dailyEquityEntries.push(newEntry);
+            dailyEquityEntries.sort((a, b) => new Date(b.date) - new Date(a.date)); // Sort descending
+            
+            saveToFirebase();
+            updateDailyEquityTable();
+        }
+        
+        // Update the daily equity table
+        function updateDailyEquityTable() {
+            const tbody = document.getElementById('dailyEquityTableBody');
+            
+            if (dailyEquityEntries.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="9" class="empty-state">No daily entries yet. Click "Add Today\'s Entry" to start tracking.</td></tr>';
+                return;
+            }
+            
+            let html = '';
+            
+            dailyEquityEntries.forEach((entry, index) => {
+                // Calculate 10-day moving average
+                let tenDayAvg = 0;
+                let belowAvg = false;
+                
+                if (index <= dailyEquityEntries.length - 10) {
+                    const last10 = dailyEquityEntries.slice(index, index + 10);
+                    tenDayAvg = last10.reduce((sum, e) => sum + e.accountValue, 0) / 10;
+                    belowAvg = entry.accountValue < tenDayAvg;
+                }
+                
+                // Alternating row colors
+                const rowBg = index % 2 === 0 ? 'background: #f9fafb;' : 'background: white;';
+                
+                // Highlight 10-day avg if below average
+                const belowAvgStyle = belowAvg ? 'background: #fef3c7; color: #92400e; font-weight: 700;' : '';
+                
+                // Escape HTML in notes for display
+                const notesDisplay = entry.notes || '';
+                const notesPreview = notesDisplay.length > 30 ? notesDisplay.substring(0, 30) + '...' : notesDisplay;
+                
+                html += `
+                    <tr style="${rowBg}">
+                        <td>${entry.date}</td>
+                        <td>$${entry.accountValue.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+                        <td class="${entry.dailyChange >= 0 ? 'profit' : 'loss'}">${entry.dailyChange.toFixed(2)}%</td>
+                        <td style="${belowAvgStyle}">${tenDayAvg > 0 ? '$' + tenDayAvg.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}) : '-'}</td>
+                        <td>${entry.drawdown.toFixed(2)}%</td>
+                        <td>${entry.exposure.toFixed(2)}%</td>
+                        <td><input type="text" value="${entry.fomo}" onchange="updateDailyEquityEntry('${entry.date}', 'fomo', this.value)" style="width: 80px; padding: 4px;"></td>
+                        <td class="notes-cell">
+                            <div class="notes-preview" onclick="editDailyNote('${entry.date}', '${notesDisplay.replace(/'/g, "\\'")}')">
+                                ${notesPreview || 'Click to add notes...'}
+                            </div>
+                            ${notesDisplay ? `<div class="notes-tooltip" id="tooltip-${index}">${notesDisplay}</div>` : ''}
+                        </td>
+                        <td>
+                            <button class="btn-danger btn-small" onclick="deleteDailyEquityEntry('${entry.date}')">Delete</button>
+                        </td>
+                    </tr>
+                `;
+            });
+            
+            tbody.innerHTML = html;
+            
+            // Add hover positioning for tooltips
+            document.querySelectorAll('.notes-preview').forEach((preview, idx) => {
+                const tooltip = document.getElementById('tooltip-' + idx);
+                if (tooltip) {
+                    preview.addEventListener('mouseenter', function(e) {
+                        const rect = preview.getBoundingClientRect();
+                        tooltip.style.display = 'block';
+                        tooltip.style.left = rect.left + 'px';
+                        tooltip.style.top = (rect.bottom + 10) + 'px';
+                    });
+                    preview.addEventListener('mouseleave', function() {
+                        tooltip.style.display = 'none';
+                    });
+                }
+            });
+        }
+        
+        // Edit daily note with a modal/prompt
+        function editDailyNote(date, currentNotes) {
+            const newNotes = prompt('Edit your notes for ' + date + ':', currentNotes);
+            if (newNotes !== null) {
+                updateDailyEquityEntry(date, 'notes', newNotes);
+                updateDailyEquityTable();
+            }
+        }
+        
+        // Update a specific field in a daily equity entry
+        function updateDailyEquityEntry(date, field, value) {
+            const entry = dailyEquityEntries.find(e => e.date === date);
+            if (entry) {
+                entry[field] = value;
+                saveToFirebase();
+            }
+        }
+        
+        // Delete a daily equity entry
+        function deleteDailyEquityEntry(date) {
+            if (!confirm('Delete this daily entry?')) return;
+            
+            dailyEquityEntries = dailyEquityEntries.filter(e => e.date !== date);
+            saveToFirebase();
+            updateDailyEquityTable();
+        }
+
+        // Save daily snapshot
+        function saveDailySnapshot() {
+            const accountSize = getAccountSize();
+            const today = new Date().toISOString().split('T')[0];
+            
+            let totalOpenPnL = 0;
+            openPositions.forEach(pos => {
+                const metrics = calculatePositionMetrics(pos);
+                totalOpenPnL += metrics.totalPnL;
+            });
+            
+            const accountValue = accountSize + totalOpenPnL;
+            const existingIndex = dailyEquity.findIndex(snap => snap.date === today);
+            
+            if (existingIndex !== -1) {
+                dailyEquity[existingIndex] = {
+                    date: today,
+                    accountValue: accountValue,
+                    accountSize: accountSize,
+                    openPnL: totalOpenPnL
+                };
+            } else {
+                dailyEquity.push({
+                    date: today,
+                    accountValue: accountValue,
+                    accountSize: accountSize,
+                    openPnL: totalOpenPnL
+                });
+            }
+            
+            dailyEquity.sort((a, b) => new Date(a.date) - new Date(b.date));
+            
+            saveToFirebase();
+        }
+
+        function takeSnapshot() {
+            saveDailySnapshot();
+            updateEquityCurves();
+            alert('Daily snapshot saved! Your current account value has been recorded.');
+        }
+
+        // Fetch real-time price
+        async function fetchPrice(symbol) {
+            const apiKey = document.getElementById('apiKey').value;
+            if (!apiKey) return null;
+
+            try {
+                const response = await fetch(`https://finnhub.io/api/v1/quote?symbol=${symbol}&token=${apiKey}`);
+                const data = await response.json();
+                if (data && data.c) return data.c;
+            } catch (error) {
+                console.error(`Error fetching price for ${symbol}:`, error);
+            }
+            return null;
+        }
+
+        // Update all prices
+        async function updateAllPrices() {
+            if (openPositions.length === 0) {
+                alert('No open positions to update');
+                return;
+            }
+
+            const apiKey = document.getElementById('apiKey').value;
+            if (!apiKey) {
+                alert('Please add your Finnhub API key to enable real-time prices. Get a free key at finnhub.io');
+                return;
+            }
+
+            document.getElementById('lastUpdate').textContent = 'Updating...';
+            
+            let updatedCount = 0;
+            for (let pos of openPositions) {
+                const price = await fetchPrice(pos.symbol);
+                if (price) {
+                    pos.currentPrice = price;
+                    updatedCount++;
+                }
+                await new Promise(resolve => setTimeout(resolve, 200));
+            }
+            
+            if (updatedCount > 0) {
+                saveToFirebase();
+                updateAllDisplays();
+                const now = new Date().toLocaleTimeString();
+                document.getElementById('lastUpdate').textContent = `Last updated: ${now}`;
+            } else {
+                document.getElementById('lastUpdate').textContent = 'Update failed';
+            }
+        }
+
+        // Auto-refresh handler
+        let autoRefreshInterval = null;
+        document.getElementById('autoRefresh').addEventListener('change', function() {
+            if (this.checked) {
+                updateAllPrices();
+                autoRefreshInterval = setInterval(updateAllPrices, 60000);
+            } else {
+                if (autoRefreshInterval) {
+                    clearInterval(autoRefreshInterval);
+                    autoRefreshInterval = null;
+                }
+            }
+        });
+
+        // Modal functions
+        function openPartialSellModal(id) {
+            document.getElementById('partialSellId').value = id;
+            document.getElementById('partialSellModal').style.display = 'block';
+        }
+
+        function openUpdateStopModal(id) {
+            document.getElementById('updateStopId').value = id;
+            const pos = openPositions.find(p => p.id === id);
+            document.getElementById('newStopPrice').value = pos.currentStop;
+            document.getElementById('updateStopModal').style.display = 'block';
+        }
+
+        function openClosePositionModal(id) {
+            document.getElementById('closePositionId').value = id;
+            document.getElementById('exitDate').value = new Date().toISOString().split('T')[0];
+            document.getElementById('closePositionModal').style.display = 'block';
+        }
+
+        function openEditPositionModal(id) {
+            const pos = openPositions.find(p => p.id === id);
+            if (!pos) return;
+            
+            document.getElementById('editPositionId').value = id;
+            document.getElementById('editSymbol').value = pos.symbol;
+            document.getElementById('editEntryPrice').value = pos.entryPrice;
+            document.getElementById('editCurrentPrice').value = pos.currentPrice;
+            document.getElementById('editInitialStop').value = pos.initialStop;
+            document.getElementById('editCurrentStop').value = pos.currentStop;
+            document.getElementById('editShares').value = pos.shares;
+            document.getElementById('editInitialWeight').value = pos.initialWeight;
+            document.getElementById('editPositionModal').style.display = 'block';
+        }
+
+        function openEditClosedTradeModal(index) {
+            const trade = closedTrades[index];
+            if (!trade) return;
+            
+            document.getElementById('editClosedTradeIndex').value = index;
+            document.getElementById('editClosedSymbol').value = trade.symbol;
+            document.getElementById('editClosedEntryPrice').value = trade.entryPrice;
+            document.getElementById('editClosedExitPrice').value = trade.exitPrice;
+            document.getElementById('editClosedInitialStop').value = trade.initialStop || trade.entryPrice * 0.97;
+            document.getElementById('editClosedExitDate').value = trade.exitDate;
+            document.getElementById('editClosedAccountWeight').value = trade.accountWeight;
+            document.getElementById('editClosedNotes').value = trade.notes || '';
+            document.getElementById('editClosedTradeModal').style.display = 'block';
+        }
+
+        function closeModal(modalId) {
+            document.getElementById(modalId).style.display = 'none';
+        }
+
+        function deletePosition(id) {
+            const pos = openPositions.find(p => p.id === id);
+            if (!pos) return;
+            
+            if (confirm(`Are you sure you want to delete ${pos.symbol}? This action cannot be undone.`)) {
+                openPositions = openPositions.filter(p => p.id !== id);
+                saveToFirebase();
+                updateAllDisplays();
+            }
+        }
+
+        function deleteClosedTrade(index) {
+            const trade = closedTrades[index];
+            if (!trade) return;
+            
+            if (confirm(`Are you sure you want to delete the closed ${trade.symbol} trade? This will affect your cumulative stats.`)) {
+                closedTrades.splice(index, 1);
+                saveToFirebase();
+                updateAllDisplays();
+            }
+        }
+
+        // Partial sell
+        document.getElementById('partialSellForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const id = parseInt(document.getElementById('partialSellId').value);
+            const shares = parseInt(document.getElementById('partialShares').value);
+            const price = parseFloat(document.getElementById('partialPrice').value);
+            
+            const pos = openPositions.find(p => p.id === id);
+            if (pos && shares < pos.shares) {
+                if (!pos.partialSells) pos.partialSells = [];
+                pos.partialSells.push({ shares, price, date: new Date().toISOString() });
+                pos.shares -= shares;
+                
+                saveToFirebase();
+                saveDailySnapshot();
+                updateAllDisplays();
+                closeModal('partialSellModal');
+                this.reset();
+            } else {
+                alert('Invalid partial sell amount');
+            }
+        });
+
+        // Update stop
+        document.getElementById('updateStopForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const id = parseInt(document.getElementById('updateStopId').value);
+            const newStop = parseFloat(document.getElementById('newStopPrice').value);
+            
+            const pos = openPositions.find(p => p.id === id);
+            if (pos) {
+                pos.currentStop = newStop;
+                saveToFirebase();
+                updateAllDisplays();
+                closeModal('updateStopModal');
+                this.reset();
+            }
+        });
+
+        // Close position
+        document.getElementById('closePositionForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const id = parseInt(document.getElementById('closePositionId').value);
+            const exitPrice = parseFloat(document.getElementById('exitPrice').value);
+            const exitDate = document.getElementById('exitDate').value;
+            const notes = document.getElementById('tradeNotes').value;
+            
+            const posIndex = openPositions.findIndex(p => p.id === id);
+            if (posIndex !== -1) {
+                const pos = openPositions[posIndex];
+                const metrics = calculatePositionMetrics(pos);
+                
+                const rMultiple = metrics.initialRiskPercent > 0 ? 
+                    ((exitPrice / pos.entryPrice - 1) * 100) / metrics.initialRiskPercent : 0;
+                
+                const closedTrade = {
+                    symbol: pos.symbol,
+                    entryPrice: pos.entryPrice,
+                    exitPrice: exitPrice,
+                    initialStop: pos.initialStop,
+                    adjustedPrice: metrics.adjustedPrice,
+                    accountWeight: metrics.accountWeight,
+                    pnlPercent: ((exitPrice - metrics.adjustedPrice) / metrics.adjustedPrice) * 100,
+                    portfolioPnlPercent: (((exitPrice - metrics.adjustedPrice) / metrics.adjustedPrice) * 100 / 100) * metrics.accountWeight,
+                    initialRiskPercent: metrics.initialRiskPercent,
+                    rMultiple: rMultiple,
+                    exitDate: exitDate,
+                    notes: notes
+                };
+                
+                closedTrades.push(closedTrade);
+                openPositions.splice(posIndex, 1);
+                
+                saveToFirebase();
+                saveDailySnapshot();
+                updateAllDisplays();
+                closeModal('closePositionModal');
+                this.reset();
+            }
+        });
+
+        // Edit position
+        document.getElementById('editPositionForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const id = parseInt(document.getElementById('editPositionId').value);
+            const pos = openPositions.find(p => p.id === id);
+            
+            if (pos) {
+                pos.symbol = document.getElementById('editSymbol').value.toUpperCase();
+                pos.entryPrice = parseFloat(document.getElementById('editEntryPrice').value);
+                pos.currentPrice = parseFloat(document.getElementById('editCurrentPrice').value);
+                pos.initialStop = parseFloat(document.getElementById('editInitialStop').value);
+                pos.currentStop = parseFloat(document.getElementById('editCurrentStop').value);
+                const newShares = parseInt(document.getElementById('editShares').value);
+                pos.initialWeight = parseFloat(document.getElementById('editInitialWeight').value);
+                
+                if (!pos.partialSells || pos.partialSells.length === 0) {
+                    pos.shares = newShares;
+                    pos.initialShares = newShares;
+                } else {
+                    pos.shares = newShares;
+                    if (!pos.initialShares) {
+                        pos.initialShares = newShares;
+                    }
+                }
+                
+                saveToFirebase();
+                updateAllDisplays();
+                closeModal('editPositionModal');
+                this.reset();
+            }
+        });
+
+        // Edit closed trade
+        document.getElementById('editClosedTradeForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const index = parseInt(document.getElementById('editClosedTradeIndex').value);
+            const trade = closedTrades[index];
+            
+            if (trade) {
+                const entryPrice = parseFloat(document.getElementById('editClosedEntryPrice').value);
+                const exitPrice = parseFloat(document.getElementById('editClosedExitPrice').value);
+                const initialStop = parseFloat(document.getElementById('editClosedInitialStop').value);
+                const accountWeight = parseFloat(document.getElementById('editClosedAccountWeight').value);
+                
+                trade.symbol = document.getElementById('editClosedSymbol').value.toUpperCase();
+                trade.entryPrice = entryPrice;
+                trade.exitPrice = exitPrice;
+                trade.initialStop = initialStop;
+                trade.exitDate = document.getElementById('editClosedExitDate').value;
+                trade.accountWeight = accountWeight;
+                trade.notes = document.getElementById('editClosedNotes').value;
+                
+                const adjustedPrice = trade.adjustedPrice || entryPrice;
+                trade.pnlPercent = ((exitPrice - adjustedPrice) / adjustedPrice) * 100;
+                trade.portfolioPnlPercent = (trade.pnlPercent / 100) * accountWeight;
+                trade.initialRiskPercent = ((entryPrice - initialStop) / entryPrice) * 100;
+                const exitReturn = ((exitPrice - entryPrice) / entryPrice) * 100;
+                trade.rMultiple = trade.initialRiskPercent > 0 ? exitReturn / trade.initialRiskPercent : 0;
+                
+                saveToFirebase();
+                updateAllDisplays();
+                closeModal('editClosedTradeModal');
+                this.reset();
+            }
+        });
+
+        // Tab switching
+        function switchTab(tabName) {
+            document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+            
+            // Find the button that was clicked
+            const clickedButton = event ? event.target : document.querySelector(`[onclick="switchTab('${tabName}')"]`);
+            if (clickedButton) {
+                clickedButton.classList.add('active');
+            }
+            
+            document.getElementById(tabName).classList.add('active');
+        }
+
+        // Update all displays
+        function updateAllDisplays() {
+            updateOpenPositionsTable();
+            updatePortfolioStats();
+            updateClosedTradeStats();
+            updateClosedTradesTable();
+            updateEquityCurves();
+            updateAccountStats();
+            updateDailyEquityTable();
+        }
+
+        // Position Sizing Calculator Functions
+        function calculateRisk() {
+            const triggerPrice = parseFloat(document.getElementById('calcTriggerPrice').value);
+            const stopPrice = parseFloat(document.getElementById('calcStopPrice').value);
+            
+            if (!triggerPrice || !stopPrice) {
+                alert('Please enter both Trigger Price and Stop Price');
+                return;
+            }
+            
+            const riskPerShare = triggerPrice - stopPrice;
+            const riskPercent = (riskPerShare / triggerPrice) * 100;
+            
+            document.getElementById('calculatedRisk').textContent = riskPercent.toFixed(2) + '%';
+            document.getElementById('riskPerShare').textContent = '$' + riskPerShare.toFixed(2);
+            document.getElementById('posRiskPerShare').value = riskPerShare.toFixed(2);
+        }
+        
+        function calculatePositionSize() {
+            const accountSize = parseFloat(document.getElementById('posCalcAccount').value);
+            const riskPercent = parseFloat(document.getElementById('posRiskPercent').value);
+            const riskPerShare = parseFloat(document.getElementById('posRiskPerShare').value);
+            const triggerPrice = parseFloat(document.getElementById('calcTriggerPrice').value);
+            
+            if (!accountSize || !riskPercent || !riskPerShare || !triggerPrice) {
+                alert('Please calculate risk first and enter account size and risk %');
+                return;
+            }
+            
+            const dollarRisk = (riskPercent / 100) * accountSize;
+            const shares = Math.floor(dollarRisk / riskPerShare);
+            const posValue = shares * triggerPrice;
+            const accountWeight = (posValue / accountSize) * 100;
+            
+            document.getElementById('sharesToBuy').textContent = shares;
+            document.getElementById('positionValue').textContent = '$' + posValue.toFixed(2);
+            document.getElementById('accountWeightCalc').textContent = accountWeight.toFixed(2) + '%';
+        }
+
+        // Stock Profile Data Storage
+        let stockProfiles = {
+            1: { symbol: '', price: 0, stop: 0 },
+            2: { symbol: '', price: 0, stop: 0 },
+            3: { symbol: '', price: 0, stop: 0 },
+            4: { symbol: '', price: 0, stop: 0 },
+            5: { symbol: '', price: 0, stop: 0 },
+            6: { symbol: '', price: 0, stop: 0 }
+        };
+
+        // Update Stock Profile
+        function updateStockProfile(stockNum) {
+            const symbol = document.getElementById(`stock${stockNum}SymbolInput`).value.toUpperCase();
+            const price = parseFloat(document.getElementById(`stock${stockNum}Price`).value);
+            const stop = parseFloat(document.getElementById(`stock${stockNum}Stop`).value);
+            
+            if (!symbol || !price || !stop) {
+                alert('Please enter Symbol, Price, and Stop');
+                return;
+            }
+            
+            stockProfiles[stockNum] = { symbol, price, stop };
+            
+            // Update tab label
+            document.getElementById(`stock${stockNum}Symbol`).textContent = symbol;
+            document.getElementById(`stock${stockNum}Title`).textContent = `${symbol} Risk Profile`;
+            
+            // Generate and display the risk profile table
+            const profileHTML = generateStockProfileTable(stockNum, symbol, price, stop);
+            document.getElementById(`stock${stockNum}Profile`).innerHTML = profileHTML;
+            
+            saveToFirebase();
+        }
+
+        // Generate Stock Profile Table
+        function generateStockProfileTable(stockNum, symbol, price, stop) {
+            const accountSize = getAccountSize();
+            const myRoth = parseFloat(document.getElementById('myRoth').value) || 0;
+            const wifeRoth = parseFloat(document.getElementById('wifeRoth').value) || 0;
+            
+            const riskPerShare = price - stop;
+            const stockRiskPercent = (riskPerShare / price) * 100;
+            
+            const riskLevels = [
+                { label: 'Risking 1% of account', percent: 1.0, isRisk: true },
+                { label: 'Risking 0.75% of account', percent: 0.75, isRisk: true },
+                { label: 'Risking 0.5% of account', percent: 0.5, isRisk: true },
+                { label: 'Risking 0.25% of account', percent: 0.25, isRisk: true },
+                { label: 'Risking 0.125% of account', percent: 0.125, isRisk: true },
+                { label: '25% Position Size', percent: 25, isRisk: false },
+                { label: '15% Position Size', percent: 15, isRisk: false },
+                { label: '12% Position Size', percent: 12, isRisk: false },
+                { label: '9% Position Size', percent: 9, isRisk: false }
+            ];
+            
+            let html = `
+                <div style="margin-bottom: 20px; padding: 15px; background: #f9f9f9; border-radius: 8px;">
+                    <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px;">
+                        <div>
+                            <div style="font-size: 0.85em; color: #666;">Current Price</div>
+                            <div style="font-size: 1.5em; font-weight: bold; color: #667eea;">$${price.toFixed(2)}</div>
+                        </div>
+                        <div>
+                            <div style="font-size: 0.85em; color: #666;">Stop Price</div>
+                            <div style="font-size: 1.5em; font-weight: bold; color: #ef4444;">$${stop.toFixed(2)}</div>
+                        </div>
+                        <div>
+                            <div style="font-size: 0.85em; color: #666;">Stock Risk %</div>
+                            <div style="font-size: 1.5em; font-weight: bold; color: #f59e0b;">${stockRiskPercent.toFixed(2)}%</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <table style="margin-bottom: 20px;">
+                    <thead>
+                        <tr>
+                            <th>Risk/Position Level</th>
+                            <th>Trading Account<br/>Shares</th>
+                            <th>Trading Account<br/>Acct Wt%</th>
+                            <th>My Roth<br/>Shares</th>
+                            <th>My Roth<br/>Acct Wt%</th>
+                            <th>Wife Roth<br/>Shares</th>
+                            <th>Wife Roth<br/>Acct Wt%</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+            `;
+            
+            riskLevels.forEach((level, index) => {
+                let mainShares, mainWeight, myRothShares, myRothWeight, wifeRothShares, wifeRothWeight;
+                
+                if (level.isRisk) {
+                    // Risk-based calculation
+                    const mainRisk = (level.percent / 100) * accountSize;
+                    mainShares = Math.floor(mainRisk / riskPerShare);
+                    const mainValue = mainShares * price;
+                    mainWeight = (mainValue / accountSize) * 100;
+                    
+                    const myRothRisk = myRoth > 0 ? (level.percent / 100) * myRoth : 0;
+                    myRothShares = myRoth > 0 ? Math.floor(myRothRisk / riskPerShare) : 0;
+                    const myRothValue = myRothShares * price;
+                    myRothWeight = myRoth > 0 ? (myRothValue / myRoth) * 100 : 0;
+                    
+                    const wifeRothRisk = wifeRoth > 0 ? (level.percent / 100) * wifeRoth : 0;
+                    wifeRothShares = wifeRoth > 0 ? Math.floor(wifeRothRisk / riskPerShare) : 0;
+                    const wifeRothValue = wifeRothShares * price;
+                    wifeRothWeight = wifeRoth > 0 ? (wifeRothValue / wifeRoth) * 100 : 0;
+                } else {
+                    // Position size calculation
+                    const mainValue = (level.percent / 100) * accountSize;
+                    mainShares = Math.floor(mainValue / price);
+                    const mainActualValue = mainShares * price;
+                    mainWeight = (mainActualValue / accountSize) * 100;
+                    
+                    const myRothValue = myRoth > 0 ? (level.percent / 100) * myRoth : 0;
+                    myRothShares = myRoth > 0 ? Math.floor(myRothValue / price) : 0;
+                    const myRothActualValue = myRothShares * price;
+                    myRothWeight = myRoth > 0 ? (myRothActualValue / myRoth) * 100 : 0;
+                    
+                    const wifeRothValue = wifeRoth > 0 ? (level.percent / 100) * wifeRoth : 0;
+                    wifeRothShares = wifeRoth > 0 ? Math.floor(wifeRothValue / price) : 0;
+                    const wifeRothActualValue = wifeRothShares * price;
+                    wifeRothWeight = wifeRoth > 0 ? (wifeRothActualValue / wifeRoth) * 100 : 0;
+                }
+                
+                // Alternating row colors
+                const rowStyle = index % 2 === 0 ? 'background: #f9f9f9;' : 'background: white;';
+                
+                html += `
+                    <tr style="${rowStyle}">
+                        <td><strong>${level.label}</strong></td>
+                        <td>${mainShares}</td>
+                        <td>${mainWeight.toFixed(2)}%</td>
+                        <td>${myRothShares}</td>
+                        <td>${myRothWeight.toFixed(2)}%</td>
+                        <td>${wifeRothShares}</td>
+                        <td>${wifeRothWeight.toFixed(2)}%</td>
+                    </tr>
+                `;
+            });
+            
+            html += `
+                    </tbody>
+                </table>
+                
+                <div style="padding: 15px; background: #fffbeb; border-radius: 8px; border: 2px solid #f59e0b;">
+                    <h3 style="color: #f59e0b; margin-bottom: 10px; font-size: 1em;">Quick Reference</h3>
+                    <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; font-size: 0.9em;">
+                        <div>Trading Account: <strong>$${accountSize.toLocaleString()}</strong></div>
+                        <div>Risk per Share: <strong>$${riskPerShare.toFixed(2)}</strong></div>
+                        <div>My Roth: <strong>$${myRoth.toLocaleString()}</strong></div>
+                        <div>Stock Risk: <strong>${stockRiskPercent.toFixed(2)}%</strong></div>
+                        <div>Wife's Roth: <strong>$${wifeRoth.toLocaleString()}</strong></div>
+                        <div></div>
+                    </div>
+                </div>
+            `;
+            
+            return html;
+        }
+
+        // Auto-save account settings with error checking
+        const accountFields = [
+            { id: 'accountSize', callback: function() { saveToFirebase(); saveDailySnapshot(); updateAllDisplays(); } },
+            { id: 'startingAccount', callback: function() { saveToFirebase(); updateAllDisplays(); } },
+            { id: 'myRoth', callback: saveToFirebase },
+            { id: 'myRothJan1', callback: saveToFirebase },
+            { id: 'wifeRoth', callback: saveToFirebase },
+            { id: 'wifeRothJan1', callback: saveToFirebase },
+            { id: 'apiKey', callback: saveToFirebase }
+        ];
+        
+        accountFields.forEach(field => {
+            const element = document.getElementById(field.id);
+            if (element) {
+                element.addEventListener('change', field.callback);
+            } else {
+                console.warn(`Element with id '${field.id}' not found`);
+            }
+        });
+
+        // Initialize
+        window.onload = function() {
+            const hasConfig = loadFirebaseConfig();
+            if (!hasConfig) {
+                updateSyncStatus('Not configured - Click ⚙️ Firebase Config', false);
+                // Show modal after a short delay so page loads first
+                setTimeout(() => {
+                    document.getElementById('firebaseSetupModal').style.display = 'block';
+                }, 500);
+            } else {
+                updateSyncStatus('Connected to Firebase ✓', true);
+            }
+        };
+    </script>
+</body>
+</html>
