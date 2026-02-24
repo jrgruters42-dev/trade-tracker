@@ -919,6 +919,7 @@
                 <!-- Add Daily Entry Button -->
                 <div style="margin-bottom: 15px;">
                     <button onclick="addDailyEquityEntry()" class="btn-success">📊 Add Today's Entry</button>
+                    <button onclick="archiveYearEndData()" class="btn-secondary" style="margin-left: 10px;">📦 Archive & Reset for New Year</button>
                     <span style="margin-left: 15px; color: #666; font-size: 0.9em;">Auto-fills from current account values</span>
                 </div>
                 
@@ -1590,7 +1591,6 @@
                 let symbolStyle = '';
                 if (metrics.portfolioCapitalRisk === 0) {
                     portRiskStyle = 'background: #10b981; color: white; font-weight: 700;'; // green
-                    symbolStyle = 'color: #10b981; font-weight: 700;'; // green symbol
                 } else if (metrics.portfolioCapitalRisk < 0.5) {
                     // Manila/light yellow (default from highlight-col class, no extra styling needed)
                     portRiskStyle = '';
@@ -1598,6 +1598,11 @@
                     portRiskStyle = 'background: #fca5a5; color: #7f1d1d; font-weight: 700;'; // light red
                 } else {
                     portRiskStyle = 'background: #ef4444; color: white; font-weight: 700;'; // red
+                }
+                
+                // Green symbol if current stop is at or above adjusted price (position is risk-free)
+                if (pos.currentStop >= metrics.adjustedPrice) {
+                    symbolStyle = 'color: #10b981; font-weight: 700;';
                 }
                 
                 // Color coding for Portfolio Drawdown
@@ -2070,10 +2075,12 @@
                 totalDrawdown += metrics.portfolioDrawdown;
             });
             
-            // Calculate daily % change (if we have previous day)
+            // Calculate daily % change (compare to most recent previous entry chronologically)
             let dailyChange = 0;
             if (dailyEquityEntries.length > 0) {
-                const prevEntry = dailyEquityEntries[dailyEquityEntries.length - 1];
+                // Sort chronologically (oldest first) to find the most recent entry before today
+                const sorted = [...dailyEquityEntries].sort((a, b) => new Date(a.date) - new Date(b.date));
+                const prevEntry = sorted[sorted.length - 1]; // Last entry chronologically
                 dailyChange = ((accountSize - prevEntry.accountValue) / prevEntry.accountValue) * 100;
             }
             
@@ -2089,7 +2096,7 @@
             };
             
             dailyEquityEntries.push(newEntry);
-            dailyEquityEntries.sort((a, b) => new Date(b.date) - new Date(a.date)); // Sort descending
+            dailyEquityEntries.sort((a, b) => new Date(b.date) - new Date(a.date)); // Sort descending (newest first)
             
             saveToFirebase();
             updateDailyEquityTable();
@@ -2143,6 +2150,7 @@
                             ${notesDisplay ? `<div class="notes-tooltip" id="tooltip-${index}">${notesDisplay}</div>` : ''}
                         </td>
                         <td>
+                            <button class="btn-secondary btn-small" onclick="editJournalEntry('${entry.date}')" style="margin-right: 5px;">Edit</button>
                             <button class="btn-danger btn-small" onclick="deleteDailyEquityEntry('${entry.date}')">Delete</button>
                         </td>
                     </tr>
@@ -2177,6 +2185,47 @@
             }
         }
         
+        // Edit entire journal entry
+        function editJournalEntry(date) {
+            const entry = dailyEquityEntries.find(e => e.date === date);
+            if (!entry) return;
+            
+            const newAccountValue = prompt('Account Value for ' + date + ':', entry.accountValue);
+            if (newAccountValue === null) return; // User canceled
+            
+            const newFomo = prompt('FOMO for ' + date + ':', entry.fomo);
+            if (newFomo === null) return;
+            
+            const newNotes = prompt('Notes for ' + date + ':', entry.notes);
+            if (newNotes === null) return;
+            
+            // Update the entry
+            entry.accountValue = parseFloat(newAccountValue);
+            entry.fomo = newFomo;
+            entry.notes = newNotes;
+            
+            // Recalculate daily % change for this entry and subsequent entries
+            recalculateDailyChanges();
+            
+            saveToFirebase();
+            updateDailyEquityTable();
+        }
+        
+        // Recalculate daily % changes for all entries
+        function recalculateDailyChanges() {
+            // Sort chronologically (oldest first)
+            const sorted = [...dailyEquityEntries].sort((a, b) => new Date(a.date) - new Date(b.date));
+            
+            sorted.forEach((entry, index) => {
+                if (index === 0) {
+                    entry.dailyChange = 0; // First entry has no previous day
+                } else {
+                    const prevEntry = sorted[index - 1];
+                    entry.dailyChange = ((entry.accountValue - prevEntry.accountValue) / prevEntry.accountValue) * 100;
+                }
+            });
+        }
+        
         // Update a specific field in a daily equity entry
         function updateDailyEquityEntry(date, field, value) {
             const entry = dailyEquityEntries.find(e => e.date === date);
@@ -2191,8 +2240,67 @@
             if (!confirm('Delete this daily entry?')) return;
             
             dailyEquityEntries = dailyEquityEntries.filter(e => e.date !== date);
+            
+            // Recalculate daily changes after deletion
+            recalculateDailyChanges();
+            
             saveToFirebase();
             updateDailyEquityTable();
+        }
+        
+        // Archive year-end data
+        function archiveYearEndData() {
+            const currentYear = new Date().getFullYear();
+            const previousYear = currentYear - 1;
+            
+            if (!confirm(`Archive all ${previousYear} data and reset for ${currentYear}?\n\nThis will:\n1. Download a backup file with all your ${previousYear} data\n2. Clear all closed trades\n3. Clear all daily journal entries\n4. Keep your open positions\n5. Reset account to current value as new starting point\n\nYou MUST download the backup file before proceeding!`)) {
+                return;
+            }
+            
+            // Create archive data
+            const archiveData = {
+                year: previousYear,
+                archivedDate: new Date().toISOString(),
+                closedTrades: closedTrades,
+                dailyJournalEntries: dailyEquityEntries,
+                dailyEquity: dailyEquity,
+                finalAccountValue: getAccountSize(),
+                startingAccountValue: parseFloat(document.getElementById('startingAccount').value),
+                totalReturn: ((getAccountSize() - parseFloat(document.getElementById('startingAccount').value)) / parseFloat(document.getElementById('startingAccount').value) * 100).toFixed(2) + '%'
+            };
+            
+            // Download archive file
+            const dataStr = JSON.stringify(archiveData, null, 2);
+            const dataBlob = new Blob([dataStr], {type: 'application/json'});
+            const url = URL.createObjectURL(dataBlob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = `trade-tracker-archive-${previousYear}.json`;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(url);
+            
+            // Give user time to see the download
+            setTimeout(() => {
+                if (confirm('Archive file downloaded! Ready to reset tracker for new year?')) {
+                    // Reset data
+                    closedTrades = [];
+                    dailyEquityEntries = [];
+                    dailyEquity = [];
+                    
+                    // Set new starting account value to current value
+                    const currentAccount = getAccountSize();
+                    document.getElementById('startingAccount').value = currentAccount;
+                    document.getElementById('myRothJan1').value = document.getElementById('myRoth').value;
+                    document.getElementById('wifeRothJan1').value = document.getElementById('wifeRoth').value;
+                    
+                    saveToFirebase();
+                    updateAllDisplays();
+                    
+                    alert(`✅ Tracker reset for ${currentYear}!\n\nYour archive is saved as: trade-tracker-archive-${previousYear}.json\n\nStarting account values updated to current balances.`);
+                }
+            }, 1000);
         }
 
         // Save daily snapshot
