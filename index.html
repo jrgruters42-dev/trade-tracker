@@ -919,8 +919,10 @@
                 <!-- Add Daily Entry Button -->
                 <div style="margin-bottom: 15px;">
                     <button onclick="addDailyEquityEntry()" class="btn-success">📊 Add Today's Entry</button>
+                    <button onclick="addCustomDateEntry()" class="btn-secondary" style="margin-left: 5px;">📅 Add Entry for Specific Date</button>
+                    <button onclick="recalculateAllDailyChanges()" class="btn-secondary" style="margin-left: 5px;">🔄 Recalculate All %</button>
                     <button onclick="archiveYearEndData()" class="btn-secondary" style="margin-left: 10px;">📦 Archive & Reset for New Year</button>
-                    <span style="margin-left: 15px; color: #666; font-size: 0.9em;">Auto-fills from current account values</span>
+                    <span style="margin-left: 15px; color: #666; font-size: 0.9em;">Auto-fills from current account values | <span id="entryCount">0 entries</span></span>
                 </div>
                 
                 <!-- Daily Equity Table -->
@@ -1408,6 +1410,11 @@
             dailyEquity = data.dailyEquity || [];
             dailyEquityEntries = data.dailyEquityEntries || [];
             positionIdCounter = data.positionIdCounter || 1;
+            
+            // Automatically recalculate daily changes to fix any historical calculation errors
+            if (dailyEquityEntries.length > 0) {
+                recalculateDailyChanges();
+            }
 
             document.getElementById('accountSize').value = data.accountSize || 250000;
             document.getElementById('startingAccount').value = data.startingAccount || 248288;
@@ -2102,9 +2109,69 @@
             updateDailyEquityTable();
         }
         
+        // Add entry for a specific date
+        function addCustomDateEntry() {
+            const dateInput = prompt('Enter date (YYYY-MM-DD):', new Date().toISOString().split('T')[0]);
+            if (!dateInput) return;
+            
+            // Validate date format
+            const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
+            if (!dateRegex.test(dateInput)) {
+                alert('Invalid date format. Please use YYYY-MM-DD (e.g., 2026-02-23)');
+                return;
+            }
+            
+            const targetDate = dateInput;
+            
+            // Check if entry for this date already exists
+            const existingEntry = dailyEquityEntries.find(entry => entry.date === targetDate);
+            if (existingEntry) {
+                if (!confirm(`An entry for ${targetDate} already exists. Replace it?`)) {
+                    return;
+                }
+                dailyEquityEntries = dailyEquityEntries.filter(entry => entry.date !== targetDate);
+            }
+            
+            const accountValue = prompt(`Account Value for ${targetDate}:`, '');
+            if (!accountValue) return;
+            
+            const drawdown = prompt(`Drawdown % for ${targetDate} (optional):`, '0');
+            const exposure = prompt(`Exposure % for ${targetDate} (optional):`, '0');
+            const fomo = prompt(`FOMO for ${targetDate} (optional):`, '');
+            const notes = prompt(`Notes for ${targetDate} (optional):`, '');
+            
+            // Create new entry
+            const newEntry = {
+                date: targetDate,
+                accountValue: parseFloat(accountValue),
+                dailyChange: 0, // Will be calculated
+                drawdown: parseFloat(drawdown) || 0,
+                exposure: parseFloat(exposure) || 0,
+                fomo: fomo || '',
+                notes: notes || ''
+            };
+            
+            dailyEquityEntries.push(newEntry);
+            dailyEquityEntries.sort((a, b) => new Date(b.date) - new Date(a.date));
+            
+            // Recalculate all daily changes
+            recalculateDailyChanges();
+            
+            saveToFirebase();
+            updateDailyEquityTable();
+            
+            alert(`✅ Entry added for ${targetDate}!\n\nDaily % changes have been recalculated for all entries.`);
+        }
+        
         // Update the daily equity table
         function updateDailyEquityTable() {
             const tbody = document.getElementById('dailyEquityTableBody');
+            
+            // Update entry count
+            const entryCountSpan = document.getElementById('entryCount');
+            if (entryCountSpan) {
+                entryCountSpan.textContent = `${dailyEquityEntries.length} ${dailyEquityEntries.length === 1 ? 'entry' : 'entries'}`;
+            }
             
             if (dailyEquityEntries.length === 0) {
                 tbody.innerHTML = '<tr><td colspan="9" class="empty-state">No daily entries yet. Click "Add Today\'s Entry" to start tracking.</td></tr>';
@@ -2224,6 +2291,40 @@
                     entry.dailyChange = ((entry.accountValue - prevEntry.accountValue) / prevEntry.accountValue) * 100;
                 }
             });
+        }
+        
+        // User-triggered recalculation with confirmation
+        function recalculateAllDailyChanges() {
+            if (dailyEquityEntries.length === 0) {
+                alert('No entries to recalculate!');
+                return;
+            }
+            
+            // Show preview of what will change
+            const sorted = [...dailyEquityEntries].sort((a, b) => new Date(a.date) - new Date(b.date));
+            let previewText = 'This will recalculate ALL daily % changes:\n\n';
+            
+            sorted.forEach((entry, index) => {
+                if (index > 0) {
+                    const prevEntry = sorted[index - 1];
+                    const correctChange = ((entry.accountValue - prevEntry.accountValue) / prevEntry.accountValue) * 100;
+                    const oldChange = entry.dailyChange;
+                    
+                    if (Math.abs(correctChange - oldChange) > 0.01) {
+                        previewText += `${entry.date}: ${oldChange.toFixed(2)}% → ${correctChange.toFixed(2)}%\n`;
+                    }
+                }
+            });
+            
+            if (!confirm(previewText + '\nProceed with recalculation?')) {
+                return;
+            }
+            
+            recalculateDailyChanges();
+            saveToFirebase();
+            updateDailyEquityTable();
+            
+            alert('✅ All daily % changes recalculated correctly!');
         }
         
         // Update a specific field in a daily equity entry
