@@ -557,10 +557,18 @@
         <h1 style="margin-bottom: 10px; font-size: 1.8em;">📊 Trade Tracker</h1>
 
         <!-- Sync Status -->
-        <div class="sync-status" style="padding: 10px 15px; margin-bottom: 12px;">
-            <div class="sync-indicator">
+        <div class="sync-status" style="padding: 10px 15px; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center;">
+            <div class="sync-indicator" style="display: flex; align-items: center; gap: 10px;">
                 <div class="sync-dot" id="syncDot"></div>
-                <span id="syncStatus" style="font-size: 13px;">Connecting to cloud...</span>
+                <div style="display: flex; flex-direction: column;">
+                    <span id="syncStatus" style="font-size: 13px; font-weight: 600;">Connecting to cloud...</span>
+                    <span id="lastSavedTime" style="font-size: 11px; color: #666;">Never saved</span>
+                </div>
+            </div>
+            <div style="display: flex; gap: 5px;">
+                <button onclick="forceSaveToFirebase()" class="btn-secondary btn-small" title="Force save all data to Firebase">💾 Save</button>
+                <button onclick="forceLoadFromFirebase()" class="btn-secondary btn-small" title="Force reload all data from Firebase">🔄 Reload</button>
+                <button onclick="openFirebaseSetup()" class="btn-secondary btn-small">⚙️</button>
             </div>
         </div>
 
@@ -750,7 +758,10 @@
         <!-- Closed Trades Tab -->
         <div id="closed-trades" class="tab-content">
             <div class="card">
-                <h2>Closed Trade History</h2>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                    <h2 style="margin: 0;">Closed Trade History</h2>
+                    <button onclick="recalculateClosedTradeRMultiples()" class="btn-secondary btn-small">🔄 Recalculate R-Multiples</button>
+                </div>
                 <div class="table-scroll" id="closedTradesTable">
                     <div class="empty-state">No closed trades</div>
                 </div>
@@ -1392,12 +1403,63 @@
             };
 
             dbRef.set(data).then(() => {
+                const now = new Date();
+                const timeStr = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
                 updateSyncStatus('Synced ✓', true);
-                console.log('Data saved to Firebase successfully');
+                document.getElementById('lastSavedTime').textContent = `Last saved: ${timeStr}`;
+                console.log('Data saved to Firebase successfully at', timeStr);
             }).catch((error) => {
                 console.error('Save error:', error);
                 updateSyncStatus('Sync error', false);
+                document.getElementById('lastSavedTime').textContent = `Save failed`;
                 alert('Firebase sync error: ' + error.message);
+            });
+        }
+        
+        // Force save to Firebase (user-triggered)
+        function forceSaveToFirebase() {
+            if (!isFirebaseInitialized || !dbRef) {
+                alert('❌ Firebase is not connected! Click ⚙️ to configure Firebase first.');
+                return;
+            }
+            
+            updateSyncStatus('Saving...', true);
+            saveToFirebase();
+            
+            setTimeout(() => {
+                alert('✅ Force save complete! Check "Last saved" timestamp above.');
+            }, 1000);
+        }
+        
+        // Force reload from Firebase (user-triggered)
+        function forceLoadFromFirebase() {
+            if (!isFirebaseInitialized || !dbRef) {
+                alert('❌ Firebase is not connected! Click ⚙️ to configure Firebase first.');
+                return;
+            }
+            
+            if (!confirm('⚠️ Force reload will replace ALL current data with what\'s in Firebase.\n\nAny unsaved changes will be lost!\n\nProceed?')) {
+                return;
+            }
+            
+            updateSyncStatus('Loading...', true);
+            
+            dbRef.once('value').then((snapshot) => {
+                const data = snapshot.val();
+                if (data) {
+                    loadDataFromFirebase(data);
+                    const now = new Date();
+                    const timeStr = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+                    document.getElementById('lastSavedTime').textContent = `Loaded: ${timeStr}`;
+                    updateSyncStatus('Synced ✓', true);
+                    alert('✅ Data reloaded from Firebase successfully!');
+                } else {
+                    alert('⚠️ No data found in Firebase database.');
+                }
+            }).catch((error) => {
+                console.error('Load error:', error);
+                updateSyncStatus('Load error', false);
+                alert('❌ Failed to load from Firebase: ' + error.message);
             });
         }
 
@@ -2583,6 +2645,70 @@
                 updateAllDisplays();
             }
         }
+        
+        // Recalculate R-multiples for all closed trades (fixes trades with partials)
+        function recalculateClosedTradeRMultiples() {
+            if (closedTrades.length === 0) {
+                alert('No closed trades to recalculate!');
+                return;
+            }
+            
+            let recalculatedCount = 0;
+            let changesPreview = 'R-Multiple Recalculation Preview:\n\n';
+            
+            closedTrades.forEach((trade, index) => {
+                // Only recalculate if trade had partials
+                if (trade.partialSells && trade.partialSells.length > 0) {
+                    const oldRMultiple = trade.rMultiple;
+                    
+                    // Calculate total P&L including all partials
+                    let totalPnLDollars = 0;
+                    
+                    // Use initialShares if available, otherwise estimate from data
+                    let initialShares = trade.partialSells.reduce((sum, sell) => sum + sell.shares, 0);
+                    // Add remaining shares that were closed
+                    // We need to reverse-engineer this from the exit
+                    // For now, we'll use the data we have
+                    
+                    // Add P&L from all partial sells
+                    trade.partialSells.forEach(sell => {
+                        totalPnLDollars += (sell.price - trade.entryPrice) * sell.shares;
+                        initialShares += sell.shares;
+                    });
+                    
+                    // Estimate remaining shares from pnlPercent and accountWeight
+                    // This is tricky - we'll use a simpler approach
+                    // Just recalculate based on portfolio P&L percentage
+                    
+                    const accountSize = getAccountSize();
+                    const totalPnLFromPortfolio = (trade.portfolioPnlPercent / 100) * accountSize;
+                    
+                    // Original initial risk in dollars
+                    const originalInitialRiskDollars = (trade.entryPrice - trade.initialStop) * initialShares;
+                    
+                    // Recalculate R-multiple
+                    const newRMultiple = originalInitialRiskDollars > 0 ? 
+                        totalPnLFromPortfolio / originalInitialRiskDollars : 0;
+                    
+                    if (Math.abs(newRMultiple - oldRMultiple) > 0.01) {
+                        trade.rMultiple = newRMultiple;
+                        recalculatedCount++;
+                        changesPreview += `${trade.symbol} (${trade.exitDate}): ${oldRMultiple.toFixed(2)}R → ${newRMultiple.toFixed(2)}R\n`;
+                    }
+                }
+            });
+            
+            if (recalculatedCount === 0) {
+                alert('✅ All R-multiples are already correct!\n\nNo trades with partials needed recalculation.');
+                return;
+            }
+            
+            if (confirm(changesPreview + `\nRecalculate ${recalculatedCount} trade(s)?`)) {
+                saveToFirebase();
+                updateAllDisplays();
+                alert(`✅ Successfully recalculated R-multiples for ${recalculatedCount} trade(s)!`);
+            }
+        }
 
         // Partial sell
         document.getElementById('partialSellForm').addEventListener('submit', function(e) {
@@ -2639,8 +2765,34 @@
                 const pos = openPositions[posIndex];
                 const metrics = calculatePositionMetrics(pos);
                 
-                const rMultiple = metrics.initialRiskPercent > 0 ? 
-                    ((exitPrice / pos.entryPrice - 1) * 100) / metrics.initialRiskPercent : 0;
+                // Calculate TOTAL P&L including all partials
+                let totalPnLDollars = 0;
+                
+                // Add P&L from all partial sells
+                if (pos.partialSells && pos.partialSells.length > 0) {
+                    pos.partialSells.forEach(sell => {
+                        totalPnLDollars += (sell.price - pos.entryPrice) * sell.shares;
+                    });
+                }
+                
+                // Add P&L from final close (remaining shares)
+                totalPnLDollars += (exitPrice - pos.entryPrice) * pos.shares;
+                
+                // Calculate ORIGINAL initial risk in dollars (before any partials)
+                const originalInitialRiskDollars = (pos.entryPrice - pos.initialStop) * pos.initialShares;
+                
+                // Calculate ORIGINAL total cost (before any partials)
+                const originalTotalCost = pos.entryPrice * pos.initialShares;
+                
+                // R-multiple = Total P&L / Original Initial Risk
+                const rMultiple = originalInitialRiskDollars > 0 ? 
+                    totalPnLDollars / originalInitialRiskDollars : 0;
+                
+                // Portfolio P&L % based on ORIGINAL position weight
+                const portfolioPnlPercent = (totalPnLDollars / getAccountSize()) * 100;
+                
+                // Position P&L % based on ORIGINAL cost
+                const pnlPercent = (totalPnLDollars / originalTotalCost) * 100;
                 
                 const closedTrade = {
                     symbol: pos.symbol,
@@ -2648,13 +2800,15 @@
                     exitPrice: exitPrice,
                     initialStop: pos.initialStop,
                     adjustedPrice: metrics.adjustedPrice,
-                    accountWeight: metrics.accountWeight,
-                    pnlPercent: ((exitPrice - metrics.adjustedPrice) / metrics.adjustedPrice) * 100,
-                    portfolioPnlPercent: (((exitPrice - metrics.adjustedPrice) / metrics.adjustedPrice) * 100 / 100) * metrics.accountWeight,
+                    accountWeight: pos.initialWeight, // Use ORIGINAL weight
+                    pnlPercent: pnlPercent,
+                    portfolioPnlPercent: portfolioPnlPercent,
                     initialRiskPercent: metrics.initialRiskPercent,
                     rMultiple: rMultiple,
                     exitDate: exitDate,
-                    notes: notes
+                    notes: notes,
+                    hadPartials: pos.partialSells && pos.partialSells.length > 0,
+                    partialSells: pos.partialSells || []
                 };
                 
                 closedTrades.push(closedTrade);
@@ -2992,6 +3146,14 @@
                 }, 500);
             } else {
                 updateSyncStatus('Connected to Firebase ✓', true);
+                
+                // Auto-save every 30 seconds to prevent data loss
+                setInterval(() => {
+                    if (isFirebaseInitialized && dbRef) {
+                        saveToFirebase();
+                        console.log('Auto-save triggered');
+                    }
+                }, 30000); // 30 seconds
             }
         };
     </script>

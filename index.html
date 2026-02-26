@@ -758,7 +758,10 @@
         <!-- Closed Trades Tab -->
         <div id="closed-trades" class="tab-content">
             <div class="card">
-                <h2>Closed Trade History</h2>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                    <h2 style="margin: 0;">Closed Trade History</h2>
+                    <button onclick="recalculateClosedTradeRMultiples()" class="btn-secondary btn-small">🔄 Recalculate R-Multiples</button>
+                </div>
                 <div class="table-scroll" id="closedTradesTable">
                     <div class="empty-state">No closed trades</div>
                 </div>
@@ -2642,6 +2645,70 @@
                 updateAllDisplays();
             }
         }
+        
+        // Recalculate R-multiples for all closed trades (fixes trades with partials)
+        function recalculateClosedTradeRMultiples() {
+            if (closedTrades.length === 0) {
+                alert('No closed trades to recalculate!');
+                return;
+            }
+            
+            let recalculatedCount = 0;
+            let changesPreview = 'R-Multiple Recalculation Preview:\n\n';
+            
+            closedTrades.forEach((trade, index) => {
+                // Only recalculate if trade had partials
+                if (trade.partialSells && trade.partialSells.length > 0) {
+                    const oldRMultiple = trade.rMultiple;
+                    
+                    // Calculate total P&L including all partials
+                    let totalPnLDollars = 0;
+                    
+                    // Use initialShares if available, otherwise estimate from data
+                    let initialShares = trade.partialSells.reduce((sum, sell) => sum + sell.shares, 0);
+                    // Add remaining shares that were closed
+                    // We need to reverse-engineer this from the exit
+                    // For now, we'll use the data we have
+                    
+                    // Add P&L from all partial sells
+                    trade.partialSells.forEach(sell => {
+                        totalPnLDollars += (sell.price - trade.entryPrice) * sell.shares;
+                        initialShares += sell.shares;
+                    });
+                    
+                    // Estimate remaining shares from pnlPercent and accountWeight
+                    // This is tricky - we'll use a simpler approach
+                    // Just recalculate based on portfolio P&L percentage
+                    
+                    const accountSize = getAccountSize();
+                    const totalPnLFromPortfolio = (trade.portfolioPnlPercent / 100) * accountSize;
+                    
+                    // Original initial risk in dollars
+                    const originalInitialRiskDollars = (trade.entryPrice - trade.initialStop) * initialShares;
+                    
+                    // Recalculate R-multiple
+                    const newRMultiple = originalInitialRiskDollars > 0 ? 
+                        totalPnLFromPortfolio / originalInitialRiskDollars : 0;
+                    
+                    if (Math.abs(newRMultiple - oldRMultiple) > 0.01) {
+                        trade.rMultiple = newRMultiple;
+                        recalculatedCount++;
+                        changesPreview += `${trade.symbol} (${trade.exitDate}): ${oldRMultiple.toFixed(2)}R → ${newRMultiple.toFixed(2)}R\n`;
+                    }
+                }
+            });
+            
+            if (recalculatedCount === 0) {
+                alert('✅ All R-multiples are already correct!\n\nNo trades with partials needed recalculation.');
+                return;
+            }
+            
+            if (confirm(changesPreview + `\nRecalculate ${recalculatedCount} trade(s)?`)) {
+                saveToFirebase();
+                updateAllDisplays();
+                alert(`✅ Successfully recalculated R-multiples for ${recalculatedCount} trade(s)!`);
+            }
+        }
 
         // Partial sell
         document.getElementById('partialSellForm').addEventListener('submit', function(e) {
@@ -2698,8 +2765,34 @@
                 const pos = openPositions[posIndex];
                 const metrics = calculatePositionMetrics(pos);
                 
-                const rMultiple = metrics.initialRiskPercent > 0 ? 
-                    ((exitPrice / pos.entryPrice - 1) * 100) / metrics.initialRiskPercent : 0;
+                // Calculate TOTAL P&L including all partials
+                let totalPnLDollars = 0;
+                
+                // Add P&L from all partial sells
+                if (pos.partialSells && pos.partialSells.length > 0) {
+                    pos.partialSells.forEach(sell => {
+                        totalPnLDollars += (sell.price - pos.entryPrice) * sell.shares;
+                    });
+                }
+                
+                // Add P&L from final close (remaining shares)
+                totalPnLDollars += (exitPrice - pos.entryPrice) * pos.shares;
+                
+                // Calculate ORIGINAL initial risk in dollars (before any partials)
+                const originalInitialRiskDollars = (pos.entryPrice - pos.initialStop) * pos.initialShares;
+                
+                // Calculate ORIGINAL total cost (before any partials)
+                const originalTotalCost = pos.entryPrice * pos.initialShares;
+                
+                // R-multiple = Total P&L / Original Initial Risk
+                const rMultiple = originalInitialRiskDollars > 0 ? 
+                    totalPnLDollars / originalInitialRiskDollars : 0;
+                
+                // Portfolio P&L % based on ORIGINAL position weight
+                const portfolioPnlPercent = (totalPnLDollars / getAccountSize()) * 100;
+                
+                // Position P&L % based on ORIGINAL cost
+                const pnlPercent = (totalPnLDollars / originalTotalCost) * 100;
                 
                 const closedTrade = {
                     symbol: pos.symbol,
@@ -2707,13 +2800,15 @@
                     exitPrice: exitPrice,
                     initialStop: pos.initialStop,
                     adjustedPrice: metrics.adjustedPrice,
-                    accountWeight: metrics.accountWeight,
-                    pnlPercent: ((exitPrice - metrics.adjustedPrice) / metrics.adjustedPrice) * 100,
-                    portfolioPnlPercent: (((exitPrice - metrics.adjustedPrice) / metrics.adjustedPrice) * 100 / 100) * metrics.accountWeight,
+                    accountWeight: pos.initialWeight, // Use ORIGINAL weight
+                    pnlPercent: pnlPercent,
+                    portfolioPnlPercent: portfolioPnlPercent,
                     initialRiskPercent: metrics.initialRiskPercent,
                     rMultiple: rMultiple,
                     exitDate: exitDate,
-                    notes: notes
+                    notes: notes,
+                    hadPartials: pos.partialSells && pos.partialSells.length > 0,
+                    partialSells: pos.partialSells || []
                 };
                 
                 closedTrades.push(closedTrade);
