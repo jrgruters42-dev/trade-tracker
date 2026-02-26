@@ -557,10 +557,18 @@
         <h1 style="margin-bottom: 10px; font-size: 1.8em;">📊 Trade Tracker</h1>
 
         <!-- Sync Status -->
-        <div class="sync-status" style="padding: 10px 15px; margin-bottom: 12px;">
-            <div class="sync-indicator">
+        <div class="sync-status" style="padding: 10px 15px; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center;">
+            <div class="sync-indicator" style="display: flex; align-items: center; gap: 10px;">
                 <div class="sync-dot" id="syncDot"></div>
-                <span id="syncStatus" style="font-size: 13px;">Connecting to cloud...</span>
+                <div style="display: flex; flex-direction: column;">
+                    <span id="syncStatus" style="font-size: 13px; font-weight: 600;">Connecting to cloud...</span>
+                    <span id="lastSavedTime" style="font-size: 11px; color: #666;">Never saved</span>
+                </div>
+            </div>
+            <div style="display: flex; gap: 5px;">
+                <button onclick="forceSaveToFirebase()" class="btn-secondary btn-small" title="Force save all data to Firebase">💾 Save</button>
+                <button onclick="forceLoadFromFirebase()" class="btn-secondary btn-small" title="Force reload all data from Firebase">🔄 Reload</button>
+                <button onclick="openFirebaseSetup()" class="btn-secondary btn-small">⚙️</button>
             </div>
         </div>
 
@@ -1392,12 +1400,63 @@
             };
 
             dbRef.set(data).then(() => {
+                const now = new Date();
+                const timeStr = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
                 updateSyncStatus('Synced ✓', true);
-                console.log('Data saved to Firebase successfully');
+                document.getElementById('lastSavedTime').textContent = `Last saved: ${timeStr}`;
+                console.log('Data saved to Firebase successfully at', timeStr);
             }).catch((error) => {
                 console.error('Save error:', error);
                 updateSyncStatus('Sync error', false);
+                document.getElementById('lastSavedTime').textContent = `Save failed`;
                 alert('Firebase sync error: ' + error.message);
+            });
+        }
+        
+        // Force save to Firebase (user-triggered)
+        function forceSaveToFirebase() {
+            if (!isFirebaseInitialized || !dbRef) {
+                alert('❌ Firebase is not connected! Click ⚙️ to configure Firebase first.');
+                return;
+            }
+            
+            updateSyncStatus('Saving...', true);
+            saveToFirebase();
+            
+            setTimeout(() => {
+                alert('✅ Force save complete! Check "Last saved" timestamp above.');
+            }, 1000);
+        }
+        
+        // Force reload from Firebase (user-triggered)
+        function forceLoadFromFirebase() {
+            if (!isFirebaseInitialized || !dbRef) {
+                alert('❌ Firebase is not connected! Click ⚙️ to configure Firebase first.');
+                return;
+            }
+            
+            if (!confirm('⚠️ Force reload will replace ALL current data with what\'s in Firebase.\n\nAny unsaved changes will be lost!\n\nProceed?')) {
+                return;
+            }
+            
+            updateSyncStatus('Loading...', true);
+            
+            dbRef.once('value').then((snapshot) => {
+                const data = snapshot.val();
+                if (data) {
+                    loadDataFromFirebase(data);
+                    const now = new Date();
+                    const timeStr = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+                    document.getElementById('lastSavedTime').textContent = `Loaded: ${timeStr}`;
+                    updateSyncStatus('Synced ✓', true);
+                    alert('✅ Data reloaded from Firebase successfully!');
+                } else {
+                    alert('⚠️ No data found in Firebase database.');
+                }
+            }).catch((error) => {
+                console.error('Load error:', error);
+                updateSyncStatus('Load error', false);
+                alert('❌ Failed to load from Firebase: ' + error.message);
             });
         }
 
@@ -2992,6 +3051,14 @@
                 }, 500);
             } else {
                 updateSyncStatus('Connected to Firebase ✓', true);
+                
+                // Auto-save every 30 seconds to prevent data loss
+                setInterval(() => {
+                    if (isFirebaseInitialized && dbRef) {
+                        saveToFirebase();
+                        console.log('Auto-save triggered');
+                    }
+                }, 30000); // 30 seconds
             }
         };
     </script>
