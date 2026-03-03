@@ -2749,10 +2749,25 @@
                 totalPnLDollars += (exitPrice - pos.entryPrice) * pos.shares;
                 
                 // Calculate ORIGINAL initial risk in dollars (before any partials)
-                const originalInitialRiskDollars = (pos.entryPrice - pos.initialStop) * pos.initialShares;
+                // Calculate original shares (handle old positions without initialShares field)
+                let originalShares = pos.shares; // Start with current shares
+                
+                // Add back any partial sells to get original shares
+                if (pos.partialSells && pos.partialSells.length > 0) {
+                    pos.partialSells.forEach(sell => {
+                        originalShares += sell.shares;
+                    });
+                }
+                
+                // Use initialShares if available (newer positions have this)
+                if (pos.initialShares) {
+                    originalShares = pos.initialShares;
+                }
+                
+                const originalInitialRiskDollars = (pos.entryPrice - pos.initialStop) * originalShares;
                 
                 // Calculate ORIGINAL total cost (before any partials)
-                const originalTotalCost = pos.entryPrice * pos.initialShares;
+                const originalTotalCost = pos.entryPrice * originalShares;
                 
                 // R-multiple = Total P&L / Original Initial Risk
                 const rMultiple = originalInitialRiskDollars > 0 ? 
@@ -2770,7 +2785,7 @@
                     exitPrice: exitPrice,
                     initialStop: pos.initialStop,
                     adjustedPrice: metrics.adjustedPrice,
-                    accountWeight: pos.initialWeight, // Use ORIGINAL weight
+                    accountWeight: pos.initialWeight || metrics.accountWeight, // Use ORIGINAL weight if available
                     pnlPercent: pnlPercent,
                     portfolioPnlPercent: portfolioPnlPercent,
                     initialRiskPercent: metrics.initialRiskPercent,
