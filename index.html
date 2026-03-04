@@ -689,16 +689,16 @@
                         <div class="stat-value" style="font-size: 1em;" id="avgRMultiple">0.00R</div>
                     </div>
                     <div class="stat-box-compact" style="padding: 6px;">
-                        <div class="stat-label" style="font-size: 0.65em;">Last 10 P/L</div>
-                        <div class="stat-value" style="font-size: 1em;" id="last10Pnl">0%</div>
+                        <div class="stat-label" style="font-size: 0.65em;">If Stops Hit</div>
+                        <div class="stat-value" style="font-size: 1em;" id="ifStopsHit">$0</div>
                     </div>
                     <div class="stat-box-compact" style="padding: 6px;">
                         <div class="stat-label" style="font-size: 0.65em;">Last 10 Win%</div>
                         <div class="stat-value" style="font-size: 1em;" id="last10WinRate">0%</div>
                     </div>
                     <div class="stat-box-compact" style="padding: 6px;">
-                        <div class="stat-label" style="font-size: 0.65em;">Total Closed</div>
-                        <div class="stat-value" style="font-size: 1em;" id="totalClosedPnl">0%</div>
+                        <div class="stat-label" style="font-size: 0.65em;">Available Cash</div>
+                        <div class="stat-value" style="font-size: 1em;" id="availableCash">$0</div>
                     </div>
                     <div class="stat-box-compact" style="padding: 6px;">
                         <div class="stat-label" style="font-size: 0.65em;">Overall Win%</div>
@@ -746,9 +746,25 @@
                     </div>
                     <span id="lastUpdate" style="color: #666; font-size: 12px;"></span>
                 </div>
-                <p style="color: #666; font-size: 13px; margin-bottom: 10px; font-style: italic;">
-                    💡 Tip: Click "Update All Prices" anytime to refresh, or enable auto-refresh. You can also manually edit Current Price in any position.
-                </p>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                    <p style="color: #666; font-size: 13px; margin: 0; font-style: italic;">
+                        💡 Tip: Click "Update All Prices" anytime or enable auto-refresh.
+                    </p>
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <label style="font-size: 13px; color: #666; margin: 0;">Sort by:</label>
+                        <select id="positionSortBy" onchange="sortOpenPositions()" style="padding: 4px 8px; font-size: 13px; border: 1px solid #ddd; border-radius: 4px;">
+                            <option value="default">Default</option>
+                            <option value="symbol">Symbol (A-Z)</option>
+                            <option value="symbolDesc">Symbol (Z-A)</option>
+                            <option value="pnl">P&L % (High-Low)</option>
+                            <option value="pnlAsc">P&L % (Low-High)</option>
+                            <option value="risk">Portfolio Risk % (High-Low)</option>
+                            <option value="riskAsc">Portfolio Risk % (Low-High)</option>
+                            <option value="exposure">Exposure % (High-Low)</option>
+                            <option value="exposureAsc">Exposure % (Low-High)</option>
+                        </select>
+                    </div>
+                </div>
                 <div class="table-scroll" id="openPositionsTable">
                     <div class="empty-state">No open positions</div>
                 </div>
@@ -1841,11 +1857,18 @@
                 totalPortfolioDrawdown += metrics.portfolioDrawdown;
             });
             
+            // Calculate Available Cash and If Stops Hit
+            const availableCash = accountSize * (100 - totalExposure) / 100;
+            const totalDrawdownDollars = accountSize * totalPortfolioDrawdown / 100;
+            const ifStopsHit = accountSize - totalDrawdownDollars;
+            
             // Update values
             document.getElementById('portfolioExposure').textContent = totalExposure.toFixed(2) + '%';
             document.getElementById('openPnlPercent').textContent = totalOpenPnl.toFixed(2) + '%';
             document.getElementById('totalPortfolioRisk').textContent = totalPortfolioRisk.toFixed(2) + '%';
             document.getElementById('totalPortfolioDrawdown').textContent = totalPortfolioDrawdown.toFixed(2) + '%';
+            document.getElementById('availableCash').textContent = '$' + availableCash.toLocaleString(undefined, {minimumFractionDigits: 0, maximumFractionDigits: 0});
+            document.getElementById('ifStopsHit').textContent = '$' + ifStopsHit.toLocaleString(undefined, {minimumFractionDigits: 0, maximumFractionDigits: 0});
             
             // Calculate closed trade stats for summary
             if (closedTrades.length > 0) {
@@ -1906,6 +1929,73 @@
             } else {
                 pnlElement.parentElement.style.background = 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)';
             }
+            
+            // Color code Available Cash (neutral - purple)
+            const availableCashElement = document.getElementById('availableCash');
+            availableCashElement.parentElement.style.background = 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)';
+            
+            // Color code If Stops Hit (green if minimal loss, red if significant loss)
+            const ifStopsHitElement = document.getElementById('ifStopsHit');
+            const stopsHitLoss = ((ifStopsHit - accountSize) / accountSize) * 100;
+            if (stopsHitLoss >= -2) {
+                ifStopsHitElement.parentElement.style.background = 'linear-gradient(135deg, #10b981 0%, #059669 100%)';
+            } else if (stopsHitLoss >= -5) {
+                ifStopsHitElement.parentElement.style.background = 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)';
+            } else {
+                ifStopsHitElement.parentElement.style.background = 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)';
+            }
+        }
+
+        // Sort open positions
+        function sortOpenPositions() {
+            const sortBy = document.getElementById('positionSortBy').value;
+            
+            if (sortBy === 'default') {
+                // Don't sort, keep original order (or sort by ID)
+                openPositions.sort((a, b) => a.id - b.id);
+            } else if (sortBy === 'symbol') {
+                openPositions.sort((a, b) => a.symbol.localeCompare(b.symbol));
+            } else if (sortBy === 'symbolDesc') {
+                openPositions.sort((a, b) => b.symbol.localeCompare(a.symbol));
+            } else if (sortBy === 'pnl') {
+                openPositions.sort((a, b) => {
+                    const metricsA = calculatePositionMetrics(a);
+                    const metricsB = calculatePositionMetrics(b);
+                    return metricsB.pnlPercent - metricsA.pnlPercent;
+                });
+            } else if (sortBy === 'pnlAsc') {
+                openPositions.sort((a, b) => {
+                    const metricsA = calculatePositionMetrics(a);
+                    const metricsB = calculatePositionMetrics(b);
+                    return metricsA.pnlPercent - metricsB.pnlPercent;
+                });
+            } else if (sortBy === 'risk') {
+                openPositions.sort((a, b) => {
+                    const metricsA = calculatePositionMetrics(a);
+                    const metricsB = calculatePositionMetrics(b);
+                    return metricsB.portfolioCapitalRisk - metricsA.portfolioCapitalRisk;
+                });
+            } else if (sortBy === 'riskAsc') {
+                openPositions.sort((a, b) => {
+                    const metricsA = calculatePositionMetrics(a);
+                    const metricsB = calculatePositionMetrics(b);
+                    return metricsA.portfolioCapitalRisk - metricsB.portfolioCapitalRisk;
+                });
+            } else if (sortBy === 'exposure') {
+                openPositions.sort((a, b) => {
+                    const metricsA = calculatePositionMetrics(a);
+                    const metricsB = calculatePositionMetrics(b);
+                    return metricsB.accountWeight - metricsA.accountWeight;
+                });
+            } else if (sortBy === 'exposureAsc') {
+                openPositions.sort((a, b) => {
+                    const metricsA = calculatePositionMetrics(a);
+                    const metricsB = calculatePositionMetrics(b);
+                    return metricsA.accountWeight - metricsB.accountWeight;
+                });
+            }
+            
+            updateOpenPositionsTable();
         }
 
         // Calculate trade statistics
