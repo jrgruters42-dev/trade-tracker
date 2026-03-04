@@ -1486,6 +1486,26 @@
             dailyEquityEntries = data.dailyEquityEntries || [];
             positionIdCounter = data.positionIdCounter || 1;
             
+            // Clean up closed trades to remove any undefined values (Firebase rejects undefined)
+            closedTrades = closedTrades.map(trade => {
+                return {
+                    symbol: trade.symbol || '',
+                    entryPrice: trade.entryPrice || 0,
+                    exitPrice: trade.exitPrice || 0,
+                    initialStop: trade.initialStop || 0,
+                    adjustedPrice: trade.adjustedPrice || trade.entryPrice || 0,
+                    accountWeight: trade.accountWeight || 0,
+                    pnlPercent: trade.pnlPercent || 0,
+                    portfolioPnlPercent: trade.portfolioPnlPercent || 0,
+                    initialRiskPercent: trade.initialRiskPercent || 0,
+                    rMultiple: trade.rMultiple || 0,
+                    exitDate: trade.exitDate || '',
+                    notes: trade.notes || '',
+                    hadPartials: trade.hadPartials === true ? true : false,
+                    partialSells: trade.partialSells || []
+                };
+            });
+            
             // Automatically recalculate daily changes to fix any historical calculation errors
             if (dailyEquityEntries.length > 0) {
                 recalculateDailyChanges();
@@ -2791,8 +2811,8 @@
                     initialRiskPercent: metrics.initialRiskPercent,
                     rMultiple: rMultiple,
                     exitDate: exitDate,
-                    notes: notes,
-                    hadPartials: pos.partialSells && pos.partialSells.length > 0,
+                    notes: notes || '',
+                    hadPartials: (pos.partialSells && pos.partialSells.length > 0) ? true : false,
                     partialSells: pos.partialSells || []
                 };
                 
