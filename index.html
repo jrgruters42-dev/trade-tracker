@@ -1901,31 +1901,38 @@
             const wifeRothYTD = wifeRothJan1 > 0 ? ((wifeRoth - wifeRothJan1) / wifeRothJan1) * 100 : 0;
             
             // Update Portfolio Summary display elements
-            document.getElementById('closedPnlPercent').textContent = closedPnlPercent.toFixed(2) + '%';
-            
-            // Update YTD displays
-            document.getElementById('tradingYTD').textContent = tradingYTD.toFixed(2) + '%';
-            document.getElementById('myRothYTD').textContent = myRothYTD.toFixed(2) + '%';
-            document.getElementById('wifeRothYTD').textContent = wifeRothYTD.toFixed(2) + '%';
-            
-            // Color code Closed P&L
             const closedPnlElement = document.getElementById('closedPnlPercent');
-            if (closedPnlPercent > 0) {
-                closedPnlElement.parentElement.style.background = 'linear-gradient(135deg, #10b981 0%, #059669 100%)';
-            } else if (closedPnlPercent < 0) {
-                closedPnlElement.parentElement.style.background = 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)';
-            } else {
-                closedPnlElement.parentElement.style.background = 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)';
+            if (closedPnlElement) {
+                closedPnlElement.textContent = closedPnlPercent.toFixed(2) + '%';
+                
+                // Color code Closed P&L
+                if (closedPnlPercent > 0) {
+                    closedPnlElement.parentElement.style.background = 'linear-gradient(135deg, #10b981 0%, #059669 100%)';
+                } else if (closedPnlPercent < 0) {
+                    closedPnlElement.parentElement.style.background = 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)';
+                } else {
+                    closedPnlElement.parentElement.style.background = 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)';
+                }
             }
             
-            // Color code Trading YTD
+            // Update YTD displays
             const tradingYTDElement = document.getElementById('tradingYTD');
-            if (tradingYTD > 0) {
-                tradingYTDElement.parentElement.style.background = 'linear-gradient(135deg, #10b981 0%, #059669 100%)';
-            } else if (tradingYTD < 0) {
-                tradingYTDElement.parentElement.style.background = 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)';
-            } else {
-                tradingYTDElement.parentElement.style.background = 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)';
+            const myRothYTDElement = document.getElementById('myRothYTD');
+            const wifeRothYTDElement = document.getElementById('wifeRothYTD');
+            
+            if (tradingYTDElement) tradingYTDElement.textContent = tradingYTD.toFixed(2) + '%';
+            if (myRothYTDElement) myRothYTDElement.textContent = myRothYTD.toFixed(2) + '%';
+            if (wifeRothYTDElement) wifeRothYTDElement.textContent = wifeRothYTD.toFixed(2) + '%';
+            
+            // Color code Trading YTD
+            if (tradingYTDElement) {
+                if (tradingYTD > 0) {
+                    tradingYTDElement.parentElement.style.background = 'linear-gradient(135deg, #10b981 0%, #059669 100%)';
+                } else if (tradingYTD < 0) {
+                    tradingYTDElement.parentElement.style.background = 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)';
+                } else {
+                    tradingYTDElement.parentElement.style.background = 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)';
+                }
             }
             
             // Color code My Roth YTD
