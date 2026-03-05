@@ -1506,6 +1506,26 @@
                 };
             });
             
+            // Recalculate R-multiples for all closed trades (fixes old trades with incorrect R-multiples)
+            const accountSize = parseFloat(document.getElementById('accountSize').value) || 250000;
+            closedTrades.forEach(trade => {
+                if (trade.portfolioPnlPercent !== undefined && trade.accountWeight > 0 && trade.initialRiskPercent > 0) {
+                    // Calculate P/L in dollars from portfolio P/L %
+                    const pnlDollars = (trade.portfolioPnlPercent / 100) * accountSize;
+                    
+                    // Calculate cost basis (original position value)
+                    const costBasis = (trade.accountWeight / 100) * accountSize;
+                    
+                    // Calculate initial risk in dollars
+                    const riskDollars = (trade.initialRiskPercent / 100) * costBasis;
+                    
+                    // Recalculate R-multiple
+                    if (riskDollars > 0) {
+                        trade.rMultiple = pnlDollars / riskDollars;
+                    }
+                }
+            });
+            
             // Automatically recalculate daily changes to fix any historical calculation errors
             if (dailyEquityEntries.length > 0) {
                 recalculateDailyChanges();
