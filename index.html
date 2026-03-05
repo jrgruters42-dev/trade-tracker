@@ -677,10 +677,6 @@
                         <div class="stat-value" style="font-size: 1em;" id="openPnlPercent">0%</div>
                     </div>
                     <div class="stat-box-compact" style="padding: 6px;">
-                        <div class="stat-label" style="font-size: 0.65em;">Closed P&L %</div>
-                        <div class="stat-value" style="font-size: 1em;" id="closedPnlPercent">0%</div>
-                    </div>
-                    <div class="stat-box-compact" style="padding: 6px;">
                         <div class="stat-label" style="font-size: 0.65em;">Avg W/L</div>
                         <div class="stat-value" style="font-size: 1em;" id="avgWLRatio">0.00</div>
                     </div>
@@ -703,6 +699,14 @@
                     <div class="stat-box-compact" style="padding: 6px;">
                         <div class="stat-label" style="font-size: 0.65em;">Overall Win%</div>
                         <div class="stat-value" style="font-size: 1em;" id="overallWinRate">0%</div>
+                    </div>
+                    <div class="stat-box-compact" style="padding: 6px;">
+                        <div class="stat-label" style="font-size: 0.65em;">Cash Available</div>
+                        <div class="stat-value" style="font-size: 1em;" id="cashAvailable">$0</div>
+                    </div>
+                    <div class="stat-box-compact" style="padding: 6px;">
+                        <div class="stat-label" style="font-size: 0.65em;">If All Stop Out</div>
+                        <div class="stat-value" style="font-size: 1em;" id="ifAllStopOut">$0</div>
                     </div>
                 </div>
             </div>
@@ -1654,6 +1658,105 @@
         });
 
         // Update open positions table
+        // Sort open positions table
+        let currentSortColumn = null;
+        let currentSortDirection = 'desc';
+        
+        function sortOpenPositions(column) {
+            // Toggle direction if same column clicked
+            if (currentSortColumn === column) {
+                currentSortDirection = currentSortDirection === 'desc' ? 'asc' : 'desc';
+            } else {
+                currentSortColumn = column;
+                currentSortDirection = 'desc';
+            }
+            
+            openPositions.sort((a, b) => {
+                let valA, valB;
+                const metricsA = calculatePositionMetrics(a);
+                const metricsB = calculatePositionMetrics(b);
+                
+                switch(column) {
+                    case 'symbol':
+                        valA = a.symbol;
+                        valB = b.symbol;
+                        break;
+                    case 'currentPrice':
+                        valA = a.currentPrice;
+                        valB = b.currentPrice;
+                        break;
+                    case 'entryPrice':
+                        valA = a.entryPrice;
+                        valB = b.entryPrice;
+                        break;
+                    case 'adjustedPrice':
+                        valA = metricsA.adjustedPrice;
+                        valB = metricsB.adjustedPrice;
+                        break;
+                    case 'shares':
+                        valA = a.shares;
+                        valB = b.shares;
+                        break;
+                    case 'initialStop':
+                        valA = a.initialStop;
+                        valB = b.initialStop;
+                        break;
+                    case 'currentStop':
+                        valA = a.currentStop;
+                        valB = b.currentStop;
+                        break;
+                    case 'initialWeight':
+                        valA = a.initialWeight || 0;
+                        valB = b.initialWeight || 0;
+                        break;
+                    case 'accountWeight':
+                        valA = metricsA.accountWeight;
+                        valB = metricsB.accountWeight;
+                        break;
+                    case 'pnlPercent':
+                        valA = metricsA.pnlPercent;
+                        valB = metricsB.pnlPercent;
+                        break;
+                    case 'portfolioPnl':
+                        valA = metricsA.portfolioPnlPercent;
+                        valB = metricsB.portfolioPnlPercent;
+                        break;
+                    case 'portfolioDrawdown':
+                        valA = metricsA.portfolioDrawdown;
+                        valB = metricsB.portfolioDrawdown;
+                        break;
+                    case 'portfolioRisk':
+                        valA = metricsA.portfolioCapitalRisk;
+                        valB = metricsB.portfolioCapitalRisk;
+                        break;
+                    case 'initialR':
+                        valA = metricsA.initialR;
+                        valB = metricsB.initialR;
+                        break;
+                    case 'twoRTarget':
+                        valA = metricsA.twoRTarget;
+                        valB = metricsB.twoRTarget;
+                        break;
+                    case 'riskPercent':
+                        valA = metricsA.initialRiskPercent;
+                        valB = metricsB.initialRiskPercent;
+                        break;
+                    default:
+                        return 0;
+                }
+                
+                // Handle string vs number comparison
+                if (typeof valA === 'string') {
+                    const comparison = valA.localeCompare(valB);
+                    return currentSortDirection === 'desc' ? -comparison : comparison;
+                } else {
+                    return currentSortDirection === 'desc' ? valB - valA : valA - valB;
+                }
+            });
+            
+            updateOpenPositionsTable();
+        }
+
         function updateOpenPositionsTable() {
             const container = document.getElementById('openPositionsTable');
             
@@ -1666,22 +1769,22 @@
                 <table>
                     <thead>
                         <tr>
-                            <th>Symbol</th>
-                            <th>Current Price</th>
-                            <th>Entry</th>
-                            <th>Adj Price</th>
-                            <th>QTY</th>
-                            <th>Initial Stop</th>
-                            <th>Current Stop</th>
-                            <th>Init Acct Wt%</th>
-                            <th>Acct Wt%</th>
-                            <th class="highlight-col">P&L% <span class="tooltip">ℹ<span class="tooltiptext">Includes realized gains from partial sells</span></span></th>
-                            <th class="highlight-col">Port P&L%</th>
-                            <th class="highlight-col">Port Drawdown</th>
-                            <th class="highlight-col">Port Risk%</th>
-                            <th class="highlight-col">Init Risk Ratio</th>
-                            <th>2R Target</th>
-                            <th>Risk%</th>
+                            <th onclick="sortOpenPositions('symbol')" style="cursor: pointer;">Symbol ▼</th>
+                            <th onclick="sortOpenPositions('currentPrice')" style="cursor: pointer;">Current Price ▼</th>
+                            <th onclick="sortOpenPositions('entryPrice')" style="cursor: pointer;">Entry ▼</th>
+                            <th onclick="sortOpenPositions('adjustedPrice')" style="cursor: pointer;">Adj Price ▼</th>
+                            <th onclick="sortOpenPositions('shares')" style="cursor: pointer;">QTY ▼</th>
+                            <th onclick="sortOpenPositions('initialStop')" style="cursor: pointer;">Initial Stop ▼</th>
+                            <th onclick="sortOpenPositions('currentStop')" style="cursor: pointer;">Current Stop ▼</th>
+                            <th onclick="sortOpenPositions('initialWeight')" style="cursor: pointer;">Init Acct Wt% ▼</th>
+                            <th onclick="sortOpenPositions('accountWeight')" style="cursor: pointer;">Acct Wt% ▼</th>
+                            <th class="highlight-col" onclick="sortOpenPositions('pnlPercent')" style="cursor: pointer;">P&L% ▼ <span class="tooltip">ℹ<span class="tooltiptext">Includes realized gains from partial sells</span></span></th>
+                            <th class="highlight-col" onclick="sortOpenPositions('portfolioPnl')" style="cursor: pointer;">Port P&L% ▼</th>
+                            <th class="highlight-col" onclick="sortOpenPositions('portfolioDrawdown')" style="cursor: pointer;">Port Drawdown ▼</th>
+                            <th class="highlight-col" onclick="sortOpenPositions('portfolioRisk')" style="cursor: pointer;">Port Risk% ▼</th>
+                            <th class="highlight-col" onclick="sortOpenPositions('initialR')" style="cursor: pointer;">Init Risk Ratio ▼</th>
+                            <th onclick="sortOpenPositions('twoRTarget')" style="cursor: pointer;">2R Target ▼</th>
+                            <th onclick="sortOpenPositions('riskPercent')" style="cursor: pointer;">Risk% ▼</th>
                             <th>Actions</th>
                         </tr>
                     </thead>
@@ -1925,6 +2028,27 @@
                 pnlElement.parentElement.style.background = 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)';
             } else {
                 pnlElement.parentElement.style.background = 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)';
+            }
+            
+            // Calculate Cash Available (Account Size - Total Exposure in dollars)
+            const exposureDollars = (totalExposure / 100) * accountSize;
+            const cashAvailable = accountSize - exposureDollars;
+            const cashEl = document.getElementById('cashAvailable');
+            if (cashEl) {
+                cashEl.textContent = '$' + cashAvailable.toLocaleString(undefined, {minimumFractionDigits: 0, maximumFractionDigits: 0});
+            }
+            
+            // Calculate If All Stop Out (current account value if all positions hit their stops)
+            let totalStopOutLoss = 0;
+            openPositions.forEach(pos => {
+                const metrics = calculatePositionMetrics(pos);
+                const riskDollars = metrics.riskDollars || ((metrics.adjustedPrice - pos.currentStop) * pos.shares);
+                totalStopOutLoss += riskDollars;
+            });
+            const accountIfStopOut = accountSize - totalStopOutLoss;
+            const stopOutEl = document.getElementById('ifAllStopOut');
+            if (stopOutEl) {
+                stopOutEl.textContent = '$' + accountIfStopOut.toLocaleString(undefined, {minimumFractionDigits: 0, maximumFractionDigits: 0});
             }
         }
 
