@@ -5,152 +5,919 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Trade Tracker - Cloud Sync</title>
     <script src="https://cdn.plot.ly/plotly-2.26.0.min.js"></script>
+    
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
+    
     <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); min-height: 100vh; padding: 12px; }
-        .container { max-width: 1600px; margin: 0 auto; }
-        h1 { color: white; text-align: center; margin-bottom: 20px; font-size: 2.2em; text-shadow: 2px 2px 4px rgba(0,0,0,0.2); }
-        .sync-status { background: white; border-radius: 12px; padding: 15px 20px; margin-bottom: 20px; box-shadow: 0 8px 24px rgba(0,0,0,0.15); display: flex; justify-content: space-between; align-items: center; }
-        .sync-dot { width: 12px; height: 12px; border-radius: 50%; background: #10b981; animation: pulse 2s infinite; display: inline-block; margin-right: 8px; }
-        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
-        .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 15px; margin-bottom: 20px; }
-        .stat-card { background: white; padding: 15px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); text-align: center; }
-        .stat-label { color: #64748b; font-size: 0.75em; font-weight: 600; text-transform: uppercase; margin-bottom: 5px; }
-        .stat-value { font-size: 1.4em; font-weight: 700; color: #1e293b; }
-        .positive { color: #10b981 !important; }
-        .negative { color: #ef4444 !important; }
-        .tabs { display: flex; gap: 8px; margin-bottom: 20px; flex-wrap: wrap; }
-        .tab { background: rgba(255,255,255,0.2); color: white; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-weight: 600; transition: 0.3s; }
-        .tab.active { background: white; color: #667eea; }
-        .tab-content { display: none; }
-        .tab-content.active { display: block; }
-        .card { background: white; border-radius: 12px; padding: 20px; box-shadow: 0 8px 24px rgba(0,0,0,0.15); margin-bottom: 20px; }
-        table { width: 100%; border-collapse: collapse; }
-        th, td { padding: 12px; text-align: left; border-bottom: 1px solid #f1f5f9; font-size: 14px; }
-        th { background: #f8fafc; font-weight: 600; cursor: pointer; color: #64748b; }
-        .btn-action { padding: 4px 8px; font-size: 12px; border-radius: 4px; border: none; cursor: pointer; margin-right: 4px; font-weight: 600; }
-        .btn-close { background: #fee2e2; color: #ef4444; }
-        .btn-edit { background: #e0e7ff; color: #4338ca; }
-        input, textarea { width: 100%; padding: 8px; border: 1px solid #e2e8f0; border-radius: 6px; margin-top: 5px; }
-        #firebaseSetupModal { display: none; position: fixed; z-index: 999; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); }
-        .modal-content { background: white; margin: 10% auto; padding: 30px; border-radius: 15px; width: 90%; max-width: 500px; }
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 12px;
+        }
+
+        .container {
+            max-width: 1600px;
+            margin: 0 auto;
+        }
+
+        h1 {
+            color: white;
+            text-align: center;
+            margin-bottom: 20px;
+            font-size: 2.2em;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+        }
+
+        .sync-status {
+            background: white;
+            border-radius: 12px;
+            padding: 15px 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.15);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .sync-indicator {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-weight: 600;
+        }
+
+        .sync-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: #10b981;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .stat-card {
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            text-align: center;
+            transition: transform 0.2s;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-2px);
+        }
+
+        .stat-label {
+            color: #64748b;
+            font-size: 0.9em;
+            font-weight: 600;
+            text-transform: uppercase;
+            margin-bottom: 8px;
+        }
+
+        .stat-value {
+            font-size: 1.8em;
+            font-weight: 700;
+            color: #1e293b;
+        }
+
+        .positive { color: #10b981; }
+        .negative { color: #ef4444; }
+
+        .tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+
+        .tab {
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 15px;
+            font-weight: 600;
+            transition: all 0.3s;
+            backdrop-filter: blur(5px);
+        }
+
+        .tab.active {
+            background: white;
+            color: #667eea;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .card {
+            background: white;
+            border-radius: 12px;
+            padding: 25px;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.15);
+            margin-bottom: 20px;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        label {
+            display: block;
+            font-size: 0.9em;
+            font-weight: 600;
+            color: #475569;
+            margin-bottom: 6px;
+        }
+
+        input, select, textarea {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: border-color 0.2s;
+        }
+
+        input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .btn {
+            padding: 10px 20px;
+            border-radius: 8px;
+            border: none;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn-primary {
+            background: #667eea;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #5a6fd6;
+        }
+
+        .btn-secondary {
+            background: #f1f5f9;
+            color: #475569;
+        }
+
+        .btn-danger {
+            background: #fee2e2;
+            color: #ef4444;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+        }
+
+        th {
+            text-align: left;
+            padding: 12px;
+            background: #f8fafc;
+            color: #64748b;
+            font-weight: 600;
+            font-size: 0.85em;
+            text-transform: uppercase;
+            border-bottom: 2px solid #e2e8f0;
+            cursor: pointer;
+        }
+
+        td {
+            padding: 12px;
+            border-bottom: 1px solid #e2e8f0;
+            font-size: 14px;
+        }
+
+        .action-btns {
+            display: flex;
+            gap: 8px;
+        }
+
+        #firebaseSetupModal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 1000;
+            backdrop-filter: blur(4px);
+        }
+
+        .modal-content {
+            background: white;
+            width: 90%;
+            max-width: 500px;
+            margin: 50px auto;
+            padding: 30px;
+            border-radius: 16px;
+            box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1);
+        }
+
+        .risk-profile {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .risk-low { background: #dcfce7; color: #166534; }
+        .risk-med { background: #fef9c3; color: #854d0e; }
+        .risk-high { background: #fee2e2; color: #991b1b; }
+
+        .journal-entry {
+            background: #f8fafc;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            border-left: 4px solid #667eea;
+        }
+
+        /* Responsive adjustments */
+        @media (max-width: 768px) {
+            .stats-grid {
+                grid-template-columns: 1fr 1fr;
+            }
+            .grid {
+                grid-template-columns: 1fr;
+            }
+        }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>Trade Tracker Cloud</h1>
-        
+        <h1>Trade Tracker</h1>
+
         <div class="sync-status">
-            <div><div id="syncDot" class="sync-dot"></div><span id="syncText">Syncing...</span></div>
-            <button class="btn-action" style="background:#f1f5f9" onclick="document.getElementById('firebaseSetupModal').style.display='block'">⚙️ Config</button>
+            <div class="sync-indicator">
+                <div id="syncDot" class="sync-dot"></div>
+                <span id="syncText">Initializing...</span>
+            </div>
+            <div class="action-btns">
+                <button class="btn btn-secondary" onclick="forceReload()">🔄 Force Reload</button>
+                <button class="btn btn-secondary" onclick="document.getElementById('firebaseSetupModal').style.display='block'">⚙️ Firebase Config</button>
+            </div>
         </div>
 
         <div class="stats-grid">
-            <div class="stat-card"><div class="stat-label">Closed P&L</div><div id="totalPL" class="stat-value">$0.00</div></div>
-            <div class="stat-card"><div class="stat-label">Win Rate</div><div id="winRate" class="stat-value">0%</div></div>
-            <div class="stat-card"><div class="stat-label">Avg R</div><div id="avgR" class="stat-value">0.00R</div></div>
-            <div class="stat-card"><div class="stat-label">YTD P&L</div><div id="ytdPL" class="stat-value">$0.00</div></div>
-            <div class="stat-card"><div class="stat-label">If All Stop Out</div><div id="stopOutVal" class="stat-value">$0.00</div></div>
+            <div class="stat-card">
+                <div class="stat-label">Closed P&L</div>
+                <div id="totalPL" class="stat-value">$0.00</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Win Rate</div>
+                <div id="winRate" class="stat-value">0%</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Avg R</div>
+                <div id="avgR" class="stat-value">0.00R</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">YTD P&L</div>
+                <div id="ytdPL" class="stat-value">$0.00</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">If All Stop Out</div>
+                <div id="stopOutVal" class="stat-value">$0.00</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Cash Available</div>
+                <div id="cashAvailableStat" class="stat-value">$0.00</div>
+            </div>
         </div>
 
         <div class="tabs">
-            <button class="tab active" onclick="switchTab('trades')">Positions</button>
-            <button class="tab" onclick="switchTab('history')">History</button>
-            <button class="tab" onclick="switchTab('accounts')">Accounts</button>
-            <button class="tab" onclick="switchTab('journal')">Journal</button>
+            <button class="tab active" onclick="switchTab('trades')">Open Positions</button>
+            <button class="tab" onclick="switchTab('history')">Trade History</button>
+            <button class="tab" onclick="switchTab('calculator')">Risk Calculator</button>
+            <button class="tab" onclick="switchTab('journal')">Daily Journal</button>
+            <button class="tab" onclick="switchTab('accounts')">Accounts & Roth</button>
         </div>
 
         <div id="trades" class="tab-content active">
             <div class="card">
                 <h3>Add New Position</h3>
-                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 10px; margin-top:10px;">
-                    <input type="text" id="ticker" placeholder="Ticker">
-                    <input type="number" id="entry" placeholder="Entry $">
-                    <input type="number" id="qty" placeholder="Qty">
-                    <input type="number" id="stop" placeholder="Stop $">
+                <div class="grid" style="margin-top: 15px;">
+                    <div class="form-group">
+                        <label>Ticker</label>
+                        <input type="text" id="ticker" placeholder="e.g. NVDA" onkeyup="this.value = this.value.toUpperCase()">
+                    </div>
+                    <div class="form-group">
+                        <label>Entry Price</label>
+                        <input type="number" id="entry" step="0.01" placeholder="0.00">
+                    </div>
+                    <div class="form-group">
+                        <label>Quantity</label>
+                        <input type="number" id="qty" placeholder="0">
+                    </div>
+                    <div class="form-group">
+                        <label>Stop Loss</label>
+                        <input type="number" id="stop" step="0.01" placeholder="0.00">
+                    </div>
                 </div>
-                <button class="btn-action" style="background:#667eea; color:white; width:100%; margin-top:10px; padding:10px;" onclick="addTrade()">Open Trade</button>
+                <button class="btn btn-primary" onclick="addTrade()">🚀 Open Position</button>
             </div>
+
             <div class="card">
-                <h3>Current Positions</h3>
-                <table>
-                    <thead><tr><th>Ticker</th><th>Entry</th><th>Qty</th><th>Stop</th><th>Risk $</th><th style="width:140px">Actions</th></tr></thead>
-                    <tbody id="openBody"></tbody>
-                </table>
+                <h3>Current Portfolio</h3>
+                <div style="overflow-x: auto;">
+                    <table id="openPositionsTable">
+                        <thead>
+                            <tr>
+                                <th onclick="sortOpen('ticker')">Ticker</th>
+                                <th onclick="sortOpen('entryPrice')">Entry</th>
+                                <th onclick="sortOpen('quantity')">Qty</th>
+                                <th onclick="sortOpen('stopLoss')">Stop</th>
+                                <th>Risk $</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="openPositionsBody"></tbody>
+                    </table>
+                </div>
             </div>
         </div>
 
         <div id="history" class="tab-content">
             <div class="card">
-                <table>
-                    <thead><tr><th onclick="sortHistory('date')">Date</th><th>Ticker</th><th>Exit $</th><th>P&L</th><th>R</th></tr></thead>
-                    <tbody id="historyBody"></tbody>
-                </table>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                    <h3>Closed Trades</h3>
+                </div>
+                <div style="overflow-x: auto;">
+                    <table id="historyTable">
+                        <thead>
+                            <tr>
+                                <th onclick="sortHistory('date')">Date</th>
+                                <th onclick="sortHistory('ticker')">Ticker</th>
+                                <th onclick="sortHistory('exitPrice')">Exit</th>
+                                <th onclick="sortHistory('profit')">P&L $</th>
+                                <th onclick="sortHistory('rMultiple')">R-Mult</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="historyBody"></tbody>
+                    </table>
+                </div>
             </div>
         </div>
 
-        <div id="accounts" class="tab-content">
+        <div id="calculator" class="tab-content">
             <div class="card">
-                <h3>Roth IRA Tracking</h3>
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top:10px;">
-                    <div><label>My Roth Balance</label><input type="number" id="myRoth" onchange="saveToFirebase()"></div>
-                    <div><label>My Roth Jan 1st</label><input type="number" id="myRothJan1" onchange="saveToFirebase()"></div>
-                    <div><label>Wife Roth Balance</label><input type="number" id="wifeRoth" onchange="saveToFirebase()"></div>
-                    <div><label>Wife Roth Jan 1st</label><input type="number" id="wifeRothJan1" onchange="saveToFirebase()"></div>
+                <h3>Position Sizing Calculator</h3>
+                <div class="grid" style="margin-top: 15px;">
+                    <div class="form-group">
+                        <label>Account Balance</label>
+                        <input type="number" id="calcBalance" value="10000">
+                    </div>
+                    <div class="form-group">
+                        <label>Risk Percentage (%)</label>
+                        <input type="number" id="calcRiskPct" value="1">
+                    </div>
+                    <div class="form-group">
+                        <label>Entry Price</label>
+                        <input type="number" id="calcEntry" step="0.01">
+                    </div>
+                    <div class="form-group">
+                        <label>Stop Loss</label>
+                        <input type="number" id="calcStop" step="0.01">
+                    </div>
                 </div>
-                <div style="margin-top:20px;">
-                    <label>Cash Available</label><input type="number" id="cashAvail" onchange="saveToFirebase()">
+                <div id="calcResult" style="margin-top: 20px; padding: 15px; background: #f8fafc; border-radius: 8px; display: none;">
                 </div>
+                <button class="btn btn-primary" onclick="calculateSize()" style="margin-top: 10px;">Calculate</button>
             </div>
         </div>
 
         <div id="journal" class="tab-content">
             <div class="card">
-                <textarea id="journalText" rows="20" placeholder="Trading journal..." onchange="saveToFirebase()"></textarea>
+                <h3>Daily Trading Journal</h3>
+                <div class="form-group" style="margin-top: 15px;">
+                    <textarea id="journalArea" rows="10" placeholder="What did you learn today? Market sentiment? Why did you take that trade?"></textarea>
+                </div>
+                <button class="btn btn-primary" onclick="saveJournal()">💾 Save Notes</button>
+                <div id="journalEntries" style="margin-top: 20px;"></div>
+            </div>
+        </div>
+
+        <div id="accounts" class="tab-content">
+            <div class="card">
+                <h3>Financial Tracking</h3>
+                <div class="grid">
+                    <div class="form-group">
+                        <label>My Roth Balance</label>
+                        <input type="number" id="myRoth" placeholder="0.00">
+                    </div>
+                    <div class="form-group">
+                        <label>My Roth (Jan 1st)</label>
+                        <input type="number" id="myRothJan1" placeholder="0.00">
+                    </div>
+                    <div class="form-group">
+                        <label>Wife Roth Balance</label>
+                        <input type="number" id="wifeRoth" placeholder="0.00">
+                    </div>
+                    <div class="form-group">
+                        <label>Wife Roth (Jan 1st)</label>
+                        <input type="number" id="wifeRothJan1" placeholder="0.00">
+                    </div>
+                    <div class="form-group">
+                        <label>Cash Available</label>
+                        <input type="number" id="cashAvailable" placeholder="0.00">
+                    </div>
+                </div>
             </div>
         </div>
     </div>
 
     <div id="firebaseSetupModal">
         <div class="modal-content">
-            <h3>Firebase Setup</h3>
-            <textarea id="fbConfig" rows="10" placeholder='Paste Config JSON here'></textarea>
-            <button class="btn-action" style="background:#667eea; color:white; width:100%; margin-top:15px; padding:10px;" onclick="saveConfig()">Save & Connect</button>
+            <h3>Firebase Configuration</h3>
+            <p style="font-size: 0.9em; color: #64748b; margin: 10px 0;">Your data is saved in your own Firebase Realtime Database.</p>
+            <div class="form-group">
+                <label>API Key</label>
+                <input type="password" id="apiKey">
+            </div>
+            <div class="form-group">
+                <label>Database URL</label>
+                <input type="text" id="dbUrl" placeholder="https://your-db.firebaseio.com">
+            </div>
+            <div class="form-group">
+                <label>Project ID</label>
+                <input type="text" id="projectId">
+            </div>
+            <div style="display: flex; gap: 10px; margin-top: 20px;">
+                <button class="btn btn-primary" onclick="saveFirebaseConfig()" style="flex: 1;">Save & Connect</button>
+                <button class="btn btn-secondary" onclick="document.getElementById('firebaseSetupModal').style.display='none'">Cancel</button>
+            </div>
         </div>
     </div>
 
     <script>
+        // Core State
         let trades = [];
+        let journalEntries = [];
         let dbRef = null;
+        let isFirebaseInitialized = false;
 
-        function switchTab(id) {
+        // Sorting state
+        let openSort = { field: 'ticker', direction: 'asc' };
+        let historySort = { field: 'date', direction: 'desc' };
+
+        // --- Firebase Core ---
+
+        function saveFirebaseConfig() {
+            const config = {
+                apiKey: document.getElementById('apiKey').value,
+                databaseURL: document.getElementById('dbUrl').value,
+                projectId: document.getElementById('projectId').value,
+                authDomain: `${document.getElementById('projectId').value}.firebaseapp.com`
+            };
+
+            if (!config.apiKey || !config.databaseURL) {
+                alert("Please enter at least the API Key and Database URL");
+                return;
+            }
+
+            localStorage.setItem('firebaseConfig', JSON.stringify(config));
+            alert("Configuration saved! Reloading...");
+            location.reload();
+        }
+
+        function loadFirebaseConfig() {
+            const configStr = localStorage.getItem('firebaseConfig');
+            if (!configStr) return false;
+
+            try {
+                const config = JSON.parse(configStr);
+                
+                // Set UI values
+                document.getElementById('apiKey').value = config.apiKey || '';
+                document.getElementById('dbUrl').value = config.databaseURL || '';
+                document.getElementById('projectId').value = config.projectId || '';
+
+                // Initialize Firebase
+                firebase.initializeApp(config);
+                const db = firebase.database();
+                dbRef = db.ref('trade_tracker_v1');
+                
+                isFirebaseInitialized = true;
+                
+                // Listen for changes
+                dbRef.on('value', (snapshot) => {
+                    const data = snapshot.val();
+                    if (data) {
+                        trades = data.trades || [];
+                        journalEntries = data.journalEntries || [];
+                        
+                        // Load account data
+                        if (data.accounts) {
+                            document.getElementById('myRoth').value = data.accounts.myRoth || '';
+                            document.getElementById('myRothJan1').value = data.accounts.myRothJan1 || '';
+                            document.getElementById('wifeRoth').value = data.accounts.wifeRoth || '';
+                            document.getElementById('wifeRothJan1').value = data.accounts.wifeRothJan1 || '';
+                            document.getElementById('cashAvailable').value = data.accounts.cashAvailable || '';
+                            document.getElementById('journalArea').value = data.currentJournal || '';
+                        }
+                        
+                        renderAll();
+                    }
+                }, (error) => {
+                    console.error("Firebase Read Error:", error);
+                    updateSyncStatus('Database Error: Check Permissions', false);
+                });
+
+                return true;
+            } catch (e) {
+                console.error("Config Load Error:", e);
+                return false;
+            }
+        }
+
+        function saveToFirebase() {
+            if (!isFirebaseInitialized || !dbRef) return;
+
+            const data = {
+                trades: trades,
+                journalEntries: journalEntries,
+                currentJournal: document.getElementById('journalArea').value,
+                accounts: {
+                    myRoth: document.getElementById('myRoth').value,
+                    myRothJan1: document.getElementById('myRothJan1').value,
+                    wifeRoth: document.getElementById('wifeRoth').value,
+                    wifeRothJan1: document.getElementById('wifeRothJan1').value,
+                    cashAvailable: document.getElementById('cashAvailable').value
+                },
+                lastUpdated: firebase.database.ServerValue.TIMESTAMP
+            };
+
+            dbRef.set(data).then(() => {
+                updateSyncStatus('Changes Synced ✓', true);
+            }).catch(err => {
+                console.error("Save Error:", err);
+                updateSyncStatus('Sync Failed - Retrying...', false);
+            });
+        }
+
+        function updateSyncStatus(text, success) {
+            const dot = document.getElementById('syncDot');
+            const statusText = document.getElementById('syncText');
+            statusText.textContent = text;
+            dot.style.background = success ? '#10b981' : '#ef4444';
+        }
+
+        function forceReload() {
+            if (confirm("Force reload from database? Unsaved changes will be lost.")) {
+                location.reload();
+            }
+        }
+
+        // --- UI Logic ---
+
+        function switchTab(tabId) {
             document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
             document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-            document.getElementById(id).classList.add('active');
+            document.getElementById(tabId).classList.add('active');
             event.target.classList.add('active');
         }
 
+        // --- Trade Management ---
+
+        function addTrade() {
+            const trade = {
+                id: Date.now(),
+                ticker: document.getElementById('ticker').value,
+                entryPrice: parseFloat(document.getElementById('entry').value),
+                quantity: parseInt(document.getElementById('qty').value),
+                stopLoss: parseFloat(document.getElementById('stop').value),
+                status: 'Open',
+                date: new Date().toISOString()
+            };
+
+            if (!trade.ticker || !trade.entryPrice || !trade.quantity) {
+                alert("Please fill in Ticker, Entry, and Quantity");
+                return;
+            }
+
+            trades.push(trade);
+            saveToFirebase();
+            renderAll();
+            
+            // Clear inputs
+            document.getElementById('ticker').value = '';
+            document.getElementById('entry').value = '';
+            document.getElementById('qty').value = '';
+            document.getElementById('stop').value = '';
+        }
+
+        function closeTrade(id) {
+            const exitPrice = prompt("Enter Exit Price:");
+            if (exitPrice === null) return;
+
+            const trade = trades.find(t => t.id === id);
+            trade.status = 'Closed';
+            trade.exitPrice = parseFloat(exitPrice);
+            trade.closeDate = new Date().toISOString();
+            
+            // Calculate R-Multiple
+            const riskPerShare = trade.entryPrice - trade.stopLoss;
+            if (riskPerShare !== 0) {
+                trade.rMultiple = (trade.exitPrice - trade.entryPrice) / riskPerShare;
+            } else {
+                trade.rMultiple = 0;
+            }
+
+            saveToFirebase();
+            renderAll();
+        }
+
+        function deleteTrade(id) {
+            if (confirm("Delete this trade record forever?")) {
+                trades = trades.filter(t => t.id !== id);
+                saveToFirebase();
+                renderAll();
+            }
+        }
+
+        function editTrade(id) {
+            const trade = trades.find(t => t.id === id);
+            const field = prompt("What would you like to edit? (ticker, entry, qty, stop, exit)");
+            if (!field) return;
+
+            const newVal = prompt(`Enter new value for ${field}:`, trade[field] || '');
+            if (newVal === null) return;
+
+            if (field === 'ticker') trade.ticker = newVal.toUpperCase();
+            if (field === 'entry') trade.entryPrice = parseFloat(newVal);
+            if (field === 'qty') trade.quantity = parseInt(newVal);
+            if (field === 'stop') trade.stopLoss = parseFloat(newVal);
+            if (field === 'exit') trade.exitPrice = parseFloat(newVal);
+
+            // Recalculate R if closed
+            if (trade.status === 'Closed' && trade.stopLoss) {
+                const risk = trade.entryPrice - trade.stopLoss;
+                trade.rMultiple = risk !== 0 ? (trade.exitPrice - trade.entryPrice) / risk : 0;
+            }
+
+            saveToFirebase();
+            renderAll();
+        }
+
+        // --- Rendering ---
+
+        function renderAll() {
+            renderOpenTrades();
+            renderHistory();
+            updateStats();
+        }
+
+        function renderOpenTrades() {
+            const body = document.getElementById('openPositionsBody');
+            body.innerHTML = '';
+
+            const open = trades.filter(t => t.status === 'Open');
+            
+            // Sort
+            open.sort((a, b) => {
+                let valA = a[openSort.field];
+                let valB = b[openSort.field];
+                if (typeof valA === 'string') {
+                    return openSort.direction === 'asc' ? valA.localeCompare(valB) : valB.localeCompare(valA);
+                }
+                return openSort.direction === 'asc' ? valA - valB : valB - valA;
+            });
+
+            open.forEach(t => {
+                const riskPerShare = t.entryPrice - t.stopLoss;
+                const totalRisk = riskPerShare * t.quantity;
+
+                body.innerHTML += `
+                    <tr>
+                        <td><strong>${t.ticker}</strong></td>
+                        <td>$${t.entryPrice.toFixed(2)}</td>
+                        <td>${t.quantity}</td>
+                        <td>$${t.stopLoss.toFixed(2)}</td>
+                        <td class="negative">-$${totalRisk.toFixed(2)}</td>
+                        <td>
+                            <div class="action-btns">
+                                <button class="btn btn-primary" style="padding: 4px 8px; font-size: 12px;" onclick="closeTrade(${t.id})">Close</button>
+                                <button class="btn btn-secondary" style="padding: 4px 8px; font-size: 12px;" onclick="editTrade(${t.id})">Edit</button>
+                            </div>
+                        </td>
+                    </tr>
+                `;
+            });
+        }
+
+        function renderHistory() {
+            const body = document.getElementById('historyBody');
+            body.innerHTML = '';
+
+            const closed = trades.filter(t => t.status === 'Closed');
+            
+            closed.sort((a, b) => {
+                let valA = a[historySort.field];
+                let valB = b[historySort.field];
+                
+                // Handle profit specifically since it's calculated
+                if (historySort.field === 'profit') {
+                    valA = (a.exitPrice - a.entryPrice) * a.quantity;
+                    valB = (b.exitPrice - b.entryPrice) * b.quantity;
+                }
+
+                if (typeof valA === 'string') {
+                    return historySort.direction === 'asc' ? valA.localeCompare(valB) : valB.localeCompare(valA);
+                }
+                return historySort.direction === 'asc' ? valA - valB : valB - valA;
+            });
+
+            closed.forEach(t => {
+                const profit = (t.exitPrice - t.entryPrice) * t.quantity;
+                const rMult = t.rMultiple || 0;
+
+                body.innerHTML += `
+                    <tr>
+                        <td>${new Date(t.date).toLocaleDateString()}</td>
+                        <td><strong>${t.ticker}</strong></td>
+                        <td>$${t.exitPrice.toFixed(2)}</td>
+                        <td class="${profit >= 0 ? 'positive' : 'negative'}">$${profit.toFixed(2)}</td>
+                        <td class="${rMult >= 0 ? 'positive' : 'negative'}">${rMult.toFixed(2)}R</td>
+                        <td>
+                            <div class="action-btns">
+                                <button class="btn btn-secondary" style="padding: 4px 8px; font-size: 12px;" onclick="editTrade(${t.id})">Edit</button>
+                                <button class="btn btn-danger" style="padding: 4px 8px; font-size: 12px;" onclick="deleteTrade(${t.id})">Delete</button>
+                            </div>
+                        </td>
+                    </tr>
+                `;
+            });
+        }
+
         function updateStats() {
-            const openTrades = trades.filter(t => t.status === 'Open');
-            const closedTrades = trades.filter(t => t.status === 'Closed');
+            const closed = trades.filter(t => t.status === 'Closed');
+            const open = trades.filter(t => t.status === 'Open');
             const currentYear = new Date().getFullYear();
 
-            // Stats calculations
-            let totalPL = 0, ytdPL = 0, wins = 0, totalR = 0, stopOutTotal = 0;
+            let totalPL = 0;
+            let wins = 0;
+            let totalR = 0;
+            let ytdPL = 0;
 
-            closedTrades.forEach(t => {
+            closed.forEach(t => {
                 const profit = (t.exitPrice - t.entryPrice) * t.quantity;
                 totalPL += profit;
                 if (profit > 0) wins++;
-                totalR += (parseFloat(t.rMultiple) || 0);
-                if (new Date(t.date).getFullYear() === currentYear) ytdPL += profit;
+                totalR += (t.rMultiple || 0);
+                
+                // Fixed YTD Logic
+                if (new Date(t.date).getFullYear() === currentYear) {
+                    ytdPL += profit;
+                }
             });
 
-            openTrades.forEach(t => {
+            // Calculate Stop Out Value
+            let stopOutTotal = 0;
+            open.forEach(t => {
                 stopOutTotal += (t.stopLoss - t.entryPrice) * t.quantity;
             });
 
-            // Update UI
-            document
+            // Win Rate Fixed: Only show if trades exist to avoid NaN
+            const winRate = closed.length > 0 ? (wins / closed.length) * 100 : 0;
+            const avgR = closed.length > 0 ? (totalR / closed.length) : 0;
+
+            document.getElementById('totalPL').textContent = `$${totalPL.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+            document.getElementById('totalPL').className = `stat-value ${totalPL >= 0 ? 'positive' : 'negative'}`;
+            
+            document.getElementById('winRate').textContent = `${winRate.toFixed(1)}%`;
+            
+            document.getElementById('avgR').textContent = `${avgR.toFixed(2)}R`;
+            document.getElementById('avgR').className = `stat-value ${avgR >= 0 ? 'positive' : 'negative'}`;
+
+            document.getElementById('ytdPL').textContent = `$${ytdPL.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+            document.getElementById('ytdPL').className = `stat-value ${ytdPL >= 0 ? 'positive' : 'negative'}`;
+
+            document.getElementById('stopOutVal').textContent = `$${stopOutTotal.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+            document.getElementById('stopOutVal').className = `stat-value ${stopOutTotal >= 0 ? 'positive' : 'negative'}`;
+
+            const cashAvail = document.getElementById('cashAvailable').value || 0;
+            document.getElementById('cashAvailableStat').textContent = `$${parseFloat(cashAvail).toLocaleString()}`;
+        }
+
+        // --- Other Features ---
+
+        function calculateSize() {
+            const balance = parseFloat(document.getElementById('calcBalance').value);
+            const riskPct = parseFloat(document.getElementById('calcRiskPct').value) / 100;
+            const entry = parseFloat(document.getElementById('calcEntry').value);
+            const stop = parseFloat(document.getElementById('calcStop').value);
+
+            if (!entry || !stop || entry === stop) return;
+
+            const riskAmount = balance * riskPct;
+            const riskPerShare = Math.abs(entry - stop);
+            const quantity = Math.floor(riskAmount / riskPerShare);
+            const totalPosition = quantity * entry;
+
+            const resultDiv = document.getElementById('calcResult');
+            resultDiv.style.display = 'block';
+            resultDiv.innerHTML = `
+                <strong>Recommendation:</strong><br>
+                Buy <strong>${quantity}</strong> shares<br>
+                Total Position Value: $${totalPosition.toLocaleString()}<br>
+                Total Risk: $${riskAmount.toLocaleString()}
+            `;
+        }
+
+        function saveJournal() {
+            saveToFirebase();
+            alert("Journal saved to cloud!");
+        }
+
+        function sortOpen(field) {
+            if (openSort.field === field) {
+                openSort.direction = openSort.direction === 'asc' ? 'desc' : 'asc';
+            } else {
+                openSort.field = field;
+                openSort.direction = 'asc';
+            }
+            renderOpenTrades();
+        }
+
+        function sortHistory(field) {
+            if (historySort.field === field) {
+                historySort.direction = historySort.direction === 'asc' ? 'desc' : 'asc';
+            } else {
+                historySort.field = field;
+                historySort.direction = 'asc';
+            }
+            renderHistory();
+        }
+
+        // Listen for account field changes to auto-save
+        const accountFields = ['myRoth', 'myRothJan1', 'wifeRoth', 'wifeRothJan1', 'cashAvailable'];
+        accountFields.forEach(id => {
+            document.getElementById(id).addEventListener('change', saveToFirebase);
+        });
+
+        // Initialize
+        window.onload = function() {
+            const hasConfig = loadFirebaseConfig();
+            if (!hasConfig) {
+                updateSyncStatus('Not configured - Click ⚙️ Firebase Config', false);
+                setTimeout(() => {
+                    document.getElementById('firebaseSetupModal').style.display = 'block';
+                }, 500);
+            } else {
+                updateSyncStatus('Connected to Firebase ✓', true);
+                // Auto-save journal/accounts every 60 seconds
+                setInterval(saveToFirebase, 60000);
+            }
+        };
+    </script>
+</body>
+</html>
