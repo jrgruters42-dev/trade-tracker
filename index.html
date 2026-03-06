@@ -28,12 +28,16 @@
         .tab-content.active { display: block; }
         .card { background: white; border-radius: 12px; padding: 20px; box-shadow: 0 8px 24px rgba(0,0,0,0.15); margin-bottom: 20px; }
         table { width: 100%; border-collapse: collapse; }
-        th, td { padding: 12px; text-align: left; border-bottom: 1px solid #f1f5f9; }
-        th { background: #f8fafc; font-weight: 600; cursor: pointer; color: #64748b; font-size: 0.9em; }
+        th, td { padding: 10px 8px; text-align: left; border-bottom: 1px solid #f1f5f9; font-size: 14px; }
+        th { background: #f8fafc; font-weight: 600; cursor: pointer; color: #64748b; font-size: 0.85em; }
         input, select, textarea { width: 100%; padding: 10px; border: 1px solid #e2e8f0; border-radius: 6px; margin-top: 5px; font-size: 14px; }
-        .btn { padding: 10px 20px; border-radius: 6px; border: none; cursor: pointer; font-weight: 600; transition: 0.2s; }
+        .btn { padding: 8px 16px; border-radius: 6px; border: none; cursor: pointer; font-weight: 600; transition: 0.2s; }
         .btn-primary { background: #667eea; color: white; }
-        .btn-close { background: #fee2e2; color: #ef4444; font-size: 0.85em; }
+        /* Action buttons specific styling */
+        .btn-action { padding: 4px 10px; font-size: 12px; white-space: nowrap; margin-right: 4px; }
+        .btn-close { background: #fee2e2; color: #ef4444; }
+        .btn-edit { background: #e0e7ff; color: #4338ca; }
+        .action-cell { white-space: nowrap; width: 1%; } /* Keeps buttons in one row */
         #firebaseSetupModal { display: none; position: fixed; z-index: 999; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); }
         .modal-content { background: white; margin: 10% auto; padding: 30px; border-radius: 15px; width: 90%; max-width: 500px; }
     </style>
@@ -75,7 +79,7 @@
             <div class="card">
                 <h3>Open Positions</h3>
                 <table id="openTable">
-                    <thead><tr><th>Ticker</th><th>Entry</th><th>Qty</th><th>Stop</th><th>Actions</th></tr></thead>
+                    <thead><tr><th>Ticker</th><th>Entry</th><th>Qty</th><th>Stop</th><th class="action-cell">Actions</th></tr></thead>
                     <tbody id="openBody"></tbody>
                 </table>
             </div>
@@ -112,7 +116,6 @@
     <div id="firebaseSetupModal">
         <div class="modal-content">
             <h3>Firebase Setup</h3>
-            <p>Paste your config JSON from Firebase Console:</p>
             <textarea id="fbConfig" rows="10" placeholder='{"apiKey": "...", "databaseURL": "..."}'></textarea>
             <button class="btn btn-primary" style="margin-top:15px; width:100%" onclick="saveConfig()">Connect & Reload</button>
         </div>
@@ -157,7 +160,10 @@
             trades.forEach(t => {
                 if (t.status === 'Open') {
                     ob.innerHTML += `<tr><td>${t.ticker}</td><td>$${t.entryPrice}</td><td>${t.quantity}</td><td>$${t.stopLoss}</td>
-                    <td><button class="btn btn-close" onclick="closeTrade(${t.id})">Close</button></td></tr>`;
+                    <td class="action-cell">
+                        <button class="btn btn-action btn-edit" onclick="editTrade(${t.id})">Edit</button>
+                        <button class="btn btn-action btn-close" onclick="closeTrade(${t.id})">Close</button>
+                    </td></tr>`;
                 } else {
                     const p = (t.exitPrice - t.entryPrice) * t.quantity;
                     hb.innerHTML += `<tr><td>${new Date(t.date).toLocaleDateString()}</td><td>${t.ticker}</td>
@@ -168,13 +174,25 @@
         }
 
         function addTrade() {
+            const tkr = document.getElementById('ticker').value.toUpperCase();
+            if(!tkr) return;
             trades.push({
-                id: Date.now(), ticker: document.getElementById('ticker').value.toUpperCase(),
-                entryPrice: parseFloat(document.getElementById('entry').value),
-                quantity: parseInt(document.getElementById('qty').value),
-                stopLoss: parseFloat(document.getElementById('stop').value),
+                id: Date.now(), ticker: tkr,
+                entryPrice: parseFloat(document.getElementById('entry').value) || 0,
+                quantity: parseInt(document.getElementById('qty').value) || 0,
+                stopLoss: parseFloat(document.getElementById('stop').value) || 0,
                 status: 'Open', date: new Date().toISOString()
             });
+            saveToFirebase(); render();
+            document.getElementById('ticker').value = '';
+        }
+
+        function editTrade(id) {
+            const t = trades.find(tr => tr.id === id);
+            const newQty = prompt("Edit Quantity:", t.quantity);
+            const newStop = prompt("Edit Stop Loss:", t.stopLoss);
+            if (newQty !== null) t.quantity = parseInt(newQty);
+            if (newStop !== null) t.stopLoss = parseFloat(newStop);
             saveToFirebase(); render();
         }
 
