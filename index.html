@@ -933,7 +933,8 @@
                 
                 <!-- Add Daily Entry Button -->
                 <div style="margin-bottom: 15px;">
-                    <button onclick="addDailyEquityEntry()" class="btn-success">📊 Add Today's Entry</button>
+                    <button onclick="quickSnapshotWithNCFD()" class="btn-success" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); font-weight: 700;">⚡ Quick Snapshot (Auto FOMO)</button>
+                    <button onclick="addDailyEquityEntry()" class="btn-success" style="margin-left: 5px;">📊 Add Today's Entry</button>
                     <button onclick="addCustomDateEntry()" class="btn-secondary" style="margin-left: 5px;">📅 Add Entry for Specific Date</button>
                     <button onclick="recalculateAllDailyChanges()" class="btn-secondary" style="margin-left: 5px;">🔄 Recalculate All %</button>
                     <button onclick="archiveYearEndData()" class="btn-secondary" style="margin-left: 10px;">📦 Archive & Reset for New Year</button>
@@ -1530,10 +1531,11 @@
                 }
             });
             
-            // Automatically recalculate daily changes to fix any historical calculation errors
-            if (dailyEquityEntries.length > 0) {
-                recalculateDailyChanges();
-            }
+            // Don't automatically recalculate - only when user explicitly requests it
+            // This prevents overwriting user-entered values on every page load
+            // if (dailyEquityEntries.length > 0) {
+            //     recalculateDailyChanges();
+            // }
 
             document.getElementById('accountSize').value = data.accountSize || 250000;
             document.getElementById('startingAccount').value = data.startingAccount || 248288;
@@ -1859,12 +1861,12 @@
                         <td>$${metrics.twoRTarget.toFixed(2)}</td>
                         <td>${metrics.initialRiskPercent.toFixed(2)}%</td>
                         <td>
-                            <div class="action-buttons">
-                                <button class="btn-secondary btn-small" onclick="openEditPositionModal(${pos.id})">Edit</button>
-                                <button class="btn-success btn-small" onclick="openPartialSellModal(${pos.id})">Partial</button>
-                                <button class="btn-secondary btn-small" onclick="openUpdateStopModal(${pos.id})">Stop</button>
-                                <button class="btn-danger btn-small" onclick="openClosePositionModal(${pos.id})">Close</button>
-                                <button class="btn-danger btn-small" onclick="deletePosition(${pos.id})">Delete</button>
+                            <div class="action-buttons" style="display: flex; gap: 3px; flex-wrap: nowrap;">
+                                <button class="btn-secondary" style="padding: 3px 6px; font-size: 0.75em; white-space: nowrap;" onclick="openEditPositionModal(${pos.id})">Edit</button>
+                                <button class="btn-success" style="padding: 3px 6px; font-size: 0.75em; white-space: nowrap;" onclick="openPartialSellModal(${pos.id})">Part</button>
+                                <button class="btn-secondary" style="padding: 3px 6px; font-size: 0.75em; white-space: nowrap;" onclick="openUpdateStopModal(${pos.id})">Stop</button>
+                                <button class="btn-danger" style="padding: 3px 6px; font-size: 0.75em; white-space: nowrap;" onclick="openClosePositionModal(${pos.id})">Close</button>
+                                <button class="btn-danger" style="padding: 3px 6px; font-size: 0.75em; white-space: nowrap;" onclick="deletePosition(${pos.id})">Del</button>
                             </div>
                         </td>
                     </tr>
@@ -2326,6 +2328,98 @@
         let dailyEquityEntries = [];
         
         // Add today's daily equity entry
+        // Quick Snapshot with auto-fetched $NCFD (FOMO)
+        async function quickSnapshotWithNCFD() {
+            const today = new Date().toISOString().split('T')[0];
+            
+            // Check if entry already exists for today
+            const existingEntry = dailyEquityEntries.find(entry => entry.date === today);
+            if (existingEntry) {
+                if (!confirm(`An entry for ${today} already exists. Replace it?`)) {
+                    return;
+                }
+            }
+            
+            // Show loading message
+            const loadingMsg = alert('Fetching $NCFD closing price...');
+            
+            try {
+                // Fetch $NCFD price from Alpha Vantage
+                const apiKey = document.getElementById('apiKey').value || 'demo';
+                const url = `https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=NCFD&apikey=${apiKey}`;
+                
+                const response = await fetch(url);
+                const data = await response.json();
+                
+                let ncfdPrice = null;
+                
+                if (data['Global Quote'] && data['Global Quote']['05. price']) {
+                    ncfdPrice = parseFloat(data['Global Quote']['05. price']);
+                } else {
+                    // Fallback: try to get from user
+                    const userInput = prompt('Could not fetch $NCFD automatically. Enter closing price manually:', '');
+                    if (userInput) {
+                        ncfdPrice = parseFloat(userInput);
+                    } else {
+                        alert('Snapshot cancelled - no FOMO value provided.');
+                        return;
+                    }
+                }
+                
+                // Get current values
+                const accountSize = getAccountSize();
+                
+                // Calculate current portfolio stats
+                let totalPortfolioRisk = 0;
+                let totalExposure = 0;
+                let totalDrawdown = 0;
+                
+                openPositions.forEach(pos => {
+                    const metrics = calculatePositionMetrics(pos);
+                    totalPortfolioRisk += metrics.portfolioCapitalRisk;
+                    totalExposure += metrics.accountWeight;
+                    totalDrawdown += metrics.portfolioDrawdown;
+                });
+                
+                // Create entry
+                const newEntry = {
+                    date: today,
+                    accountValue: accountSize,
+                    drawdown: totalDrawdown,
+                    exposure: totalExposure,
+                    fomo: ncfdPrice,
+                    notes: 'Auto-created via Quick Snapshot',
+                    dailyChange: 0 // Will be calculated
+                };
+                
+                // Remove existing entry if replacing
+                if (existingEntry) {
+                    const index = dailyEquityEntries.findIndex(e => e.date === today);
+                    dailyEquityEntries.splice(index, 1);
+                }
+                
+                // Add new entry
+                dailyEquityEntries.push(newEntry);
+                
+                // Sort by date
+                dailyEquityEntries.sort((a, b) => new Date(a.date) - new Date(b.date));
+                
+                // Recalculate daily changes
+                recalculateDailyChanges();
+                
+                // Save and update
+                saveToFirebase();
+                saveDailySnapshot();
+                updateDailyEquityTable();
+                
+                alert(`✅ Snapshot saved!\n\nDate: ${today}\nAccount: $${accountSize.toLocaleString()}\nFOMO ($NCFD): $${ncfdPrice.toFixed(2)}\nDrawdown: ${totalDrawdown.toFixed(2)}%\nExposure: ${totalExposure.toFixed(2)}%`);
+                
+            } catch (error) {
+                console.error('Error fetching $NCFD:', error);
+                alert('❌ Error fetching $NCFD price. Please check your API key or enter manually using "Add Today\'s Entry" button.');
+            }
+        }
+
         function addDailyEquityEntry() {
             const accountSize = getAccountSize();
             const today = new Date().toISOString().split('T')[0];
@@ -2372,6 +2466,9 @@
             
             dailyEquityEntries.push(newEntry);
             dailyEquityEntries.sort((a, b) => new Date(b.date) - new Date(a.date)); // Sort descending (newest first)
+            
+            // Recalculate all daily % changes to reflect the new entry
+            recalculateDailyChanges();
             
             saveToFirebase();
             updateDailyEquityTable();
