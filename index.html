@@ -2523,6 +2523,9 @@
         function updateDailyEquityTable() {
             const tbody = document.getElementById('dailyEquityTableBody');
             
+            // ALWAYS sort newest first before displaying
+            dailyEquityEntries.sort((a, b) => new Date(b.date) - new Date(a.date));
+            
             // Update entry count
             const entryCountSpan = document.getElementById('entryCount');
             if (entryCountSpan) {
