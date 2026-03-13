@@ -933,7 +933,7 @@
                 
                 <!-- Add Daily Entry Button -->
                 <div style="margin-bottom: 15px;">
-                    <button onclick="quickSnapshotWithNCFD()" class="btn-success" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); font-weight: 700;">⚡ Quick Snapshot (Auto FOMO)</button>
+                    <button onclick="quickSnapshotWithNCFD()" class="btn-success" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); font-weight: 700;">⚡ Quick Snapshot</button>
                     <button onclick="addDailyEquityEntry()" class="btn-success" style="margin-left: 5px;">📊 Add Today's Entry</button>
                     <button onclick="addCustomDateEntry()" class="btn-secondary" style="margin-left: 5px;">📅 Add Entry for Specific Date</button>
                     <button onclick="recalculateAllDailyChanges()" class="btn-secondary" style="margin-left: 5px;">🔄 Recalculate All %</button>
@@ -1571,6 +1571,15 @@
         function getAccountSize() {
             return parseFloat(document.getElementById('accountSize').value) || 250000;
         }
+        
+        // Get today's date in YYYY-MM-DD format using LOCAL timezone (not UTC)
+        function getTodayLocal() {
+            const now = new Date();
+            const year = now.getFullYear();
+            const month = String(now.getMonth() + 1).padStart(2, '0');
+            const day = String(now.getDate()).padStart(2, '0');
+            return `${year}-${month}-${day}`;
+        }
 
         // Calculate position metrics
         function calculatePositionMetrics(pos) {
@@ -1649,7 +1658,7 @@
                 shares: shares,
                 initialShares: shares,
                 initialWeight: parseFloat(document.getElementById('initialWeight').value),
-                entryDate: new Date().toISOString().split('T')[0],
+                entryDate: getTodayLocal(),
                 partialSells: []
             };
 
@@ -2328,9 +2337,9 @@
         let dailyEquityEntries = [];
         
         // Add today's daily equity entry
-        // Quick Snapshot with auto-fetched $NCFD (FOMO)
+        // Quick Snapshot with manual $NCFD entry
         async function quickSnapshotWithNCFD() {
-            const today = new Date().toISOString().split('T')[0];
+            const today = getTodayLocal();
             
             // Check if entry already exists for today
             const existingEntry = dailyEquityEntries.find(entry => entry.date === today);
@@ -2340,89 +2349,71 @@
                 }
             }
             
-            // Show loading message
-            const loadingMsg = alert('Fetching $NCFD closing price...');
-            
-            try {
-                // Fetch $NCFD price from Alpha Vantage
-                const apiKey = document.getElementById('apiKey').value || 'demo';
-                const url = `https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=NCFD&apikey=${apiKey}`;
-                
-                const response = await fetch(url);
-                const data = await response.json();
-                
-                let ncfdPrice = null;
-                
-                if (data['Global Quote'] && data['Global Quote']['05. price']) {
-                    ncfdPrice = parseFloat(data['Global Quote']['05. price']);
-                } else {
-                    // Fallback: try to get from user
-                    const userInput = prompt('Could not fetch $NCFD automatically. Enter closing price manually:', '');
-                    if (userInput) {
-                        ncfdPrice = parseFloat(userInput);
-                    } else {
-                        alert('Snapshot cancelled - no FOMO value provided.');
-                        return;
-                    }
-                }
-                
-                // Get current values
-                const accountSize = getAccountSize();
-                
-                // Calculate current portfolio stats
-                let totalPortfolioRisk = 0;
-                let totalExposure = 0;
-                let totalDrawdown = 0;
-                
-                openPositions.forEach(pos => {
-                    const metrics = calculatePositionMetrics(pos);
-                    totalPortfolioRisk += metrics.portfolioCapitalRisk;
-                    totalExposure += metrics.accountWeight;
-                    totalDrawdown += metrics.portfolioDrawdown;
-                });
-                
-                // Create entry
-                const newEntry = {
-                    date: today,
-                    accountValue: accountSize,
-                    drawdown: totalDrawdown,
-                    exposure: totalExposure,
-                    fomo: ncfdPrice,
-                    notes: 'Auto-created via Quick Snapshot',
-                    dailyChange: 0 // Will be calculated
-                };
-                
-                // Remove existing entry if replacing
-                if (existingEntry) {
-                    const index = dailyEquityEntries.findIndex(e => e.date === today);
-                    dailyEquityEntries.splice(index, 1);
-                }
-                
-                // Add new entry
-                dailyEquityEntries.push(newEntry);
-                
-                // Sort by date
-                dailyEquityEntries.sort((a, b) => new Date(a.date) - new Date(b.date));
-                
-                // Recalculate daily changes
-                recalculateDailyChanges();
-                
-                // Save and update
-                saveToFirebase();
-                saveDailySnapshot();
-                updateDailyEquityTable();
-                
-                alert(`✅ Snapshot saved!\n\nDate: ${today}\nAccount: $${accountSize.toLocaleString()}\nFOMO ($NCFD): $${ncfdPrice.toFixed(2)}\nDrawdown: ${totalDrawdown.toFixed(2)}%\nExposure: ${totalExposure.toFixed(2)}%`);
-                
-            } catch (error) {
-                console.error('Error fetching $NCFD:', error);
-                alert('❌ Error fetching $NCFD price. Please check your API key or enter manually using "Add Today\'s Entry" button.');
+            // Prompt for $NCFD closing price
+            const ncfdInput = prompt('Enter $NCFD closing price (FOMO):', '');
+            if (!ncfdInput) {
+                alert('Snapshot cancelled - no FOMO value provided.');
+                return;
             }
+            
+            const ncfdPrice = parseFloat(ncfdInput);
+            if (isNaN(ncfdPrice)) {
+                alert('Invalid price entered. Please enter a number.');
+                return;
+            }
+            
+            // Get current values
+            const accountSize = getAccountSize();
+            
+            // Calculate current portfolio stats
+            let totalPortfolioRisk = 0;
+            let totalExposure = 0;
+            let totalDrawdown = 0;
+            
+            openPositions.forEach(pos => {
+                const metrics = calculatePositionMetrics(pos);
+                totalPortfolioRisk += metrics.portfolioCapitalRisk;
+                totalExposure += metrics.accountWeight;
+                totalDrawdown += metrics.portfolioDrawdown;
+            });
+            
+            // Create entry
+            const newEntry = {
+                date: today,
+                accountValue: accountSize,
+                drawdown: totalDrawdown,
+                exposure: totalExposure,
+                fomo: ncfdPrice,
+                notes: 'Quick Snapshot',
+                dailyChange: 0 // Will be calculated
+            };
+            
+            // Remove existing entry if replacing
+            if (existingEntry) {
+                const index = dailyEquityEntries.findIndex(e => e.date === today);
+                dailyEquityEntries.splice(index, 1);
+            }
+            
+            // Add new entry
+            dailyEquityEntries.push(newEntry);
+            
+            // Sort by date DESCENDING (newest first) - matches display order
+            dailyEquityEntries.sort((a, b) => new Date(b.date) - new Date(a.date));
+            
+            // Recalculate daily changes
+            recalculateDailyChanges();
+            
+            // Save and update
+            saveToFirebase();
+            saveDailySnapshot();
+            updateDailyEquityTable();
+            
+            alert(`✅ Snapshot saved!\n\nDate: ${today}\nAccount: $${accountSize.toLocaleString()}\nFOMO ($NCFD): $${ncfdPrice.toFixed(2)}\nDrawdown: ${totalDrawdown.toFixed(2)}%\nExposure: ${totalExposure.toFixed(2)}%`);
         }
 
         function addDailyEquityEntry() {
             const accountSize = getAccountSize();
-            const today = new Date().toISOString().split('T')[0];
+            const today = getTodayLocal();
             
             // Check if entry for today already exists
             const existingEntry = dailyEquityEntries.find(entry => entry.date === today);
@@ -2476,7 +2467,7 @@
         
         // Add entry for a specific date
         function addCustomDateEntry() {
-            const dateInput = prompt('Enter date (YYYY-MM-DD):', new Date().toISOString().split('T')[0]);
+            const dateInput = prompt('Enter date (YYYY-MM-DD):', getTodayLocal());
             if (!dateInput) return;
             
             // Validate date format
@@ -2772,7 +2763,7 @@
         // Save daily snapshot
         function saveDailySnapshot() {
             const accountSize = getAccountSize();
-            const today = new Date().toISOString().split('T')[0];
+            const today = getTodayLocal();
             
             let totalOpenPnL = 0;
             openPositions.forEach(pos => {
@@ -2889,7 +2880,7 @@
 
         function openClosePositionModal(id) {
             document.getElementById('closePositionId').value = id;
-            document.getElementById('exitDate').value = new Date().toISOString().split('T')[0];
+            document.getElementById('exitDate').value = getTodayLocal();
             document.getElementById('closePositionModal').style.display = 'block';
         }
 
