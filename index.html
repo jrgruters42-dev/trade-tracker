@@ -1667,6 +1667,35 @@
             saveToFirebase();
             updateAllDisplays();
             this.reset();
+            
+            // Clear saved form data after successful submission
+            sessionStorage.removeItem('addPositionFormData');
+        });
+        
+        // Auto-save form data to prevent loss when switching tabs
+        const formFields = ['symbol', 'entryPrice', 'initialStop', 'shares', 'initialWeight'];
+        formFields.forEach(fieldId => {
+            const field = document.getElementById(fieldId);
+            if (field) {
+                // Restore saved data on page load
+                const savedData = sessionStorage.getItem('addPositionFormData');
+                if (savedData) {
+                    try {
+                        const data = JSON.parse(savedData);
+                        if (data[fieldId]) field.value = data[fieldId];
+                    } catch (e) {}
+                }
+                
+                // Save data whenever user types
+                field.addEventListener('input', function() {
+                    const formData = {};
+                    formFields.forEach(id => {
+                        const el = document.getElementById(id);
+                        if (el && el.value) formData[id] = el.value;
+                    });
+                    sessionStorage.setItem('addPositionFormData', JSON.stringify(formData));
+                });
+            }
         });
 
         // Update open positions table
