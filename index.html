@@ -1283,9 +1283,10 @@
                 
                 console.log('Setting up Firebase listener...');
                 
-                // Listen for data changes with error handling
-                dbRef.on('value', (snapshot) => {
-                    console.log('Firebase data received');
+                // Load data ONCE on page load (not continuously)
+                // This prevents save/load loops that cause data loss
+                dbRef.once('value', (snapshot) => {
+                    console.log('Firebase data received (one-time load)');
                     const data = snapshot.val();
                     if (data) {
                         console.log('Loading data from Firebase');
@@ -3426,13 +3427,8 @@
             } else {
                 updateSyncStatus('Connected to Firebase ✓', true);
                 
-                // Auto-save every 30 seconds to prevent data loss
-                setInterval(() => {
-                    if (isFirebaseInitialized && dbRef) {
-                        saveToFirebase();
-                        console.log('Auto-save triggered');
-                    }
-                }, 30000); // 30 seconds
+                // Auto-save disabled - data saves when you make changes
+                // This prevents save/load loops that cause data loss
             }
         };
     </script>
