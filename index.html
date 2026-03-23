@@ -745,7 +745,7 @@
                 <div class="refresh-controls">
                     <button onclick="updateAllPrices()" class="btn-success">🔄 Update All Prices</button>
                     <div class="toggle-switch">
-                        <input type="checkbox" id="autoRefresh">
+                        <input type="checkbox" id="autoRefresh" checked>
                         <label for="autoRefresh" style="font-weight: normal; margin: 0;">Auto-refresh every 60s</label>
                     </div>
                     <span id="lastUpdate" style="color: #666; font-size: 12px;"></span>
@@ -1816,7 +1816,7 @@
                             <th onclick="sortOpenPositions('adjustedPrice')" style="cursor: pointer;">Adj Price ▼</th>
                             <th onclick="sortOpenPositions('shares')" style="cursor: pointer;">QTY ▼</th>
                             <th onclick="sortOpenPositions('initialStop')" style="cursor: pointer;">Initial Stop ▼</th>
-                            <th onclick="sortOpenPositions('currentStop')" style="cursor: pointer;">Current Stop ▼</th>
+                            <th onclick="sortOpenPositions('currentStop')" style="cursor: pointer; background: #dbeafe; font-weight: 700;">Current Stop ▼</th>
                             <th onclick="sortOpenPositions('initialWeight')" style="cursor: pointer;">Init Acct Wt% ▼</th>
                             <th onclick="sortOpenPositions('accountWeight')" style="cursor: pointer;">Acct Wt% ▼</th>
                             <th class="highlight-col" onclick="sortOpenPositions('pnlPercent')" style="cursor: pointer;">P&L% ▼ <span class="tooltip">ℹ<span class="tooltiptext">Includes realized gains from partial sells</span></span></th>
@@ -1889,7 +1889,7 @@
                         <td>$${metrics.adjustedPrice.toFixed(2)}</td>
                         <td>${pos.shares}</td>
                         <td>$${pos.initialStop.toFixed(2)}</td>
-                        <td>$${pos.currentStop.toFixed(2)}</td>
+                        <td style="background: #dbeafe;">$${pos.currentStop.toFixed(2)}</td>
                         <td>${pos.initialWeight.toFixed(2)}%</td>
                         <td>${metrics.accountWeight.toFixed(2)}%</td>
                         <td class="highlight-col ${pnlClass}">${metrics.pnlPercent.toFixed(2)}%</td>
@@ -2897,6 +2897,11 @@
                 }
             }
         });
+        
+        // Start auto-refresh on page load (checkbox is checked by default)
+        if (document.getElementById('autoRefresh').checked) {
+            autoRefreshInterval = setInterval(updateAllPrices, 60000);
+        }
 
         // Modal functions
         function openPartialSellModal(id) {
