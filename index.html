@@ -1403,6 +1403,8 @@
         // Save data to Firebase
         function saveToFirebase() {
             if (!isFirebaseInitialized || !dbRef) return;
+            
+            window.pendingSave = true; // Track that save is in progress
 
             const data = {
                 openPositions,
@@ -1427,13 +1429,31 @@
                 updateSyncStatus('Synced ✓', true);
                 document.getElementById('lastSavedTime').textContent = `Last saved: ${timeStr}`;
                 console.log('Data saved to Firebase successfully at', timeStr);
+                window.pendingSave = false; // Save complete
             }).catch((error) => {
                 console.error('Save error:', error);
                 updateSyncStatus('Sync error', false);
                 document.getElementById('lastSavedTime').textContent = `Save failed`;
                 alert('Firebase sync error: ' + error.message);
+                window.pendingSave = false;
             });
         }
+        
+        // Warn user if they try to close with unsaved changes
+        window.addEventListener('beforeunload', function(e) {
+            if (window.pendingSave) {
+                e.preventDefault();
+                e.returnValue = 'Save in progress - closing now may lose data!';
+                return 'Save in progress - closing now may lose data!';
+            }
+        });
+        
+        // Backup auto-save every 30 seconds to prevent data loss
+        setInterval(() => {
+            if (isFirebaseInitialized && dbRef) {
+                saveToFirebase();
+            }
+        }, 30000); // 30 seconds
         
         // Force save to Firebase (user-triggered)
         function forceSaveToFirebase() {
@@ -1641,17 +1661,18 @@
             };
         }
 
-        // Add new position
-        document.getElementById('addPositionForm').addEventListener('submit', function(e) {
+        // Add new position with save confirmation
+        document.getElementById('addPositionForm').addEventListener('submit', async function(e) {
             e.preventDefault();
             
+            const symbol = document.getElementById('symbol').value.toUpperCase();
             const shares = parseInt(document.getElementById('shares').value);
             const entryPrice = parseFloat(document.getElementById('entryPrice').value);
             const initialStop = parseFloat(document.getElementById('initialStop').value);
             
             const position = {
                 id: positionIdCounter++,
-                symbol: document.getElementById('symbol').value.toUpperCase(),
+                symbol: symbol,
                 entryPrice: entryPrice,
                 currentPrice: entryPrice,
                 initialStop: initialStop,
@@ -1664,7 +1685,23 @@
             };
 
             openPositions.push(position);
+            
+            // Save and wait for completion
+            updateSyncStatus('Saving...', true);
             saveToFirebase();
+            
+            // Wait a moment for save to complete, then confirm
+            setTimeout(() => {
+                if (!window.pendingSave) {
+                    // Show brief confirmation
+                    const confirmation = document.createElement('div');
+                    confirmation.style.cssText = 'position: fixed; top: 20px; right: 20px; background: #10b981; color: white; padding: 15px 25px; border-radius: 8px; font-weight: 700; z-index: 10000; box-shadow: 0 4px 6px rgba(0,0,0,0.3);';
+                    confirmation.textContent = `✓ ${symbol} added & saved!`;
+                    document.body.appendChild(confirmation);
+                    setTimeout(() => confirmation.remove(), 2000);
+                }
+            }, 1000);
+            
             updateAllDisplays();
             this.reset();
             
