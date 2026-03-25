@@ -2324,9 +2324,11 @@
                 }
             });
             
+            // Get last 10 trades for multiple calculations
+            const last10Trades = closedTrades.slice(-10);
+            
             // Calculate total realized losses for last 10 trades
             let totalLast10LossDollars = 0;
-            const last10Trades = closedTrades.slice(-10); // Last 10 trades
             last10Trades.forEach(trade => {
                 const pnlDollars = (trade.portfolioPnlPercent / 100) * accountSize;
                 if (pnlDollars < 0) {
@@ -2377,8 +2379,7 @@
                 }
             });
             
-            // Calculate realized loss R from last 10 trades
-            const last10Trades = closedTrades.slice(-10);
+            // Calculate realized loss R from last 10 trades (reuse last10Trades from above)
             last10Trades.forEach(trade => {
                 if (trade.rMultiple < 0) {
                     totalRealizedLossR += Math.abs(trade.rMultiple);
