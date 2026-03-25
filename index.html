@@ -708,6 +708,102 @@
                         <div class="stat-label" style="font-size: 0.65em;">If All Stop Out</div>
                         <div class="stat-value" style="font-size: 1em;" id="ifAllStopOut">$0</div>
                     </div>
+                    <div class="stat-box-compact" style="padding: 6px;">
+                        <div class="stat-label" style="font-size: 0.65em;">Expectancy</div>
+                        <div class="stat-value" style="font-size: 1em;" id="expectancy">$0.00</div>
+                    </div>
+                    <div class="stat-box-compact" style="padding: 6px;" id="recoveryStatusBox">
+                        <div class="stat-label" style="font-size: 0.65em;">Recovery Status</div>
+                        <div class="stat-value" style="font-size: 1em;" id="recoveryStatus">0.00x</div>
+                    </div>
+                    <div class="stat-box-compact" style="padding: 6px;" id="netRBox">
+                        <div class="stat-label" style="font-size: 0.65em;">Net R</div>
+                        <div class="stat-value" style="font-size: 1em;" id="netR">0.00R</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Regressive Stop Alert -->
+            <div class="card" id="regressiveStopAlert" style="padding: 12px; margin-bottom: 12px; display: none; background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); border: 2px solid #f59e0b;">
+                <h2 style="font-size: 1em; margin-bottom: 10px; color: #92400e;">⚠️ Regressive Stop Required</h2>
+                <p style="font-size: 0.9em; margin-bottom: 10px; color: #78350f;">You are "Net Long hope" - move these stops to lock in profit!</p>
+                <div id="regressiveStopList" style="font-size: 0.9em;"></div>
+            </div>
+
+            <!-- Expectancy Calculator -->
+            <div class="card" style="padding: 12px; margin-bottom: 12px;">
+                <h2 style="font-size: 1em; margin-bottom: 15px;">📊 Expectancy Calculator</h2>
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 15px;">
+                    
+                    <!-- Scenario 1 -->
+                    <div style="padding: 15px; background: #f9fafb; border-radius: 8px; border: 1px solid #e5e7eb;">
+                        <h3 style="font-size: 0.9em; margin-bottom: 10px; color: #667eea;">Scenario 1</h3>
+                        <div style="display: grid; gap: 8px;">
+                            <div>
+                                <label style="font-size: 0.85em; display: block; margin-bottom: 3px;">Win Rate (%)</label>
+                                <input type="number" id="calc1WinRate" step="1" value="60" style="width: 100%; padding: 6px;">
+                            </div>
+                            <div>
+                                <label style="font-size: 0.85em; display: block; margin-bottom: 3px;">Avg Win ($)</label>
+                                <input type="number" id="calc1AvgWin" step="0.01" value="500" style="width: 100%; padding: 6px;">
+                            </div>
+                            <div>
+                                <label style="font-size: 0.85em; display: block; margin-bottom: 3px;">Avg Loss ($)</label>
+                                <input type="number" id="calc1AvgLoss" step="0.01" value="300" style="width: 100%; padding: 6px;">
+                            </div>
+                            <div style="margin-top: 10px; padding: 10px; background: white; border-radius: 6px; text-align: center;">
+                                <div style="font-size: 0.75em; color: #666;">Expectancy</div>
+                                <div id="calc1Result" style="font-size: 1.3em; font-weight: 700; color: #10b981;">$180.00</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Scenario 2 -->
+                    <div style="padding: 15px; background: #f9fafb; border-radius: 8px; border: 1px solid #e5e7eb;">
+                        <h3 style="font-size: 0.9em; margin-bottom: 10px; color: #667eea;">Scenario 2</h3>
+                        <div style="display: grid; gap: 8px;">
+                            <div>
+                                <label style="font-size: 0.85em; display: block; margin-bottom: 3px;">Win Rate (%)</label>
+                                <input type="number" id="calc2WinRate" step="1" value="50" style="width: 100%; padding: 6px;">
+                            </div>
+                            <div>
+                                <label style="font-size: 0.85em; display: block; margin-bottom: 3px;">Avg Win ($)</label>
+                                <input type="number" id="calc2AvgWin" step="0.01" value="600" style="width: 100%; padding: 6px;">
+                            </div>
+                            <div>
+                                <label style="font-size: 0.85em; display: block; margin-bottom: 3px;">Avg Loss ($)</label>
+                                <input type="number" id="calc2AvgLoss" step="0.01" value="300" style="width: 100%; padding: 6px;">
+                            </div>
+                            <div style="margin-top: 10px; padding: 10px; background: white; border-radius: 6px; text-align: center;">
+                                <div style="font-size: 0.75em; color: #666;">Expectancy</div>
+                                <div id="calc2Result" style="font-size: 1.3em; font-weight: 700; color: #10b981;">$150.00</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Scenario 3 -->
+                    <div style="padding: 15px; background: #f9fafb; border-radius: 8px; border: 1px solid #e5e7eb;">
+                        <h3 style="font-size: 0.9em; margin-bottom: 10px; color: #667eea;">Scenario 3</h3>
+                        <div style="display: grid; gap: 8px;">
+                            <div>
+                                <label style="font-size: 0.85em; display: block; margin-bottom: 3px;">Win Rate (%)</label>
+                                <input type="number" id="calc3WinRate" step="1" value="40" style="width: 100%; padding: 6px;">
+                            </div>
+                            <div>
+                                <label style="font-size: 0.85em; display: block; margin-bottom: 3px;">Avg Win ($)</label>
+                                <input type="number" id="calc3AvgWin" step="0.01" value="800" style="width: 100%; padding: 6px;">
+                            </div>
+                            <div>
+                                <label style="font-size: 0.85em; display: block; margin-bottom: 3px;">Avg Loss ($)</label>
+                                <input type="number" id="calc3AvgLoss" step="0.01" value="300" style="width: 100%; padding: 6px;">
+                            </div>
+                            <div style="margin-top: 10px; padding: 10px; background: white; border-radius: 6px; text-align: center;">
+                                <div style="font-size: 0.75em; color: #666;">Expectancy</div>
+                                <div id="calc3Result" style="font-size: 1.3em; font-weight: 700; color: #10b981;">$140.00</div>
+                            </div>
+                        </div>
+                    </div>
+                    
                 </div>
             </div>
 
@@ -1402,9 +1498,17 @@
 
         // Save data to Firebase
         function saveToFirebase() {
-            if (!isFirebaseInitialized || !dbRef) return;
+            if (!isFirebaseInitialized || !dbRef) {
+                console.error('❌ Cannot save: Firebase not initialized');
+                return;
+            }
             
             window.pendingSave = true; // Track that save is in progress
+            console.log('💾 Starting save to Firebase...', {
+                openPositions: openPositions.length,
+                closedTrades: closedTrades.length,
+                dailyEquityEntries: dailyEquityEntries.length
+            });
 
             const data = {
                 openPositions,
@@ -1428,10 +1532,13 @@
                 const timeStr = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
                 updateSyncStatus('Synced ✓', true);
                 document.getElementById('lastSavedTime').textContent = `Last saved: ${timeStr}`;
-                console.log('Data saved to Firebase successfully at', timeStr);
+                console.log('✅ Data saved to Firebase successfully at', timeStr, {
+                    openPositions: openPositions.length,
+                    closedTrades: closedTrades.length
+                });
                 window.pendingSave = false; // Save complete
             }).catch((error) => {
-                console.error('Save error:', error);
+                console.error('❌ Save error:', error);
                 updateSyncStatus('Sync error', false);
                 document.getElementById('lastSavedTime').textContent = `Save failed`;
                 alert('Firebase sync error: ' + error.message);
@@ -1439,6 +1546,47 @@
             });
         }
         
+        // Expectancy Calculator event listeners
+        function calculateExpectancy(winRate, avgWin, avgLoss) {
+            const winRateDecimal = winRate / 100;
+            const lossRate = 1 - winRateDecimal;
+            return (winRateDecimal * avgWin) - (lossRate * avgLoss);
+        }
+        
+        function updateExpectancyCalculator(calcNum) {
+            const winRate = parseFloat(document.getElementById(`calc${calcNum}WinRate`).value) || 0;
+            const avgWin = parseFloat(document.getElementById(`calc${calcNum}AvgWin`).value) || 0;
+            const avgLoss = parseFloat(document.getElementById(`calc${calcNum}AvgLoss`).value) || 0;
+            
+            const expectancy = calculateExpectancy(winRate, avgWin, avgLoss);
+            const resultEl = document.getElementById(`calc${calcNum}Result`);
+            
+            if (resultEl) {
+                resultEl.textContent = '$' + expectancy.toFixed(2);
+                
+                // Color code
+                if (expectancy > 0) {
+                    resultEl.style.color = '#10b981';
+                } else if (expectancy < 0) {
+                    resultEl.style.color = '#ef4444';
+                } else {
+                    resultEl.style.color = '#667eea';
+                }
+            }
+        }
+        
+        // Add event listeners for all 3 calculators
+        for (let i = 1; i <= 3; i++) {
+            ['WinRate', 'AvgWin', 'AvgLoss'].forEach(field => {
+                const el = document.getElementById(`calc${i}${field}`);
+                if (el) {
+                    el.addEventListener('input', () => updateExpectancyCalculator(i));
+                }
+            });
+            // Initialize on page load
+            updateExpectancyCalculator(i);
+        }
+
         // Warn user if they try to close with unsaved changes
         window.addEventListener('beforeunload', function(e) {
             if (window.pendingSave) {
@@ -1504,7 +1652,17 @@
 
         // Load data from Firebase
         function loadDataFromFirebase(data) {
-            if (!data) return;
+            if (!data) {
+                console.log('📭 No data in Firebase - starting fresh');
+                return;
+            }
+            
+            console.log('📥 Loading data from Firebase:', {
+                openPositions: (data.openPositions || []).length,
+                closedTrades: (data.closedTrades || []).length,
+                dailyEquityEntries: (data.dailyEquityEntries || []).length,
+                lastModified: data.lastModified
+            });
 
             openPositions = data.openPositions || [];
             closedTrades = data.closedTrades || [];
@@ -1686,21 +1844,65 @@
 
             openPositions.push(position);
             
-            // Save and wait for completion
+            // Save and VERIFY it worked
             updateSyncStatus('Saving...', true);
-            saveToFirebase();
             
-            // Wait a moment for save to complete, then confirm
-            setTimeout(() => {
-                if (!window.pendingSave) {
-                    // Show brief confirmation
-                    const confirmation = document.createElement('div');
-                    confirmation.style.cssText = 'position: fixed; top: 20px; right: 20px; background: #10b981; color: white; padding: 15px 25px; border-radius: 8px; font-weight: 700; z-index: 10000; box-shadow: 0 4px 6px rgba(0,0,0,0.3);';
-                    confirmation.textContent = `✓ ${symbol} added & saved!`;
-                    document.body.appendChild(confirmation);
-                    setTimeout(() => confirmation.remove(), 2000);
+            // Save to Firebase
+            const savePromise = new Promise((resolve, reject) => {
+                if (!isFirebaseInitialized || !dbRef) {
+                    reject(new Error('Firebase not initialized'));
+                    return;
                 }
-            }, 1000);
+                
+                const data = {
+                    openPositions,
+                    closedTrades,
+                    dailyEquity,
+                    dailyEquityEntries,
+                    positionIdCounter,
+                    accountSize: parseFloat(document.getElementById('accountSize').value),
+                    startingAccount: parseFloat(document.getElementById('startingAccount').value),
+                    myRoth: parseFloat(document.getElementById('myRoth').value),
+                    myRothJan1: parseFloat(document.getElementById('myRothJan1').value),
+                    wifeRoth: parseFloat(document.getElementById('wifeRoth').value),
+                    wifeRothJan1: parseFloat(document.getElementById('wifeRothJan1').value),
+                    apiKey: document.getElementById('apiKey').value,
+                    stockProfiles: stockProfiles,
+                    lastModified: new Date().toISOString()
+                };
+                
+                dbRef.set(data).then(() => {
+                    console.log(`✓ Position ${symbol} saved to Firebase successfully`);
+                    resolve();
+                }).catch((error) => {
+                    console.error('Save failed:', error);
+                    reject(error);
+                });
+            });
+            
+            // Wait for save to complete and verify
+            savePromise.then(() => {
+                // Show BIG centered confirmation
+                const confirmation = document.createElement('div');
+                confirmation.style.cssText = 'position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: #10b981; color: white; padding: 30px 50px; border-radius: 12px; font-weight: 700; font-size: 1.5em; z-index: 10000; box-shadow: 0 8px 16px rgba(0,0,0,0.4);';
+                confirmation.textContent = `✓ ${symbol} SAVED!`;
+                document.body.appendChild(confirmation);
+                setTimeout(() => confirmation.remove(), 3000);
+                
+                updateSyncStatus('Synced ✓', true);
+                const timeStr = new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+                document.getElementById('lastSavedTime').textContent = `Last saved: ${timeStr}`;
+            }).catch((error) => {
+                // Show ERROR message
+                const errorMsg = document.createElement('div');
+                errorMsg.style.cssText = 'position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: #ef4444; color: white; padding: 30px 50px; border-radius: 12px; font-weight: 700; font-size: 1.5em; z-index: 10000; box-shadow: 0 8px 16px rgba(0,0,0,0.4);';
+                errorMsg.textContent = `✗ SAVE FAILED!`;
+                document.body.appendChild(errorMsg);
+                setTimeout(() => errorMsg.remove(), 5000);
+                
+                updateSyncStatus('Save error', false);
+                alert(`❌ SAVE FAILED for ${symbol}!\n\nError: ${error.message}\n\nYour data was NOT saved. Try again!`);
+            });
             
             updateAllDisplays();
             this.reset();
@@ -2136,6 +2338,192 @@
             const stopOutEl = document.getElementById('ifAllStopOut');
             if (stopOutEl) {
                 stopOutEl.textContent = '$' + accountIfStopOut.toLocaleString(undefined, {minimumFractionDigits: 0, maximumFractionDigits: 0});
+            }
+            
+            // Calculate Expectancy: (Win Rate × Average Win) - (Loss Rate × Average Loss)
+            if (closedTrades.length > 0) {
+                const stats = calculateTradeStats(closedTrades);
+                const winRate = stats.winRate / 100; // Convert to decimal
+                const lossRate = 1 - winRate;
+                
+                // Calculate average win and loss in dollars
+                let totalWinDollars = 0;
+                let totalLossDollars = 0;
+                let winCount = 0;
+                let lossCount = 0;
+                
+                closedTrades.forEach(trade => {
+                    const pnlDollars = (trade.portfolioPnlPercent / 100) * accountSize;
+                    if (pnlDollars > 0) {
+                        totalWinDollars += pnlDollars;
+                        winCount++;
+                    } else if (pnlDollars < 0) {
+                        totalLossDollars += Math.abs(pnlDollars);
+                        lossCount++;
+                    }
+                });
+                
+                const avgWin = winCount > 0 ? totalWinDollars / winCount : 0;
+                const avgLoss = lossCount > 0 ? totalLossDollars / lossCount : 0;
+                
+                const expectancy = (winRate * avgWin) - (lossRate * avgLoss);
+                
+                const expectancyEl = document.getElementById('expectancy');
+                if (expectancyEl) {
+                    expectancyEl.textContent = '$' + expectancy.toFixed(2);
+                    
+                    // Color code: positive = green, negative = red
+                    if (expectancy > 0) {
+                        expectancyEl.parentElement.style.background = 'linear-gradient(135deg, #10b981 0%, #059669 100%)';
+                    } else if (expectancy < 0) {
+                        expectancyEl.parentElement.style.background = 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)';
+                    } else {
+                        expectancyEl.parentElement.style.background = 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)';
+                    }
+                }
+            } else {
+                const expectancyEl = document.getElementById('expectancy');
+                if (expectancyEl) {
+                    expectancyEl.textContent = '$0.00';
+                    expectancyEl.parentElement.style.background = 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)';
+                }
+            }
+            
+            // Calculate Recovery Status: (Total Open Profit) / (Total Realized Loss for Last 10 Trades)
+            
+            // Calculate total open profit in dollars
+            let totalOpenProfitDollars = 0;
+            openPositions.forEach(pos => {
+                const metrics = calculatePositionMetrics(pos);
+                const pnlDollars = (metrics.portfolioPnlPercent / 100) * accountSize;
+                if (pnlDollars > 0) {
+                    totalOpenProfitDollars += pnlDollars;
+                }
+            });
+            
+            // Calculate total realized losses for last 10 trades
+            let totalLast10LossDollars = 0;
+            const last10Trades = closedTrades.slice(-10); // Last 10 trades
+            last10Trades.forEach(trade => {
+                const pnlDollars = (trade.portfolioPnlPercent / 100) * accountSize;
+                if (pnlDollars < 0) {
+                    totalLast10LossDollars += Math.abs(pnlDollars);
+                }
+            });
+            
+            const recoveryStatusEl = document.getElementById('recoveryStatus');
+            const recoveryStatusBox = document.getElementById('recoveryStatusBox');
+            
+            if (recoveryStatusEl && recoveryStatusBox) {
+                if (totalLast10LossDollars > 0) {
+                    const recoveryRatio = totalOpenProfitDollars / totalLast10LossDollars;
+                    recoveryStatusEl.textContent = recoveryRatio.toFixed(2) + 'x';
+                    
+                    // If > 1.5, highlight in yellow with warning message
+                    if (recoveryRatio > 1.5) {
+                        recoveryStatusBox.style.background = 'linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%)';
+                        recoveryStatusBox.title = '⚠️ You are leaning too hard on your winners. Ring the register on a portion to clear your losses (Last 10 trades).';
+                        recoveryStatusBox.style.cursor = 'help';
+                    } else {
+                        recoveryStatusBox.style.background = 'linear-gradient(135deg, #10b981 0%, #059669 100%)';
+                        recoveryStatusBox.title = 'Healthy recovery ratio (Last 10 trades)';
+                        recoveryStatusBox.style.cursor = 'default';
+                    }
+                } else {
+                    // No losses in last 10 trades
+                    recoveryStatusEl.textContent = 'N/A';
+                    recoveryStatusBox.style.background = 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)';
+                    recoveryStatusBox.title = 'No realized losses in last 10 trades';
+                    recoveryStatusBox.style.cursor = 'default';
+                }
+            }
+            
+            // Calculate Net R: (Total Unrealized R) - (Total Realized Loss R for Last 10 Trades)
+            let totalUnrealizedR = 0;
+            let totalRealizedLossR = 0;
+            
+            // Calculate unrealized R from open positions
+            openPositions.forEach(pos => {
+                const metrics = calculatePositionMetrics(pos);
+                // R = P&L / Initial Risk
+                if (metrics.initialR && metrics.initialR !== 0) {
+                    const currentR = metrics.totalPnL / Math.abs(metrics.initialR);
+                    if (!isNaN(currentR) && isFinite(currentR)) {
+                        totalUnrealizedR += currentR;
+                    }
+                }
+            });
+            
+            // Calculate realized loss R from last 10 trades
+            const last10Trades = closedTrades.slice(-10);
+            last10Trades.forEach(trade => {
+                if (trade.rMultiple < 0) {
+                    totalRealizedLossR += Math.abs(trade.rMultiple);
+                }
+            });
+            
+            const netR = totalUnrealizedR - totalRealizedLossR;
+            const netREl = document.getElementById('netR');
+            const netRBox = document.getElementById('netRBox');
+            
+            if (netREl && netRBox) {
+                netREl.textContent = netR.toFixed(2) + 'R';
+                
+                // Color code: positive = green, negative = red
+                if (netR > 0) {
+                    netRBox.style.background = 'linear-gradient(135deg, #10b981 0%, #059669 100%)';
+                    netRBox.title = 'Net R: Unrealized R minus Last 10 Losses';
+                } else if (netR < 0) {
+                    netRBox.style.background = 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)';
+                    netRBox.title = 'Net R: Unrealized R minus Last 10 Losses';
+                } else {
+                    netRBox.style.background = 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)';
+                    netRBox.title = 'Net R: Unrealized R minus Last 10 Losses';
+                }
+            }
+            
+            // Check for Regressive Stop alerts
+            // Show alert if any single trade's unrealized profit > total realized losses (last 10)
+            const regressiveStopAlert = document.getElementById('regressiveStopAlert');
+            const regressiveStopList = document.getElementById('regressiveStopList');
+            
+            if (regressiveStopAlert && regressiveStopList) {
+                const tradesNeedingRegStop = [];
+                
+                openPositions.forEach(pos => {
+                    const metrics = calculatePositionMetrics(pos);
+                    const unrealizedProfitDollars = (metrics.portfolioPnlPercent / 100) * accountSize;
+                    
+                    if (unrealizedProfitDollars > 0 && unrealizedProfitDollars > totalLast10LossDollars && totalLast10LossDollars > 0) {
+                        // Calculate required stop price to lock in minimum profit
+                        const minProfitNeeded = totalLast10LossDollars + 1; // $1 more than total losses
+                        const minProfitPercent = (minProfitNeeded / accountSize) * 100;
+                        
+                        // Calculate stop price needed
+                        // We need: (currentPrice - stop) * shares = minProfitNeeded + initial cost basis
+                        // For now, show current profit and suggest action
+                        tradesNeedingRegStop.push({
+                            symbol: pos.symbol,
+                            unrealizedProfit: unrealizedProfitDollars,
+                            currentPrice: pos.currentPrice,
+                            currentStop: pos.currentStop,
+                            totalLosses: totalLast10LossDollars
+                        });
+                    }
+                });
+                
+                if (tradesNeedingRegStop.length > 0) {
+                    regressiveStopAlert.style.display = 'block';
+                    let html = '<ul style="margin: 0; padding-left: 20px;">';
+                    tradesNeedingRegStop.forEach(trade => {
+                        const suggestedStopBuffer = (trade.totalLosses + 1) / (pos.shares || 1); // Simplified
+                        html += `<li><strong>${trade.symbol}:</strong> Up $${trade.unrealizedProfit.toFixed(0)} (> $${trade.totalLosses.toFixed(0)} total losses). Move stop from $${trade.currentStop.toFixed(2)} to lock in at least $${(trade.totalLosses + 1).toFixed(0)} profit.</li>`;
+                    });
+                    html += '</ul>';
+                    regressiveStopList.innerHTML = html;
+                } else {
+                    regressiveStopAlert.style.display = 'none';
+                }
             }
         }
 
