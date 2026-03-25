@@ -712,7 +712,7 @@
                         <div class="stat-label" style="font-size: 0.65em;">Expectancy</div>
                         <div class="stat-value" style="font-size: 1em;" id="expectancy">0.00R</div>
                     </div>
-                    <div class="stat-box-compact" style="padding: 6px; cursor: help;" id="recoveryStatusBox">
+                    <div class="stat-box-compact" style="padding: 6px; cursor: help;" id="recoveryStatusBox" title="Total open profits ÷ Total losses from recent trades (configurable lookback) - Warns if >1.5x">
                         <div class="stat-label" style="font-size: 0.65em;">Recovery Status</div>
                         <div class="stat-value" style="font-size: 1em;" id="recoveryStatus">0.00x</div>
                     </div>
@@ -751,8 +751,8 @@
                             <input type="number" id="shares" step="1" required>
                         </div>
                         <div class="form-group">
-                            <label>Initial Account Weight (%)</label>
-                            <input type="number" id="initialWeight" step="0.01" required>
+                            <label>% Risk</label>
+                            <input type="number" id="initialWeight" step="0.001" required>
                         </div>
                     </div>
                     <button type="submit" style="height: fit-content; padding: 10px 20px;">Add Position</button>
@@ -1245,8 +1245,8 @@
                         <input type="number" id="editShares" step="1" required>
                     </div>
                     <div class="form-group">
-                        <label>Initial Account Weight (%)</label>
-                        <input type="number" id="editInitialWeight" step="0.01" required>
+                        <label>% Risk</label>
+                        <input type="number" id="editInitialWeight" step="0.001" required>
                     </div>
                 </div>
                 <button type="submit">Save Changes</button>
@@ -1316,6 +1316,9 @@
         let dbRef = null;
         let firebaseConfig = null;
         let isFirebaseInitialized = false;
+        
+        // Configuration
+        const RECOVERY_STATUS_LOOKBACK = 15; // Number of recent trades to analyze for Recovery Status (change this to 20, 25, etc. if desired)
         
         let openPositions = [];
         let closedTrades = [];
@@ -2360,8 +2363,8 @@
                 }
             });
             
-            // Get last 10 trades for multiple calculations
-            const last10Trades = closedTrades.slice(-10);
+            // Get recent trades for multiple calculations (configurable lookback period)
+            const last10Trades = closedTrades.slice(-RECOVERY_STATUS_LOOKBACK);
             
             // Calculate total realized losses for last 10 trades
             let totalLast10LossDollars = 0;
@@ -2383,18 +2386,18 @@
                     // If > 1.5, highlight in yellow with warning message
                     if (recoveryRatio > 1.5) {
                         recoveryStatusBox.style.background = 'linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%)';
-                        recoveryStatusBox.title = '⚠️ You are leaning too hard on your winners. Ring the register on a portion to clear your losses (Last 10 trades).';
+                        recoveryStatusBox.title = `⚠️ You are leaning too hard on your winners. Ring the register on a portion to clear your losses (Last ${RECOVERY_STATUS_LOOKBACK} trades).`;
                         recoveryStatusBox.style.cursor = 'help';
                     } else {
                         recoveryStatusBox.style.background = 'linear-gradient(135deg, #10b981 0%, #059669 100%)';
-                        recoveryStatusBox.title = 'Healthy recovery ratio (Last 10 trades)';
+                        recoveryStatusBox.title = `Healthy recovery ratio (Last ${RECOVERY_STATUS_LOOKBACK} trades)`;
                         recoveryStatusBox.style.cursor = 'default';
                     }
                 } else {
-                    // No losses in last 10 trades
+                    // No losses in recent trades
                     recoveryStatusEl.textContent = 'N/A';
                     recoveryStatusBox.style.background = 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)';
-                    recoveryStatusBox.title = 'No realized losses in last 10 trades';
+                    recoveryStatusBox.title = `No realized losses in last ${RECOVERY_STATUS_LOOKBACK} trades`;
                     recoveryStatusBox.style.cursor = 'default';
                 }
             }
@@ -2457,16 +2460,16 @@
                     if (unrealizedProfitDollars > 0 && unrealizedProfitDollars > totalLast10LossDollars && totalLast10LossDollars > 0) {
                         // Calculate required stop price to lock in minimum profit
                         const minProfitNeeded = totalLast10LossDollars + 1; // $1 more than total losses
-                        const minProfitPercent = (minProfitNeeded / accountSize) * 100;
                         
-                        // Calculate stop price needed
-                        // We need: (currentPrice - stop) * shares = minProfitNeeded + initial cost basis
-                        // For now, show current profit and suggest action
+                        // Calculate stop price: entryPrice + (minProfit / shares)
+                        const requiredStopPrice = pos.entryPrice + (minProfitNeeded / pos.shares);
+                        
                         tradesNeedingRegStop.push({
                             symbol: pos.symbol,
                             unrealizedProfit: unrealizedProfitDollars,
                             currentPrice: pos.currentPrice,
                             currentStop: pos.currentStop,
+                            requiredStop: requiredStopPrice,
                             totalLosses: totalLast10LossDollars
                         });
                     }
@@ -2476,7 +2479,7 @@
                     regressiveStopAlert.style.display = 'block';
                     let html = '<ul style="margin: 0; padding-left: 20px;">';
                     tradesNeedingRegStop.forEach(trade => {
-                        html += `<li><strong>${trade.symbol}:</strong> Up $${trade.unrealizedProfit.toFixed(0)} (> $${trade.totalLosses.toFixed(0)} total losses). Move stop from $${trade.currentStop.toFixed(2)} to lock in at least $${(trade.totalLosses + 1).toFixed(0)} profit.</li>`;
+                        html += `<li><strong>${trade.symbol}:</strong> Up $${trade.unrealizedProfit.toFixed(0)} (> $${trade.totalLosses.toFixed(0)} total losses). Move stop from $${trade.currentStop.toFixed(2)} → <strong style="color: #10b981;">$${trade.requiredStop.toFixed(2)}</strong> to lock in $${(trade.totalLosses + 1).toFixed(0)} profit.</li>`;
                     });
                     html += '</ul>';
                     regressiveStopList.innerHTML = html;
