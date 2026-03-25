@@ -644,7 +644,7 @@
         <div class="tabs">
             <button class="tab active" onclick="switchTab('open-positions')">Open Positions</button>
             <button class="tab" onclick="switchTab('closed-trades')">Closed Trades</button>
-            <button class="tab" onclick="switchTab('position-sizing')">Position Sizing</button>
+            <button class="tab" onclick="switchTab('expectancy-calc')">Expectancy Calculator</button>
             <button class="tab" onclick="switchTab('stock1')"><span id="stock1Symbol">Stock 1</span></button>
             <button class="tab" onclick="switchTab('stock2')"><span id="stock2Symbol">Stock 2</span></button>
             <button class="tab" onclick="switchTab('stock3')"><span id="stock3Symbol">Stock 3</span></button>
@@ -791,56 +791,92 @@
             </div>
         </div>
 
-        <!-- Position Sizing Calculator Tab -->
-        <div id="position-sizing" class="tab-content">
+        <!-- Expectancy Calculator Tab -->\n        <div id="expectancy-calc" class="tab-content">
             <div class="card">
-                <h2>Position Sizing Calculator</h2>
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
-                    <div>
-                        <h3 style="color: #667eea; font-size: 1.1em; margin-bottom: 15px;">Calculate Risk %</h3>
-                        <div class="form-group">
-                            <label>Trigger Price (Entry)</label>
-                            <input type="number" id="calcTriggerPrice" step="0.01" placeholder="0.00">
-                        </div>
-                        <div class="form-group">
-                            <label>Stop Price</label>
-                            <input type="number" id="calcStopPrice" step="0.01" placeholder="0.00">
-                        </div>
-                        <button onclick="calculateRisk()" class="btn-success">Calculate</button>
-                        
-                        <div style="margin-top: 20px; padding: 15px; background: #f9f9f9; border-radius: 8px;">
-                            <div style="font-size: 0.9em; color: #666; margin-bottom: 5px;">Risk %:</div>
-                            <div style="font-size: 1.8em; font-weight: bold; color: #667eea;" id="calculatedRisk">0.00%</div>
-                            <div style="font-size: 0.9em; color: #666; margin-top: 10px; margin-bottom: 5px;">Risk $ Per Share:</div>
-                            <div style="font-size: 1.4em; font-weight: bold; color: #667eea;" id="riskPerShare">$0.00</div>
+                <h2 style="margin-bottom: 20px;">📊 Expectancy Calculator</h2>
+                <p style="margin-bottom: 20px; color: #666;">Model different trading strategies by adjusting win rate and average R-multiples. Expectancy = (Win Rate × Avg Win R) - (Loss Rate × Avg Loss R)</p>
+                
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 20px;">
+                    
+                    <!-- Scenario 1 -->
+                    <div style="padding: 20px; background: #f9fafb; border-radius: 12px; border: 2px solid #e5e7eb;">
+                        <h3 style="font-size: 1.1em; margin-bottom: 15px; color: #667eea; font-weight: 700;">Scenario 1</h3>
+                        <div style="display: grid; gap: 12px;">
+                            <div>
+                                <label style="font-size: 0.9em; display: block; margin-bottom: 5px; font-weight: 600;">Win Rate (%)</label>
+                                <input type="number" id="calc1WinRate" step="1" value="60" style="width: 100%; padding: 10px; font-size: 1em; border: 2px solid #e5e7eb; border-radius: 6px;">
+                            </div>
+                            <div>
+                                <label style="font-size: 0.9em; display: block; margin-bottom: 5px; font-weight: 600;">Avg Win (R)</label>
+                                <input type="number" id="calc1AvgWinR" step="0.1" value="3.0" style="width: 100%; padding: 10px; font-size: 1em; border: 2px solid #e5e7eb; border-radius: 6px;">
+                            </div>
+                            <div>
+                                <label style="font-size: 0.9em; display: block; margin-bottom: 5px; font-weight: 600;">Avg Loss (R)</label>
+                                <input type="number" id="calc1AvgLossR" step="0.1" value="1.0" style="width: 100%; padding: 10px; font-size: 1em; border: 2px solid #e5e7eb; border-radius: 6px;">
+                            </div>
+                            <div style="margin-top: 15px; padding: 20px; background: white; border-radius: 8px; text-align: center; border: 2px solid #10b981;">
+                                <div style="font-size: 0.85em; color: #666; margin-bottom: 5px; text-transform: uppercase; letter-spacing: 0.5px;">Expectancy</div>
+                                <div id="calc1Result" style="font-size: 2em; font-weight: 700; color: #10b981;">1.40R</div>
+                            </div>
                         </div>
                     </div>
                     
-                    <div>
-                        <h3 style="color: #667eea; font-size: 1.1em; margin-bottom: 15px;">Position Size for Risk %</h3>
-                        <div class="form-group">
-                            <label>Account Size</label>
-                            <input type="number" id="posCalcAccount" step="1" placeholder="250000">
-                        </div>
-                        <div class="form-group">
-                            <label>Risk % of Account</label>
-                            <input type="number" id="posRiskPercent" step="0.01" placeholder="0.75">
-                        </div>
-                        <div class="form-group">
-                            <label>Risk $ Per Share (from above)</label>
-                            <input type="number" id="posRiskPerShare" step="0.01" placeholder="0.00" readonly style="background: #f5f5f5;">
-                        </div>
-                        <button onclick="calculatePositionSize()" class="btn-success">Calculate Position</button>
-                        
-                        <div style="margin-top: 20px; padding: 15px; background: #f9f9f9; border-radius: 8px;">
-                            <div style="font-size: 0.9em; color: #666; margin-bottom: 5px;">Shares to Buy:</div>
-                            <div style="font-size: 1.8em; font-weight: bold; color: #10b981;" id="sharesToBuy">0</div>
-                            <div style="font-size: 0.9em; color: #666; margin-top: 10px; margin-bottom: 5px;">Position Value:</div>
-                            <div style="font-size: 1.4em; font-weight: bold; color: #10b981;" id="positionValue">$0.00</div>
-                            <div style="font-size: 0.9em; color: #666; margin-top: 10px; margin-bottom: 5px;">Account Weight %:</div>
-                            <div style="font-size: 1.4em; font-weight: bold; color: #10b981;" id="accountWeightCalc">0.00%</div>
+                    <!-- Scenario 2 -->
+                    <div style="padding: 20px; background: #f9fafb; border-radius: 12px; border: 2px solid #e5e7eb;">
+                        <h3 style="font-size: 1.1em; margin-bottom: 15px; color: #667eea; font-weight: 700;">Scenario 2</h3>
+                        <div style="display: grid; gap: 12px;">
+                            <div>
+                                <label style="font-size: 0.9em; display: block; margin-bottom: 5px; font-weight: 600;">Win Rate (%)</label>
+                                <input type="number" id="calc2WinRate" step="1" value="50" style="width: 100%; padding: 10px; font-size: 1em; border: 2px solid #e5e7eb; border-radius: 6px;">
+                            </div>
+                            <div>
+                                <label style="font-size: 0.9em; display: block; margin-bottom: 5px; font-weight: 600;">Avg Win (R)</label>
+                                <input type="number" id="calc2AvgWinR" step="0.1" value="4.0" style="width: 100%; padding: 10px; font-size: 1em; border: 2px solid #e5e7eb; border-radius: 6px;">
+                            </div>
+                            <div>
+                                <label style="font-size: 0.9em; display: block; margin-bottom: 5px; font-weight: 600;">Avg Loss (R)</label>
+                                <input type="number" id="calc2AvgLossR" step="0.1" value="1.0" style="width: 100%; padding: 10px; font-size: 1em; border: 2px solid #e5e7eb; border-radius: 6px;">
+                            </div>
+                            <div style="margin-top: 15px; padding: 20px; background: white; border-radius: 8px; text-align: center; border: 2px solid #10b981;">
+                                <div style="font-size: 0.85em; color: #666; margin-bottom: 5px; text-transform: uppercase; letter-spacing: 0.5px;">Expectancy</div>
+                                <div id="calc2Result" style="font-size: 2em; font-weight: 700; color: #10b981;">1.50R</div>
+                            </div>
                         </div>
                     </div>
+                    
+                    <!-- Scenario 3 -->
+                    <div style="padding: 20px; background: #f9fafb; border-radius: 12px; border: 2px solid #e5e7eb;">
+                        <h3 style="font-size: 1.1em; margin-bottom: 15px; color: #667eea; font-weight: 700;">Scenario 3</h3>
+                        <div style="display: grid; gap: 12px;">
+                            <div>
+                                <label style="font-size: 0.9em; display: block; margin-bottom: 5px; font-weight: 600;">Win Rate (%)</label>
+                                <input type="number" id="calc3WinRate" step="1" value="40" style="width: 100%; padding: 10px; font-size: 1em; border: 2px solid #e5e7eb; border-radius: 6px;">
+                            </div>
+                            <div>
+                                <label style="font-size: 0.9em; display: block; margin-bottom: 5px; font-weight: 600;">Avg Win (R)</label>
+                                <input type="number" id="calc3AvgWinR" step="0.1" value="5.0" style="width: 100%; padding: 10px; font-size: 1em; border: 2px solid #e5e7eb; border-radius: 6px;">
+                            </div>
+                            <div>
+                                <label style="font-size: 0.9em; display: block; margin-bottom: 5px; font-weight: 600;">Avg Loss (R)</label>
+                                <input type="number" id="calc3AvgLossR" step="0.1" value="1.0" style="width: 100%; padding: 10px; font-size: 1em; border: 2px solid #e5e7eb; border-radius: 6px;">
+                            </div>
+                            <div style="margin-top: 15px; padding: 20px; background: white; border-radius: 8px; text-align: center; border: 2px solid #10b981;">
+                                <div style="font-size: 0.85em; color: #666; margin-bottom: 5px; text-transform: uppercase; letter-spacing: 0.5px;">Expectancy</div>
+                                <div id="calc3Result" style="font-size: 2em; font-weight: 700; color: #10b981;">1.40R</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                </div>
+                
+                <div style="margin-top: 30px; padding: 20px; background: #eff6ff; border-radius: 8px; border-left: 4px solid #3b82f6;">
+                    <h4 style="margin: 0 0 10px 0; color: #1e40af;">💡 How to Use</h4>
+                    <ul style="margin: 0; padding-left: 20px; color: #1e40af;">
+                        <li>Compare different strategies side-by-side</li>
+                        <li>Positive expectancy = profitable over time</li>
+                        <li>Model "what if" scenarios for improvement</li>
+                        <li>Example: "If I increase avg win to 4R, expectancy goes from 1.4R to 1.9R"</li>
+                    </ul>
                 </div>
             </div>
         </div>
@@ -1469,6 +1505,50 @@
             });
         }
         
+        // Expectancy Calculator functions
+        function calculateExpectancyR(winRate, avgWinR, avgLossR) {
+            const winRateDecimal = winRate / 100;
+            const lossRate = 1 - winRateDecimal;
+            return (winRateDecimal * avgWinR) - (lossRate * avgLossR);
+        }
+        
+        function updateExpectancyCalc(calcNum) {
+            const winRate = parseFloat(document.getElementById(`calc${calcNum}WinRate`).value) || 0;
+            const avgWinR = parseFloat(document.getElementById(`calc${calcNum}AvgWinR`).value) || 0;
+            const avgLossR = parseFloat(document.getElementById(`calc${calcNum}AvgLossR`).value) || 0;
+            
+            const expectancyR = calculateExpectancyR(winRate, avgWinR, avgLossR);
+            const resultEl = document.getElementById(`calc${calcNum}Result`);
+            
+            if (resultEl) {
+                resultEl.textContent = expectancyR.toFixed(2) + 'R';
+                
+                // Color code
+                if (expectancyR > 0) {
+                    resultEl.style.color = '#10b981';
+                    resultEl.parentElement.style.borderColor = '#10b981';
+                } else if (expectancyR < 0) {
+                    resultEl.style.color = '#ef4444';
+                    resultEl.parentElement.style.borderColor = '#ef4444';
+                } else {
+                    resultEl.style.color = '#667eea';
+                    resultEl.parentElement.style.borderColor = '#667eea';
+                }
+            }
+        }
+        
+        // Add event listeners for all 3 calculators
+        for (let i = 1; i <= 3; i++) {
+            ['WinRate', 'AvgWinR', 'AvgLossR'].forEach(field => {
+                const el = document.getElementById(`calc${i}${field}`);
+                if (el) {
+                    el.addEventListener('input', () => updateExpectancyCalc(i));
+                }
+            });
+            // Initialize on page load
+            updateExpectancyCalc(i);
+        }
+
         // Warn user if they try to close with unsaved changes
         window.addEventListener('beforeunload', function(e) {
             if (window.pendingSave) {
@@ -1938,7 +2018,7 @@
                             <th onclick="sortOpenPositions('shares')" style="cursor: pointer;" title="Current number of shares held">QTY ▼</th>
                             <th onclick="sortOpenPositions('initialStop')" style="cursor: pointer;" title="Original stop loss price when position opened">Initial Stop ▼</th>
                             <th onclick="sortOpenPositions('currentStop')" style="cursor: pointer; background: #dbeafe; font-weight: 700;" title="Current stop loss price (update as position moves)">Current Stop ▼</th>
-                            <th onclick="sortOpenPositions('initialWeight')" style="cursor: pointer;" title="Position size as % of account when opened">Init Acct Wt% ▼</th>
+                            <th onclick="sortOpenPositions('initialWeight')" style="cursor: pointer;" title="% of account risked when position opened">% Risk ▼</th>
                             <th onclick="sortOpenPositions('accountWeight')" style="cursor: pointer;" title="Current position size as % of account">Acct Wt% ▼</th>
                             <th class="highlight-col" onclick="sortOpenPositions('pnlPercent')" style="cursor: pointer;" title="Profit/loss on this position (includes partial sells)">P&L% ▼</th>
                             <th class="highlight-col" onclick="sortOpenPositions('portfolioPnl')" style="cursor: pointer;" title="P&L as % of total account">Port P&L% ▼</th>
@@ -1946,7 +2026,6 @@
                             <th class="highlight-col" onclick="sortOpenPositions('portfolioRisk')" style="cursor: pointer;" title="Potential loss if stop is hit (% of account)">Port Risk% ▼</th>
                             <th class="highlight-col" onclick="sortOpenPositions('initialR')" style="cursor: pointer;" title="Initial risk per share in dollars">Init Risk Ratio ▼</th>
                             <th onclick="sortOpenPositions('twoRTarget')" style="cursor: pointer;" title="Price target for 2x initial risk">2R Target ▼</th>
-                            <th onclick="sortOpenPositions('riskPercent')" style="cursor: pointer;" title="Risk as % of position value">Risk% ▼</th>
                             <th title="Edit, partial sell, update stop, close, or delete position">Actions</th>
                         </tr>
                     </thead>
@@ -2019,7 +2098,6 @@
                         <td class="highlight-col" style="${portRiskStyle}">${metrics.portfolioCapitalRisk.toFixed(2)}%</td>
                         <td class="highlight-col ${riskRatioColor}" style="${riskRatioStyle}">${metrics.initialR.toFixed(2)}R</td>
                         <td>$${metrics.twoRTarget.toFixed(2)}</td>
-                        <td>${metrics.initialRiskPercent.toFixed(2)}%</td>
                         <td>
                             <div class="action-buttons" style="display: flex; gap: 3px; flex-wrap: nowrap;">
                                 <button class="btn-secondary" style="padding: 3px 6px; font-size: 0.75em; white-space: nowrap;" onclick="openEditPositionModal(${pos.id})">Edit</button>
