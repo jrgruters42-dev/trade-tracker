@@ -2402,23 +2402,20 @@
                 }
             }
             
-            // Calculate Net R: (Total Unrealized R) - (Total Realized Loss R for Last 10 Trades)
+            // Calculate Net R: (Total Unrealized R) - (Total Realized Loss R from Last 15 Trades)
             let totalUnrealizedR = 0;
             let totalRealizedLossR = 0;
             
             // Calculate unrealized R from open positions
             openPositions.forEach(pos => {
                 const metrics = calculatePositionMetrics(pos);
-                // R = P&L / Initial Risk
-                if (metrics.initialR && metrics.initialR !== 0) {
-                    const currentR = metrics.totalPnL / Math.abs(metrics.initialR);
-                    if (!isNaN(currentR) && isFinite(currentR)) {
-                        totalUnrealizedR += currentR;
-                    }
+                // metrics.initialR is already the R-multiple for this position
+                if (metrics.initialR && !isNaN(metrics.initialR) && isFinite(metrics.initialR)) {
+                    totalUnrealizedR += metrics.initialR;
                 }
             });
             
-            // Calculate realized loss R from last 10 trades (reuse last10Trades from above)
+            // Calculate realized loss R from last 15 trades (reuse last10Trades from above)
             last10Trades.forEach(trade => {
                 if (trade.rMultiple < 0) {
                     totalRealizedLossR += Math.abs(trade.rMultiple);
@@ -2435,13 +2432,13 @@
                 // Color code: positive = green, negative = red
                 if (netR > 0) {
                     netRBox.style.background = 'linear-gradient(135deg, #10b981 0%, #059669 100%)';
-                    netRBox.title = 'Net R: Unrealized R minus Last 10 Losses';
+                    netRBox.title = `Net R: Unrealized R (${totalUnrealizedR.toFixed(2)}R) minus Recent Losses (${totalRealizedLossR.toFixed(2)}R from last ${RECOVERY_STATUS_LOOKBACK} trades)`;
                 } else if (netR < 0) {
                     netRBox.style.background = 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)';
-                    netRBox.title = 'Net R: Unrealized R minus Last 10 Losses';
+                    netRBox.title = `Net R: Unrealized R (${totalUnrealizedR.toFixed(2)}R) minus Recent Losses (${totalRealizedLossR.toFixed(2)}R from last ${RECOVERY_STATUS_LOOKBACK} trades)`;
                 } else {
                     netRBox.style.background = 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)';
-                    netRBox.title = 'Net R: Unrealized R minus Last 10 Losses';
+                    netRBox.title = `Net R: Unrealized R minus Recent Losses (last ${RECOVERY_STATUS_LOOKBACK} trades)`;
                 }
             }
             
