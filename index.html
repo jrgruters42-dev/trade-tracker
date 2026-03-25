@@ -659,66 +659,66 @@
             <!-- Portfolio Stats -->
             <div class="card" style="padding: 10px; margin-bottom: 12px;">
                 <h2 style="font-size: 1em; margin-bottom: 8px;">Portfolio Summary</h2>
-                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(100px, 1fr)); gap: 6px;">
-                    <div class="stat-box-compact" style="padding: 6px; cursor: help;" title="Total capital deployed across all open positions as % of account">
+                <div style="display: flex; gap: 6px; overflow-x: auto; padding-bottom: 5px;">
+                    <div class="stat-box-compact" style="padding: 6px; cursor: help; min-width: 100px;" title="Total capital deployed across all open positions as % of account">
                         <div class="stat-label" style="font-size: 0.65em;">Exposure</div>
                         <div class="stat-value" style="font-size: 1em;" id="portfolioExposure">0%</div>
                     </div>
-                    <div class="stat-box-compact" style="padding: 6px; cursor: help;" title="Total Risk % of your Original Capital">
+                    <div class="stat-box-compact" style="padding: 6px; cursor: help; min-width: 100px;" title="Total Risk % of your Original Capital">
                         <div class="stat-label" style="font-size: 0.65em;">Total Risk %</div>
                         <div class="stat-value" style="font-size: 1em;" id="totalPortfolioRisk">0%</div>
                     </div>
-                    <div class="stat-box-compact" style="padding: 6px; cursor: help;" title="Total drawdown from current price to current stop">
+                    <div class="stat-box-compact" style="padding: 6px; cursor: help; min-width: 100px;" title="Total drawdown from current price to current stop">
                         <div class="stat-label" style="font-size: 0.65em;">Total Drawdown</div>
                         <div class="stat-value" style="font-size: 1em;" id="totalPortfolioDrawdown">0%</div>
                     </div>
-                    <div class="stat-box-compact" style="padding: 6px; cursor: help;" title="Total unrealized profit/loss across all open positions">
+                    <div class="stat-box-compact" style="padding: 6px; cursor: help; min-width: 100px;" title="Total unrealized profit/loss across all open positions">
                         <div class="stat-label" style="font-size: 0.65em;">Open P&L %</div>
                         <div class="stat-value" style="font-size: 1em;" id="openPnlPercent">0%</div>
                     </div>
-                    <div class="stat-box-compact" style="padding: 6px; cursor: help;" title="Average Win Size ÷ Average Loss Size (all closed trades)">
+                    <div class="stat-box-compact" style="padding: 6px; cursor: help; min-width: 100px;" title="Average Win Size ÷ Average Loss Size (all closed trades)">
                         <div class="stat-label" style="font-size: 0.65em;">Avg W/L</div>
                         <div class="stat-value" style="font-size: 1em;" id="avgWLRatio">0.00</div>
                     </div>
-                    <div class="stat-box-compact" style="padding: 6px; cursor: help;" title="Average R-multiple across all closed trades (profit ÷ initial risk)">
+                    <div class="stat-box-compact" style="padding: 6px; cursor: help; min-width: 100px;" title="Average R-multiple across all closed trades (profit ÷ initial risk)">
                         <div class="stat-label" style="font-size: 0.65em;">Avg R</div>
                         <div class="stat-value" style="font-size: 1em;" id="avgRMultiple">0.00R</div>
                     </div>
-                    <div class="stat-box-compact" style="padding: 6px; cursor: help;" title="Total P&L from your last 10 closed trades">
+                    <div class="stat-box-compact" style="padding: 6px; cursor: help; min-width: 100px;" title="Total P&L from your last 10 closed trades">
                         <div class="stat-label" style="font-size: 0.65em;">Last 10 P/L</div>
                         <div class="stat-value" style="font-size: 1em;" id="last10Pnl">0%</div>
                     </div>
-                    <div class="stat-box-compact" style="padding: 6px; cursor: help;" title="Win rate for your last 10 closed trades">
+                    <div class="stat-box-compact" style="padding: 6px; cursor: help; min-width: 100px;" title="Win rate for your last 10 closed trades">
                         <div class="stat-label" style="font-size: 0.65em;">Last 10 Win%</div>
                         <div class="stat-value" style="font-size: 1em;" id="last10WinRate">0%</div>
                     </div>
-                    <div class="stat-box-compact" style="padding: 6px; cursor: help;" title="Total P&L from all closed trades (all-time performance)">
+                    <div class="stat-box-compact" style="padding: 6px; cursor: help; min-width: 100px;" title="Total P&L from all closed trades (all-time performance)">
                         <div class="stat-label" style="font-size: 0.65em;">Total Closed</div>
                         <div class="stat-value" style="font-size: 1em;" id="totalClosedPnl">0%</div>
                     </div>
-                    <div class="stat-box-compact" style="padding: 6px; cursor: help;" title="Overall win rate across all closed trades">
+                    <div class="stat-box-compact" style="padding: 6px; cursor: help; min-width: 100px;" title="Overall win rate across all closed trades">
                         <div class="stat-label" style="font-size: 0.65em;">Overall Win%</div>
                         <div class="stat-value" style="font-size: 1em;" id="overallWinRate">0%</div>
                     </div>
-                    <div class="stat-box-compact" style="padding: 6px; cursor: help;" title="Buying power available (Account Size - Total Exposure)">
-                        <div class="stat-label" style="font-size: 0.65em;">Cash Available</div>
-                        <div class="stat-value" style="font-size: 1em;" id="cashAvailable">$0</div>
-                    </div>
-                    <div class="stat-box-compact" style="padding: 6px; cursor: help;" title="Account value if all open positions hit their stops">
-                        <div class="stat-label" style="font-size: 0.65em;">If All Stop Out</div>
-                        <div class="stat-value" style="font-size: 1em;" id="ifAllStopOut">$0</div>
-                    </div>
-                    <div class="stat-box-compact" style="padding: 6px; cursor: help;" title="Expected value per trade in R: (Win Rate × Avg Win R) - (Loss Rate × Avg Loss R)">
+                    <div class="stat-box-compact" style="padding: 6px; cursor: help; min-width: 100px;" title="Expected value per trade in R: (Win Rate × Avg Win R) - (Loss Rate × Avg Loss R)">
                         <div class="stat-label" style="font-size: 0.65em;">Expectancy</div>
                         <div class="stat-value" style="font-size: 1em;" id="expectancy">0.00R</div>
                     </div>
-                    <div class="stat-box-compact" style="padding: 6px; cursor: help;" id="recoveryStatusBox" title="Total open profits ÷ Total losses from recent trades (configurable lookback) - Warns if >1.5x">
+                    <div class="stat-box-compact" style="padding: 6px; cursor: help; min-width: 100px;" id="recoveryStatusBox" title="Total open profits ÷ Total losses from recent trades (configurable lookback) - Warns if >1.5x">
                         <div class="stat-label" style="font-size: 0.65em;">Recovery Status</div>
                         <div class="stat-value" style="font-size: 1em;" id="recoveryStatus">0.00x</div>
                     </div>
-                    <div class="stat-box-compact" style="padding: 6px; cursor: help;" id="netRBox">
+                    <div class="stat-box-compact" style="padding: 6px; cursor: help; min-width: 100px;" id="netRBox">
                         <div class="stat-label" style="font-size: 0.65em;">Net R</div>
                         <div class="stat-value" style="font-size: 1em;" id="netR">0.00R</div>
+                    </div>
+                    <div class="stat-box-compact" style="padding: 6px; cursor: help; min-width: 100px;" title="Buying power available (Account Size - Total Exposure)">
+                        <div class="stat-label" style="font-size: 0.65em;">Cash Available</div>
+                        <div class="stat-value" style="font-size: 1em;" id="cashAvailable">$0</div>
+                    </div>
+                    <div class="stat-box-compact" style="padding: 6px; cursor: help; min-width: 100px;" title="Account value if all open positions hit their stops">
+                        <div class="stat-label" style="font-size: 0.65em;">If All Stop Out</div>
+                        <div class="stat-value" style="font-size: 1em;" id="ifAllStopOut">$0</div>
                     </div>
                 </div>
             </div>
@@ -786,6 +786,14 @@
                     <button onclick="recalculateClosedTradeRMultiples()" class="btn-secondary btn-small">🔄 Recalculate R-Multiples</button>
                 </div>
                 <div class="table-scroll" id="closedTradesTable">
+                    <div class="empty-state">No closed trades</div>
+                </div>
+            </div>
+            
+            <!-- Monthly Statistics -->
+            <div class="card" style="margin-top: 20px;">
+                <h2 style="margin-bottom: 15px;">📅 Monthly Performance</h2>
+                <div class="table-scroll" id="monthlyStatsTable">
                     <div class="empty-state">No closed trades</div>
                 </div>
             </div>
@@ -2710,6 +2718,108 @@
             container.innerHTML = html;
         }
 
+        function updateMonthlyStatsTable() {
+            const container = document.getElementById('monthlyStatsTable');
+            
+            if (closedTrades.length === 0) {
+                container.innerHTML = '<div class="empty-state">No closed trades</div>';
+                return;
+            }
+
+            // Group trades by month
+            const monthlyData = {};
+            
+            closedTrades.forEach(trade => {
+                const date = new Date(trade.exitDate);
+                const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+                const monthLabel = date.toLocaleDateString('en-US', { year: 'numeric', month: 'short' });
+                
+                if (!monthlyData[monthKey]) {
+                    monthlyData[monthKey] = {
+                        label: monthLabel,
+                        trades: [],
+                        totalPnl: 0,
+                        wins: 0,
+                        losses: 0
+                    };
+                }
+                
+                monthlyData[monthKey].trades.push(trade);
+                monthlyData[monthKey].totalPnl += trade.portfolioPnlPercent;
+                if (trade.rMultiple > 0) monthlyData[monthKey].wins++;
+                if (trade.rMultiple < 0) monthlyData[monthKey].losses++;
+            });
+            
+            // Convert to array and sort by date (newest first)
+            const monthlyArray = Object.keys(monthlyData)
+                .sort((a, b) => b.localeCompare(a))
+                .map(key => ({
+                    key,
+                    ...monthlyData[key]
+                }));
+
+            let html = `
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Month</th>
+                            <th title="Number of closed trades"># Trades</th>
+                            <th title="Percentage of winning trades">Win Rate</th>
+                            <th title="Average R-multiple for the month">Avg R</th>
+                            <th title="Average R for winning trades">Avg Win R</th>
+                            <th title="Average R for losing trades (absolute value)">Avg Loss R</th>
+                            <th title="Expected value: (Win Rate × Avg Win R) - (Loss Rate × Avg Loss R)">Expectancy</th>
+                            <th title="Total portfolio P&L for the month">Total P&L %</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+            `;
+
+            monthlyArray.forEach(month => {
+                const numTrades = month.trades.length;
+                const winRate = numTrades > 0 ? (month.wins / numTrades * 100) : 0;
+                
+                // Calculate average R
+                const totalR = month.trades.reduce((sum, t) => sum + t.rMultiple, 0);
+                const avgR = numTrades > 0 ? totalR / numTrades : 0;
+                
+                // Calculate avg win R and avg loss R
+                const winTrades = month.trades.filter(t => t.rMultiple > 0);
+                const lossTrades = month.trades.filter(t => t.rMultiple < 0);
+                
+                const avgWinR = winTrades.length > 0 
+                    ? winTrades.reduce((sum, t) => sum + t.rMultiple, 0) / winTrades.length 
+                    : 0;
+                    
+                const avgLossR = lossTrades.length > 0 
+                    ? Math.abs(lossTrades.reduce((sum, t) => sum + t.rMultiple, 0) / lossTrades.length)
+                    : 0;
+                
+                // Calculate expectancy
+                const lossRate = 100 - winRate;
+                const expectancy = (winRate / 100 * avgWinR) - (lossRate / 100 * avgLossR);
+                
+                const pnlClass = month.totalPnl >= 0 ? 'profit' : 'loss';
+                const expectancyClass = expectancy >= 0 ? 'profit' : 'loss';
+                
+                html += `
+                    <tr>
+                        <td><strong>${month.label}</strong></td>
+                        <td>${numTrades}</td>
+                        <td>${winRate.toFixed(1)}%</td>
+                        <td class="${avgR >= 0 ? 'profit' : 'loss'}">${avgR.toFixed(2)}R</td>
+                        <td class="profit">${avgWinR.toFixed(2)}R</td>
+                        <td class="loss">${avgLossR.toFixed(2)}R</td>
+                        <td class="${expectancyClass}"><strong>${expectancy.toFixed(2)}R</strong></td>
+                        <td class="${pnlClass}"><strong>${month.totalPnl.toFixed(2)}%</strong></td>
+                    </tr>
+                `;
+            });
+
+            html += '</tbody></table>';
+            container.innerHTML = html;
+        }
+
         // Update equity curves
         function updateEquityCurves() {
             if (dailyEquity.length > 0) {
@@ -3683,6 +3793,7 @@
             updatePortfolioStats();
             updateClosedTradeStats();
             updateClosedTradesTable();
+            updateMonthlyStatsTable();
             updateEquityCurves();
             updateAccountStats();
             updateDailyEquityTable();
