@@ -1469,47 +1469,6 @@
             });
         }
         
-        // Expectancy Calculator event listeners
-        function calculateExpectancy(winRate, avgWin, avgLoss) {
-            const winRateDecimal = winRate / 100;
-            const lossRate = 1 - winRateDecimal;
-            return (winRateDecimal * avgWin) - (lossRate * avgLoss);
-        }
-        
-        function updateExpectancyCalculator(calcNum) {
-            const winRate = parseFloat(document.getElementById(`calc${calcNum}WinRate`).value) || 0;
-            const avgWin = parseFloat(document.getElementById(`calc${calcNum}AvgWin`).value) || 0;
-            const avgLoss = parseFloat(document.getElementById(`calc${calcNum}AvgLoss`).value) || 0;
-            
-            const expectancy = calculateExpectancy(winRate, avgWin, avgLoss);
-            const resultEl = document.getElementById(`calc${calcNum}Result`);
-            
-            if (resultEl) {
-                resultEl.textContent = '$' + expectancy.toFixed(2);
-                
-                // Color code
-                if (expectancy > 0) {
-                    resultEl.style.color = '#10b981';
-                } else if (expectancy < 0) {
-                    resultEl.style.color = '#ef4444';
-                } else {
-                    resultEl.style.color = '#667eea';
-                }
-            }
-        }
-        
-        // Add event listeners for all 3 calculators
-        for (let i = 1; i <= 3; i++) {
-            ['WinRate', 'AvgWin', 'AvgLoss'].forEach(field => {
-                const el = document.getElementById(`calc${i}${field}`);
-                if (el) {
-                    el.addEventListener('input', () => updateExpectancyCalculator(i));
-                }
-            });
-            // Initialize on page load
-            updateExpectancyCalculator(i);
-        }
-
         // Warn user if they try to close with unsaved changes
         window.addEventListener('beforeunload', function(e) {
             if (window.pendingSave) {
@@ -2263,42 +2222,41 @@
                 stopOutEl.textContent = '$' + accountIfStopOut.toLocaleString(undefined, {minimumFractionDigits: 0, maximumFractionDigits: 0});
             }
             
-            // Calculate Expectancy: (Win Rate × Average Win) - (Loss Rate × Average Loss)
+            // Calculate Expectancy: (Win Rate × Average Win R) - (Loss Rate × Average Loss R)
             if (closedTrades.length > 0) {
                 const stats = calculateTradeStats(closedTrades);
                 const winRate = stats.winRate / 100; // Convert to decimal
                 const lossRate = 1 - winRate;
                 
-                // Calculate average win and loss in dollars
-                let totalWinDollars = 0;
-                let totalLossDollars = 0;
+                // Calculate average win and loss in R-multiples
+                let totalWinR = 0;
+                let totalLossR = 0;
                 let winCount = 0;
                 let lossCount = 0;
                 
                 closedTrades.forEach(trade => {
-                    const pnlDollars = (trade.portfolioPnlPercent / 100) * accountSize;
-                    if (pnlDollars > 0) {
-                        totalWinDollars += pnlDollars;
+                    if (trade.rMultiple > 0) {
+                        totalWinR += trade.rMultiple;
                         winCount++;
-                    } else if (pnlDollars < 0) {
-                        totalLossDollars += Math.abs(pnlDollars);
+                    } else if (trade.rMultiple < 0) {
+                        totalLossR += Math.abs(trade.rMultiple);
                         lossCount++;
                     }
                 });
                 
-                const avgWin = winCount > 0 ? totalWinDollars / winCount : 0;
-                const avgLoss = lossCount > 0 ? totalLossDollars / lossCount : 0;
+                const avgWinR = winCount > 0 ? totalWinR / winCount : 0;
+                const avgLossR = lossCount > 0 ? totalLossR / lossCount : 0;
                 
-                const expectancy = (winRate * avgWin) - (lossRate * avgLoss);
+                const expectancyR = (winRate * avgWinR) - (lossRate * avgLossR);
                 
                 const expectancyEl = document.getElementById('expectancy');
                 if (expectancyEl) {
-                    expectancyEl.textContent = '$' + expectancy.toFixed(2);
+                    expectancyEl.textContent = expectancyR.toFixed(2) + 'R';
                     
                     // Color code: positive = green, negative = red
-                    if (expectancy > 0) {
+                    if (expectancyR > 0) {
                         expectancyEl.parentElement.style.background = 'linear-gradient(135deg, #10b981 0%, #059669 100%)';
-                    } else if (expectancy < 0) {
+                    } else if (expectancyR < 0) {
                         expectancyEl.parentElement.style.background = 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)';
                     } else {
                         expectancyEl.parentElement.style.background = 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)';
@@ -2307,7 +2265,7 @@
             } else {
                 const expectancyEl = document.getElementById('expectancy');
                 if (expectancyEl) {
-                    expectancyEl.textContent = '$0.00';
+                    expectancyEl.textContent = '0.00R';
                     expectancyEl.parentElement.style.background = 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)';
                 }
             }
