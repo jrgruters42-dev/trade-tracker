@@ -664,11 +664,11 @@
                         <div class="stat-label" style="font-size: 0.65em;">Exposure</div>
                         <div class="stat-value" style="font-size: 1em;" id="portfolioExposure">0%</div>
                     </div>
-                    <div class="stat-box-compact" style="padding: 6px; cursor: help;" title="Total potential loss if all positions hit their stops (% of account)">
+                    <div class="stat-box-compact" style="padding: 6px; cursor: help;" title="Total Risk % of your Original Capital">
                         <div class="stat-label" style="font-size: 0.65em;">Total Risk %</div>
                         <div class="stat-value" style="font-size: 1em;" id="totalPortfolioRisk">0%</div>
                     </div>
-                    <div class="stat-box-compact" style="padding: 6px; cursor: help;" title="Sum of all open losses (current price below entry)">
+                    <div class="stat-box-compact" style="padding: 6px; cursor: help;" title="Total drawdown from current price to current stop">
                         <div class="stat-label" style="font-size: 0.65em;">Total Drawdown</div>
                         <div class="stat-value" style="font-size: 1em;" id="totalPortfolioDrawdown">0%</div>
                     </div>
@@ -2079,7 +2079,7 @@
                             <th onclick="sortOpenPositions('accountWeight')" style="cursor: pointer;" title="Current position size as % of account">Acct Wt% ▼</th>
                             <th class="highlight-col" onclick="sortOpenPositions('pnlPercent')" style="cursor: pointer;" title="Profit/loss on this position (includes partial sells)">P&L% ▼</th>
                             <th class="highlight-col" onclick="sortOpenPositions('portfolioPnl')" style="cursor: pointer;" title="P&L as % of total account">Port P&L% ▼</th>
-                            <th class="highlight-col" onclick="sortOpenPositions('portfolioDrawdown')" style="cursor: pointer;" title="How far down from entry (if losing)">Port Drawdown ▼</th>
+                            <th class="highlight-col" onclick="sortOpenPositions('portfolioDrawdown')" style="cursor: pointer;" title="Portfolio loss from current price to current stop">Port Drawdown ▼</th>
                             <th class="highlight-col" onclick="sortOpenPositions('portfolioRisk')" style="cursor: pointer;" title="Potential loss if stop is hit (% of account)">Port Risk% ▼</th>
                             <th class="highlight-col" onclick="sortOpenPositions('initialR')" style="cursor: pointer;" title="Initial risk per share in dollars">Init Risk Ratio ▼</th>
                             <th onclick="sortOpenPositions('twoRTarget')" style="cursor: pointer;" title="Price target for 2x initial risk">2R Target ▼</th>
