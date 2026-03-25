@@ -2138,13 +2138,34 @@
                     portDrawdownStyle = 'background: #fbbf24; color: #78350f; font-weight: 700;'; // yellow
                 }
                 
+                // Build QTY tooltip showing original shares and partial sell history
+                let qtyTooltip = '';
+                let originalShares = pos.initialShares || pos.shares;
+                
+                // Add back partial sells if no initialShares field
+                if (!pos.initialShares && pos.partialSells && pos.partialSells.length > 0) {
+                    pos.partialSells.forEach(sell => {
+                        originalShares += sell.shares;
+                    });
+                }
+                
+                qtyTooltip = `Original: ${originalShares} shares`;
+                if (pos.partialSells && pos.partialSells.length > 0) {
+                    qtyTooltip += '\nPartial Sells:';
+                    pos.partialSells.forEach(sell => {
+                        const sellDate = new Date(sell.date).toLocaleDateString();
+                        qtyTooltip += `\n- ${sell.shares} shares @ $${sell.price.toFixed(2)} (${sellDate})`;
+                    });
+                    qtyTooltip += `\nRemaining: ${pos.shares} shares`;
+                }
+                
                 html += `
                     <tr style="${rowBg}">
                         <td style="${symbolStyle}"><strong>${pos.symbol}</strong></td>
                         <td>$${pos.currentPrice.toFixed(2)}</td>
                         <td>$${pos.entryPrice.toFixed(2)}</td>
                         <td>$${metrics.adjustedPrice.toFixed(2)}</td>
-                        <td>${pos.shares}</td>
+                        <td title="${qtyTooltip}" style="cursor: help;">${pos.shares}</td>
                         <td>$${pos.initialStop.toFixed(2)}</td>
                         <td style="background: #dbeafe;">$${pos.currentStop.toFixed(2)}</td>
                         <td>${pos.initialWeight.toFixed(2)}%</td>
