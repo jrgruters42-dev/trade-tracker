@@ -660,63 +660,63 @@
             <div class="card" style="padding: 10px; margin-bottom: 12px;">
                 <h2 style="font-size: 1em; margin-bottom: 8px;">Portfolio Summary</h2>
                 <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(100px, 1fr)); gap: 6px;">
-                    <div class="stat-box-compact" style="padding: 6px;">
+                    <div class="stat-box-compact" style="padding: 6px; cursor: help;" title="Total capital deployed across all open positions as % of account">
                         <div class="stat-label" style="font-size: 0.65em;">Exposure</div>
                         <div class="stat-value" style="font-size: 1em;" id="portfolioExposure">0%</div>
                     </div>
-                    <div class="stat-box-compact" style="padding: 6px;">
+                    <div class="stat-box-compact" style="padding: 6px; cursor: help;" title="Total potential loss if all positions hit their stops (% of account)">
                         <div class="stat-label" style="font-size: 0.65em;">Total Risk %</div>
                         <div class="stat-value" style="font-size: 1em;" id="totalPortfolioRisk">0%</div>
                     </div>
-                    <div class="stat-box-compact" style="padding: 6px;">
+                    <div class="stat-box-compact" style="padding: 6px; cursor: help;" title="Sum of all open losses (current price below entry)">
                         <div class="stat-label" style="font-size: 0.65em;">Total Drawdown</div>
                         <div class="stat-value" style="font-size: 1em;" id="totalPortfolioDrawdown">0%</div>
                     </div>
-                    <div class="stat-box-compact" style="padding: 6px;">
+                    <div class="stat-box-compact" style="padding: 6px; cursor: help;" title="Total unrealized profit/loss across all open positions">
                         <div class="stat-label" style="font-size: 0.65em;">Open P&L %</div>
                         <div class="stat-value" style="font-size: 1em;" id="openPnlPercent">0%</div>
                     </div>
-                    <div class="stat-box-compact" style="padding: 6px;">
+                    <div class="stat-box-compact" style="padding: 6px; cursor: help;" title="Average Win Size ÷ Average Loss Size (all closed trades)">
                         <div class="stat-label" style="font-size: 0.65em;">Avg W/L</div>
                         <div class="stat-value" style="font-size: 1em;" id="avgWLRatio">0.00</div>
                     </div>
-                    <div class="stat-box-compact" style="padding: 6px;">
+                    <div class="stat-box-compact" style="padding: 6px; cursor: help;" title="Average R-multiple across all closed trades (profit ÷ initial risk)">
                         <div class="stat-label" style="font-size: 0.65em;">Avg R</div>
                         <div class="stat-value" style="font-size: 1em;" id="avgRMultiple">0.00R</div>
                     </div>
-                    <div class="stat-box-compact" style="padding: 6px;">
+                    <div class="stat-box-compact" style="padding: 6px; cursor: help;" title="Total P&L from your last 10 closed trades">
                         <div class="stat-label" style="font-size: 0.65em;">Last 10 P/L</div>
                         <div class="stat-value" style="font-size: 1em;" id="last10Pnl">0%</div>
                     </div>
-                    <div class="stat-box-compact" style="padding: 6px;">
+                    <div class="stat-box-compact" style="padding: 6px; cursor: help;" title="Win rate for your last 10 closed trades">
                         <div class="stat-label" style="font-size: 0.65em;">Last 10 Win%</div>
                         <div class="stat-value" style="font-size: 1em;" id="last10WinRate">0%</div>
                     </div>
-                    <div class="stat-box-compact" style="padding: 6px;">
+                    <div class="stat-box-compact" style="padding: 6px; cursor: help;" title="Total P&L from all closed trades (all-time performance)">
                         <div class="stat-label" style="font-size: 0.65em;">Total Closed</div>
                         <div class="stat-value" style="font-size: 1em;" id="totalClosedPnl">0%</div>
                     </div>
-                    <div class="stat-box-compact" style="padding: 6px;">
+                    <div class="stat-box-compact" style="padding: 6px; cursor: help;" title="Overall win rate across all closed trades">
                         <div class="stat-label" style="font-size: 0.65em;">Overall Win%</div>
                         <div class="stat-value" style="font-size: 1em;" id="overallWinRate">0%</div>
                     </div>
-                    <div class="stat-box-compact" style="padding: 6px;">
+                    <div class="stat-box-compact" style="padding: 6px; cursor: help;" title="Buying power available (Account Size - Total Exposure)">
                         <div class="stat-label" style="font-size: 0.65em;">Cash Available</div>
                         <div class="stat-value" style="font-size: 1em;" id="cashAvailable">$0</div>
                     </div>
-                    <div class="stat-box-compact" style="padding: 6px;">
+                    <div class="stat-box-compact" style="padding: 6px; cursor: help;" title="Account value if all open positions hit their stops">
                         <div class="stat-label" style="font-size: 0.65em;">If All Stop Out</div>
                         <div class="stat-value" style="font-size: 1em;" id="ifAllStopOut">$0</div>
                     </div>
-                    <div class="stat-box-compact" style="padding: 6px;">
+                    <div class="stat-box-compact" style="padding: 6px; cursor: help;" title="Expected value per trade in R: (Win Rate × Avg Win R) - (Loss Rate × Avg Loss R)">
                         <div class="stat-label" style="font-size: 0.65em;">Expectancy</div>
-                        <div class="stat-value" style="font-size: 1em;" id="expectancy">$0.00</div>
+                        <div class="stat-value" style="font-size: 1em;" id="expectancy">0.00R</div>
                     </div>
-                    <div class="stat-box-compact" style="padding: 6px;" id="recoveryStatusBox">
+                    <div class="stat-box-compact" style="padding: 6px; cursor: help;" id="recoveryStatusBox">
                         <div class="stat-label" style="font-size: 0.65em;">Recovery Status</div>
                         <div class="stat-value" style="font-size: 1em;" id="recoveryStatus">0.00x</div>
                     </div>
-                    <div class="stat-box-compact" style="padding: 6px;" id="netRBox">
+                    <div class="stat-box-compact" style="padding: 6px; cursor: help;" id="netRBox">
                         <div class="stat-label" style="font-size: 0.65em;">Net R</div>
                         <div class="stat-value" style="font-size: 1em;" id="netR">0.00R</div>
                     </div>
@@ -728,83 +728,6 @@
                 <h2 style="font-size: 1em; margin-bottom: 10px; color: #92400e;">⚠️ Regressive Stop Required</h2>
                 <p style="font-size: 0.9em; margin-bottom: 10px; color: #78350f;">You are "Net Long hope" - move these stops to lock in profit!</p>
                 <div id="regressiveStopList" style="font-size: 0.9em;"></div>
-            </div>
-
-            <!-- Expectancy Calculator -->
-            <div class="card" style="padding: 12px; margin-bottom: 12px;">
-                <h2 style="font-size: 1em; margin-bottom: 15px;">📊 Expectancy Calculator</h2>
-                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 15px;">
-                    
-                    <!-- Scenario 1 -->
-                    <div style="padding: 15px; background: #f9fafb; border-radius: 8px; border: 1px solid #e5e7eb;">
-                        <h3 style="font-size: 0.9em; margin-bottom: 10px; color: #667eea;">Scenario 1</h3>
-                        <div style="display: grid; gap: 8px;">
-                            <div>
-                                <label style="font-size: 0.85em; display: block; margin-bottom: 3px;">Win Rate (%)</label>
-                                <input type="number" id="calc1WinRate" step="1" value="60" style="width: 100%; padding: 6px;">
-                            </div>
-                            <div>
-                                <label style="font-size: 0.85em; display: block; margin-bottom: 3px;">Avg Win ($)</label>
-                                <input type="number" id="calc1AvgWin" step="0.01" value="500" style="width: 100%; padding: 6px;">
-                            </div>
-                            <div>
-                                <label style="font-size: 0.85em; display: block; margin-bottom: 3px;">Avg Loss ($)</label>
-                                <input type="number" id="calc1AvgLoss" step="0.01" value="300" style="width: 100%; padding: 6px;">
-                            </div>
-                            <div style="margin-top: 10px; padding: 10px; background: white; border-radius: 6px; text-align: center;">
-                                <div style="font-size: 0.75em; color: #666;">Expectancy</div>
-                                <div id="calc1Result" style="font-size: 1.3em; font-weight: 700; color: #10b981;">$180.00</div>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <!-- Scenario 2 -->
-                    <div style="padding: 15px; background: #f9fafb; border-radius: 8px; border: 1px solid #e5e7eb;">
-                        <h3 style="font-size: 0.9em; margin-bottom: 10px; color: #667eea;">Scenario 2</h3>
-                        <div style="display: grid; gap: 8px;">
-                            <div>
-                                <label style="font-size: 0.85em; display: block; margin-bottom: 3px;">Win Rate (%)</label>
-                                <input type="number" id="calc2WinRate" step="1" value="50" style="width: 100%; padding: 6px;">
-                            </div>
-                            <div>
-                                <label style="font-size: 0.85em; display: block; margin-bottom: 3px;">Avg Win ($)</label>
-                                <input type="number" id="calc2AvgWin" step="0.01" value="600" style="width: 100%; padding: 6px;">
-                            </div>
-                            <div>
-                                <label style="font-size: 0.85em; display: block; margin-bottom: 3px;">Avg Loss ($)</label>
-                                <input type="number" id="calc2AvgLoss" step="0.01" value="300" style="width: 100%; padding: 6px;">
-                            </div>
-                            <div style="margin-top: 10px; padding: 10px; background: white; border-radius: 6px; text-align: center;">
-                                <div style="font-size: 0.75em; color: #666;">Expectancy</div>
-                                <div id="calc2Result" style="font-size: 1.3em; font-weight: 700; color: #10b981;">$150.00</div>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <!-- Scenario 3 -->
-                    <div style="padding: 15px; background: #f9fafb; border-radius: 8px; border: 1px solid #e5e7eb;">
-                        <h3 style="font-size: 0.9em; margin-bottom: 10px; color: #667eea;">Scenario 3</h3>
-                        <div style="display: grid; gap: 8px;">
-                            <div>
-                                <label style="font-size: 0.85em; display: block; margin-bottom: 3px;">Win Rate (%)</label>
-                                <input type="number" id="calc3WinRate" step="1" value="40" style="width: 100%; padding: 6px;">
-                            </div>
-                            <div>
-                                <label style="font-size: 0.85em; display: block; margin-bottom: 3px;">Avg Win ($)</label>
-                                <input type="number" id="calc3AvgWin" step="0.01" value="800" style="width: 100%; padding: 6px;">
-                            </div>
-                            <div>
-                                <label style="font-size: 0.85em; display: block; margin-bottom: 3px;">Avg Loss ($)</label>
-                                <input type="number" id="calc3AvgLoss" step="0.01" value="300" style="width: 100%; padding: 6px;">
-                            </div>
-                            <div style="margin-top: 10px; padding: 10px; background: white; border-radius: 6px; text-align: center;">
-                                <div style="font-size: 0.75em; color: #666;">Expectancy</div>
-                                <div id="calc3Result" style="font-size: 1.3em; font-weight: 700; color: #10b981;">$140.00</div>
-                            </div>
-                        </div>
-                    </div>
-                    
-                </div>
             </div>
 
             <div class="card" style="padding: 12px; margin-bottom: 12px;">
@@ -2049,23 +1972,23 @@
                 <table>
                     <thead>
                         <tr>
-                            <th onclick="sortOpenPositions('symbol')" style="cursor: pointer;">Symbol ▼</th>
-                            <th onclick="sortOpenPositions('currentPrice')" style="cursor: pointer;">Current Price ▼</th>
-                            <th onclick="sortOpenPositions('entryPrice')" style="cursor: pointer;">Entry ▼</th>
-                            <th onclick="sortOpenPositions('adjustedPrice')" style="cursor: pointer;">Adj Price ▼</th>
-                            <th onclick="sortOpenPositions('shares')" style="cursor: pointer;">QTY ▼</th>
-                            <th onclick="sortOpenPositions('initialStop')" style="cursor: pointer;">Initial Stop ▼</th>
-                            <th onclick="sortOpenPositions('currentStop')" style="cursor: pointer; background: #dbeafe; font-weight: 700;">Current Stop ▼</th>
-                            <th onclick="sortOpenPositions('initialWeight')" style="cursor: pointer;">Init Acct Wt% ▼</th>
-                            <th onclick="sortOpenPositions('accountWeight')" style="cursor: pointer;">Acct Wt% ▼</th>
-                            <th class="highlight-col" onclick="sortOpenPositions('pnlPercent')" style="cursor: pointer;">P&L% ▼ <span class="tooltip">ℹ<span class="tooltiptext">Includes realized gains from partial sells</span></span></th>
-                            <th class="highlight-col" onclick="sortOpenPositions('portfolioPnl')" style="cursor: pointer;">Port P&L% ▼</th>
-                            <th class="highlight-col" onclick="sortOpenPositions('portfolioDrawdown')" style="cursor: pointer;">Port Drawdown ▼</th>
-                            <th class="highlight-col" onclick="sortOpenPositions('portfolioRisk')" style="cursor: pointer;">Port Risk% ▼</th>
-                            <th class="highlight-col" onclick="sortOpenPositions('initialR')" style="cursor: pointer;">Init Risk Ratio ▼</th>
-                            <th onclick="sortOpenPositions('twoRTarget')" style="cursor: pointer;">2R Target ▼</th>
-                            <th onclick="sortOpenPositions('riskPercent')" style="cursor: pointer;">Risk% ▼</th>
-                            <th>Actions</th>
+                            <th onclick="sortOpenPositions('symbol')" style="cursor: pointer;" title="Stock ticker symbol">Symbol ▼</th>
+                            <th onclick="sortOpenPositions('currentPrice')" style="cursor: pointer;" title="Most recent market price">Current Price ▼</th>
+                            <th onclick="sortOpenPositions('entryPrice')" style="cursor: pointer;" title="Original purchase price">Entry ▼</th>
+                            <th onclick="sortOpenPositions('adjustedPrice')" style="cursor: pointer;" title="Entry price adjusted for partial sells">Adj Price ▼</th>
+                            <th onclick="sortOpenPositions('shares')" style="cursor: pointer;" title="Current number of shares held">QTY ▼</th>
+                            <th onclick="sortOpenPositions('initialStop')" style="cursor: pointer;" title="Original stop loss price when position opened">Initial Stop ▼</th>
+                            <th onclick="sortOpenPositions('currentStop')" style="cursor: pointer; background: #dbeafe; font-weight: 700;" title="Current stop loss price (update as position moves)">Current Stop ▼</th>
+                            <th onclick="sortOpenPositions('initialWeight')" style="cursor: pointer;" title="Position size as % of account when opened">Init Acct Wt% ▼</th>
+                            <th onclick="sortOpenPositions('accountWeight')" style="cursor: pointer;" title="Current position size as % of account">Acct Wt% ▼</th>
+                            <th class="highlight-col" onclick="sortOpenPositions('pnlPercent')" style="cursor: pointer;" title="Profit/loss on this position (includes partial sells)">P&L% ▼</th>
+                            <th class="highlight-col" onclick="sortOpenPositions('portfolioPnl')" style="cursor: pointer;" title="P&L as % of total account">Port P&L% ▼</th>
+                            <th class="highlight-col" onclick="sortOpenPositions('portfolioDrawdown')" style="cursor: pointer;" title="How far down from entry (if losing)">Port Drawdown ▼</th>
+                            <th class="highlight-col" onclick="sortOpenPositions('portfolioRisk')" style="cursor: pointer;" title="Potential loss if stop is hit (% of account)">Port Risk% ▼</th>
+                            <th class="highlight-col" onclick="sortOpenPositions('initialR')" style="cursor: pointer;" title="Initial risk per share in dollars">Init Risk Ratio ▼</th>
+                            <th onclick="sortOpenPositions('twoRTarget')" style="cursor: pointer;" title="Price target for 2x initial risk">2R Target ▼</th>
+                            <th onclick="sortOpenPositions('riskPercent')" style="cursor: pointer;" title="Risk as % of position value">Risk% ▼</th>
+                            <th title="Edit, partial sell, update stop, close, or delete position">Actions</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -2516,7 +2439,6 @@
                     regressiveStopAlert.style.display = 'block';
                     let html = '<ul style="margin: 0; padding-left: 20px;">';
                     tradesNeedingRegStop.forEach(trade => {
-                        const suggestedStopBuffer = (trade.totalLosses + 1) / (pos.shares || 1); // Simplified
                         html += `<li><strong>${trade.symbol}:</strong> Up $${trade.unrealizedProfit.toFixed(0)} (> $${trade.totalLosses.toFixed(0)} total losses). Move stop from $${trade.currentStop.toFixed(2)} to lock in at least $${(trade.totalLosses + 1).toFixed(0)} profit.</li>`;
                     });
                     html += '</ul>';
