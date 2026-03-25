@@ -814,9 +814,21 @@
                                 <label style="font-size: 0.9em; display: block; margin-bottom: 5px; font-weight: 600;">Avg Loss (R)</label>
                                 <input type="number" id="calc1AvgLossR" step="0.1" value="1.0" style="width: 100%; padding: 10px; font-size: 1em; border: 2px solid #e5e7eb; border-radius: 6px;">
                             </div>
+                            <div>
+                                <label style="font-size: 0.9em; display: block; margin-bottom: 5px; font-weight: 600;">Risk % per Trade</label>
+                                <input type="number" id="calc1RiskPct" step="0.1" value="1.0" style="width: 100%; padding: 10px; font-size: 1em; border: 2px solid #e5e7eb; border-radius: 6px;">
+                            </div>
+                            <div>
+                                <label style="font-size: 0.9em; display: block; margin-bottom: 5px; font-weight: 600;">Trades per Year</label>
+                                <input type="number" id="calc1TradesYear" step="1" value="100" style="width: 100%; padding: 10px; font-size: 1em; border: 2px solid #e5e7eb; border-radius: 6px;">
+                            </div>
                             <div style="margin-top: 15px; padding: 20px; background: white; border-radius: 8px; text-align: center; border: 2px solid #10b981;">
                                 <div style="font-size: 0.85em; color: #666; margin-bottom: 5px; text-transform: uppercase; letter-spacing: 0.5px;">Expectancy</div>
                                 <div id="calc1Result" style="font-size: 2em; font-weight: 700; color: #10b981;">1.40R</div>
+                                <div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid #e5e7eb;">
+                                    <div style="font-size: 0.75em; color: #666; margin-bottom: 3px;">Annual Gain</div>
+                                    <div id="calc1Annual" style="font-size: 1.3em; font-weight: 700; color: #10b981;">140%</div>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -837,9 +849,21 @@
                                 <label style="font-size: 0.9em; display: block; margin-bottom: 5px; font-weight: 600;">Avg Loss (R)</label>
                                 <input type="number" id="calc2AvgLossR" step="0.1" value="1.0" style="width: 100%; padding: 10px; font-size: 1em; border: 2px solid #e5e7eb; border-radius: 6px;">
                             </div>
+                            <div>
+                                <label style="font-size: 0.9em; display: block; margin-bottom: 5px; font-weight: 600;">Risk % per Trade</label>
+                                <input type="number" id="calc2RiskPct" step="0.1" value="1.0" style="width: 100%; padding: 10px; font-size: 1em; border: 2px solid #e5e7eb; border-radius: 6px;">
+                            </div>
+                            <div>
+                                <label style="font-size: 0.9em; display: block; margin-bottom: 5px; font-weight: 600;">Trades per Year</label>
+                                <input type="number" id="calc2TradesYear" step="1" value="100" style="width: 100%; padding: 10px; font-size: 1em; border: 2px solid #e5e7eb; border-radius: 6px;">
+                            </div>
                             <div style="margin-top: 15px; padding: 20px; background: white; border-radius: 8px; text-align: center; border: 2px solid #10b981;">
                                 <div style="font-size: 0.85em; color: #666; margin-bottom: 5px; text-transform: uppercase; letter-spacing: 0.5px;">Expectancy</div>
                                 <div id="calc2Result" style="font-size: 2em; font-weight: 700; color: #10b981;">1.50R</div>
+                                <div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid #e5e7eb;">
+                                    <div style="font-size: 0.75em; color: #666; margin-bottom: 3px;">Annual Gain</div>
+                                    <div id="calc2Annual" style="font-size: 1.3em; font-weight: 700; color: #10b981;">150%</div>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -860,9 +884,21 @@
                                 <label style="font-size: 0.9em; display: block; margin-bottom: 5px; font-weight: 600;">Avg Loss (R)</label>
                                 <input type="number" id="calc3AvgLossR" step="0.1" value="1.0" style="width: 100%; padding: 10px; font-size: 1em; border: 2px solid #e5e7eb; border-radius: 6px;">
                             </div>
+                            <div>
+                                <label style="font-size: 0.9em; display: block; margin-bottom: 5px; font-weight: 600;">Risk % per Trade</label>
+                                <input type="number" id="calc3RiskPct" step="0.1" value="1.0" style="width: 100%; padding: 10px; font-size: 1em; border: 2px solid #e5e7eb; border-radius: 6px;">
+                            </div>
+                            <div>
+                                <label style="font-size: 0.9em; display: block; margin-bottom: 5px; font-weight: 600;">Trades per Year</label>
+                                <input type="number" id="calc3TradesYear" step="1" value="100" style="width: 100%; padding: 10px; font-size: 1em; border: 2px solid #e5e7eb; border-radius: 6px;">
+                            </div>
                             <div style="margin-top: 15px; padding: 20px; background: white; border-radius: 8px; text-align: center; border: 2px solid #10b981;">
                                 <div style="font-size: 0.85em; color: #666; margin-bottom: 5px; text-transform: uppercase; letter-spacing: 0.5px;">Expectancy</div>
                                 <div id="calc3Result" style="font-size: 2em; font-weight: 700; color: #10b981;">1.40R</div>
+                                <div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid #e5e7eb;">
+                                    <div style="font-size: 0.75em; color: #666; margin-bottom: 3px;">Annual Gain</div>
+                                    <div id="calc3Annual" style="font-size: 1.3em; font-weight: 700; color: #10b981;">140%</div>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -1519,9 +1555,12 @@
             const winRate = parseFloat(document.getElementById(`calc${calcNum}WinRate`).value) || 0;
             const avgWinR = parseFloat(document.getElementById(`calc${calcNum}AvgWinR`).value) || 0;
             const avgLossR = parseFloat(document.getElementById(`calc${calcNum}AvgLossR`).value) || 0;
+            const riskPct = parseFloat(document.getElementById(`calc${calcNum}RiskPct`).value) || 0;
+            const tradesYear = parseFloat(document.getElementById(`calc${calcNum}TradesYear`).value) || 0;
             
             const expectancyR = calculateExpectancyR(winRate, avgWinR, avgLossR);
             const resultEl = document.getElementById(`calc${calcNum}Result`);
+            const annualEl = document.getElementById(`calc${calcNum}Annual`);
             
             if (resultEl) {
                 resultEl.textContent = expectancyR.toFixed(2) + 'R';
@@ -1538,11 +1577,26 @@
                     resultEl.parentElement.style.borderColor = '#667eea';
                 }
             }
+            
+            // Calculate annual % gain
+            if (annualEl) {
+                const annualGain = expectancyR * riskPct * tradesYear;
+                annualEl.textContent = annualGain.toFixed(1) + '%';
+                
+                // Color code annual gain
+                if (annualGain > 0) {
+                    annualEl.style.color = '#10b981';
+                } else if (annualGain < 0) {
+                    annualEl.style.color = '#ef4444';
+                } else {
+                    annualEl.style.color = '#667eea';
+                }
+            }
         }
         
         // Add event listeners for all 3 calculators
         for (let i = 1; i <= 3; i++) {
-            ['WinRate', 'AvgWinR', 'AvgLossR'].forEach(field => {
+            ['WinRate', 'AvgWinR', 'AvgLossR', 'RiskPct', 'TradesYear'].forEach(field => {
                 const el = document.getElementById(`calc${i}${field}`);
                 if (el) {
                     el.addEventListener('input', () => updateExpectancyCalc(i));
