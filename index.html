@@ -785,6 +785,9 @@
                     <h2 style="margin: 0;">Closed Trade History</h2>
                     <button onclick="recalculateClosedTradeRMultiples()" class="btn-secondary btn-small">🔄 Recalculate R-Multiples</button>
                 </div>
+                <div style="margin-bottom: 15px;">
+                    <input type="text" id="closedTradesSearch" placeholder="🔍 Search by symbol..." style="width: 300px; padding: 8px; border: 2px solid #e5e7eb; border-radius: 6px; font-size: 0.9em;" oninput="updateClosedTradesTable()">
+                </div>
                 <div class="table-scroll" id="closedTradesTable">
                     <div class="empty-state">No closed trades</div>
                 </div>
@@ -2176,7 +2179,7 @@
                         <td title="${qtyTooltip}" style="cursor: help;">${pos.shares}</td>
                         <td>$${pos.initialStop.toFixed(2)}</td>
                         <td style="background: #dbeafe;">$${pos.currentStop.toFixed(2)}</td>
-                        <td>${pos.initialWeight.toFixed(2)}%</td>
+                        <td>${pos.initialWeight.toFixed(3)}%</td>
                         <td>${metrics.accountWeight.toFixed(2)}%</td>
                         <td class="highlight-col ${pnlClass}">${metrics.pnlPercent.toFixed(2)}%</td>
                         <td class="highlight-col ${pnlClass}">${metrics.portfolioPnlPercent.toFixed(2)}%</td>
@@ -2661,9 +2664,25 @@
         // Update closed trades table
         function updateClosedTradesTable() {
             const container = document.getElementById('closedTradesTable');
+            const searchInput = document.getElementById('closedTradesSearch');
+            const searchTerm = searchInput ? searchInput.value.toLowerCase().trim() : '';
             
             if (closedTrades.length === 0) {
                 container.innerHTML = '<div class="empty-state">No closed trades</div>';
+                return;
+            }
+
+            // Filter trades by search term and track original indices
+            let filteredTrades = closedTrades.map((trade, originalIndex) => ({ ...trade, originalIndex }));
+            
+            if (searchTerm) {
+                filteredTrades = filteredTrades.filter(trade => 
+                    trade.symbol.toLowerCase() === searchTerm
+                );
+            }
+            
+            if (filteredTrades.length === 0) {
+                container.innerHTML = '<div class="empty-state">No trades found matching "' + searchTerm + '"</div>';
                 return;
             }
 
@@ -2675,6 +2694,7 @@
                             <th>Entry</th>
                             <th>Exit</th>
                             <th>Acct Wt%</th>
+                            <th title="% of account risked when position opened">% Risk</th>
                             <th>P&L%</th>
                             <th>Port P&L%</th>
                             <th>R Multiple</th>
@@ -2687,10 +2707,21 @@
                     <tbody>
             `;
 
-            let cumPnl = 0;
-            closedTrades.forEach((trade, index) => {
-                cumPnl += trade.portfolioPnlPercent;
+            // Calculate cumPnl for each trade (in chronological order from full array)
+            const tradesWithCumPnl = filteredTrades.map(trade => {
+                let cumPnl = 0;
+                for (let i = 0; i <= trade.originalIndex; i++) {
+                    cumPnl += closedTrades[i].portfolioPnlPercent;
+                }
+                return { ...trade, cumPnl };
+            });
+            
+            // Reverse to show newest first
+            tradesWithCumPnl.reverse();
+            
+            tradesWithCumPnl.forEach(trade => {
                 const pnlClass = trade.pnlPercent >= 0 ? 'profit' : 'loss';
+                const riskPercent = trade.initialRiskPercent || 0;
                 
                 html += `
                     <tr>
@@ -2698,16 +2729,17 @@
                         <td>$${trade.entryPrice.toFixed(2)}</td>
                         <td>$${trade.exitPrice.toFixed(2)}</td>
                         <td>${trade.accountWeight.toFixed(2)}%</td>
+                        <td>${riskPercent.toFixed(3)}%</td>
                         <td class="${pnlClass}">${trade.pnlPercent.toFixed(2)}%</td>
                         <td class="${pnlClass}">${trade.portfolioPnlPercent.toFixed(2)}%</td>
                         <td class="${pnlClass}">${trade.rMultiple.toFixed(2)}R</td>
                         <td>${trade.exitDate}</td>
-                        <td>${cumPnl.toFixed(2)}%</td>
+                        <td>${trade.cumPnl.toFixed(2)}%</td>
                         <td style="max-width: 200px; white-space: normal;">${trade.notes || ''}</td>
                         <td>
                             <div class="action-buttons">
-                                <button class="btn-secondary btn-small" onclick="openEditClosedTradeModal(${index})">Edit</button>
-                                <button class="btn-danger btn-small" onclick="deleteClosedTrade(${index})">Delete</button>
+                                <button class="btn-secondary btn-small" onclick="openEditClosedTradeModal(${trade.originalIndex})">Edit</button>
+                                <button class="btn-danger btn-small" onclick="deleteClosedTrade(${trade.originalIndex})">Delete</button>
                             </div>
                         </td>
                     </tr>
