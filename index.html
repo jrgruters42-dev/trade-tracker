@@ -1827,8 +1827,8 @@
             const capitalRisk = Math.max(0, ((adjustedPrice - pos.currentStop) * pos.shares / totalCost) * 100);
             const portfolioCapitalRisk = (capitalRisk / 100) * pos.initialWeight;
             
-            // Calculate R-multiple based on user's entered % Risk (initialWeight)
-            const initialRiskDollars = (pos.initialWeight / 100) * accountSize;
+            // Calculate R-multiple based on initial risk (entry - initial stop) × initial shares
+            const initialRiskDollars = (pos.entryPrice - pos.initialStop) * pos.initialShares;
             const initialR = initialRiskDollars > 0 ? totalPnL / initialRiskDollars : 0;
             
             const twoRTarget = pos.entryPrice * (1 + (2 * (initialRiskPercent / 100)));
@@ -3688,14 +3688,13 @@
                     originalShares = pos.initialShares;
                 }
                 
-                // Calculate initial risk in dollars based on user's % Risk input
-                // This is the % of portfolio they said they were risking when they opened the position
-                const initialRiskDollars = (pos.initialWeight / 100) * getAccountSize();
+                // Calculate initial risk in dollars based on (Entry - Initial Stop) × Original Shares
+                const initialRiskDollars = (pos.entryPrice - pos.initialStop) * originalShares;
                 
                 // Calculate ORIGINAL total cost (before any partials)
                 const originalTotalCost = pos.entryPrice * originalShares;
                 
-                // R-multiple = Total P&L / Initial Risk (based on % Risk entered)
+                // R-multiple = Total P&L / Initial Risk (based on entry-stop distance)
                 const rMultiple = initialRiskDollars > 0 ? 
                     totalPnLDollars / initialRiskDollars : 0;
                 
