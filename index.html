@@ -1826,7 +1826,11 @@
             const initialRiskPercent = ((pos.entryPrice - pos.initialStop) / pos.entryPrice) * 100;
             const capitalRisk = Math.max(0, ((adjustedPrice - pos.currentStop) * pos.shares / totalCost) * 100);
             const portfolioCapitalRisk = (capitalRisk / 100) * pos.initialWeight;
-            const initialR = initialRiskPercent > 0 ? ((pos.currentPrice / pos.entryPrice - 1) * 100) / initialRiskPercent : 0;
+            
+            // Calculate R-multiple based on user's entered % Risk (initialWeight)
+            const initialRiskDollars = (pos.initialWeight / 100) * accountSize;
+            const initialR = initialRiskDollars > 0 ? totalPnL / initialRiskDollars : 0;
+            
             const twoRTarget = pos.entryPrice * (1 + (2 * (initialRiskPercent / 100)));
             const riskDollars = (adjustedPrice - pos.currentStop) * pos.shares;
             
@@ -2694,7 +2698,7 @@
                             <th>Entry</th>
                             <th>Exit</th>
                             <th>Acct Wt%</th>
-                            <th title="% of account risked when position opened">% Risk</th>
+                            <th title="% of total portfolio risked on this trade">% Risk</th>
                             <th>P&L%</th>
                             <th>Port P&L%</th>
                             <th>R Multiple</th>
@@ -2721,7 +2725,7 @@
             
             tradesWithCumPnl.forEach(trade => {
                 const pnlClass = trade.pnlPercent >= 0 ? 'profit' : 'loss';
-                const riskPercent = trade.initialRiskPercent || 0;
+                const riskPercent = trade.accountWeight || 0; // User-entered % risk (% of portfolio risked)
                 
                 html += `
                     <tr>
@@ -3684,14 +3688,16 @@
                     originalShares = pos.initialShares;
                 }
                 
-                const originalInitialRiskDollars = (pos.entryPrice - pos.initialStop) * originalShares;
+                // Calculate initial risk in dollars based on user's % Risk input
+                // This is the % of portfolio they said they were risking when they opened the position
+                const initialRiskDollars = (pos.initialWeight / 100) * getAccountSize();
                 
                 // Calculate ORIGINAL total cost (before any partials)
                 const originalTotalCost = pos.entryPrice * originalShares;
                 
-                // R-multiple = Total P&L / Original Initial Risk
-                const rMultiple = originalInitialRiskDollars > 0 ? 
-                    totalPnLDollars / originalInitialRiskDollars : 0;
+                // R-multiple = Total P&L / Initial Risk (based on % Risk entered)
+                const rMultiple = initialRiskDollars > 0 ? 
+                    totalPnLDollars / initialRiskDollars : 0;
                 
                 // Portfolio P&L % based on ORIGINAL position weight
                 const portfolioPnlPercent = (totalPnLDollars / getAccountSize()) * 100;
