@@ -3599,34 +3599,48 @@
             const accountSize = getAccountSize();
             let recalculated = 0;
             
-            closedTrades.forEach(trade => {
-                // Calculate original shares from P&L data
-                // portfolioPnlPercent = (Total P&L $) / Account Size × 100
-                // pnlPercent = (Total P&L $) / (Entry × Original Shares) × 100
-                // Therefore: Original Shares = (portfolioPnlPercent × Account Size) / (pnlPercent × Entry)
+            console.log('=== RECALCULATING R-MULTIPLES ===');
+            console.log('Account Size:', accountSize);
+            
+            closedTrades.forEach((trade, index) => {
+                console.log(`\nTrade ${index + 1}: ${trade.symbol} (${trade.exitDate})`);
+                console.log('  Entry:', trade.entryPrice, 'Exit:', trade.exitPrice, 'Stop:', trade.initialStop);
+                console.log('  Portfolio P&L%:', trade.portfolioPnlPercent);
+                console.log('  Position P&L%:', trade.pnlPercent);
+                console.log('  OLD R-Multiple:', trade.rMultiple);
                 
+                // Calculate original shares from P&L data
                 if (trade.pnlPercent !== 0) {
                     const originalShares = (trade.portfolioPnlPercent * accountSize) / (trade.pnlPercent * trade.entryPrice);
+                    console.log('  Calculated Original Shares:', originalShares);
                     
                     // Calculate total P&L in dollars
                     const totalPnLDollars = (trade.portfolioPnlPercent / 100) * accountSize;
+                    console.log('  Total P&L $:', totalPnLDollars);
                     
                     // Calculate initial risk in dollars
                     const initialRiskDollars = (trade.entryPrice - trade.initialStop) * originalShares;
+                    console.log('  Initial Risk $:', initialRiskDollars);
                     
                     // Recalculate R-multiple
                     if (initialRiskDollars > 0) {
-                        trade.rMultiple = totalPnLDollars / initialRiskDollars;
+                        const newRMultiple = totalPnLDollars / initialRiskDollars;
+                        console.log('  NEW R-Multiple:', newRMultiple);
+                        trade.rMultiple = newRMultiple;
                         recalculated++;
                     }
+                } else {
+                    console.log('  SKIPPED (pnlPercent is 0)');
                 }
             });
+            
+            console.log(`\n=== RECALCULATED ${recalculated} TRADES ===`);
             
             // Save to Firebase
             saveToFirebase();
             updateAllDisplays();
             
-            alert(`✅ Recalculated R-Multiples for ${recalculated} trades!\n\nAll R-multiples now use the correct formula.`);
+            alert(`✅ Recalculated R-Multiples for ${recalculated} trades!\n\nCheck browser console (F12) for details.`);
         }
 
         // Partial sell
