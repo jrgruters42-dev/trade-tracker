@@ -3600,21 +3600,25 @@
             let recalculated = 0;
             
             closedTrades.forEach(trade => {
-                // Calculate original shares from account weight
-                // Account Weight % = (Entry Price × Original Shares) / Account Size × 100
-                // Original Shares = (Account Weight % × Account Size) / (Entry Price × 100)
-                const originalShares = (trade.accountWeight * accountSize) / (trade.entryPrice * 100);
+                // Calculate original shares from P&L data
+                // portfolioPnlPercent = (Total P&L $) / Account Size × 100
+                // pnlPercent = (Total P&L $) / (Entry × Original Shares) × 100
+                // Therefore: Original Shares = (portfolioPnlPercent × Account Size) / (pnlPercent × Entry)
                 
-                // Calculate total P&L in dollars
-                const totalPnLDollars = (trade.portfolioPnlPercent / 100) * accountSize;
-                
-                // Calculate initial risk in dollars
-                const initialRiskDollars = (trade.entryPrice - trade.initialStop) * originalShares;
-                
-                // Recalculate R-multiple
-                if (initialRiskDollars > 0) {
-                    trade.rMultiple = totalPnLDollars / initialRiskDollars;
-                    recalculated++;
+                if (trade.pnlPercent !== 0) {
+                    const originalShares = (trade.portfolioPnlPercent * accountSize) / (trade.pnlPercent * trade.entryPrice);
+                    
+                    // Calculate total P&L in dollars
+                    const totalPnLDollars = (trade.portfolioPnlPercent / 100) * accountSize;
+                    
+                    // Calculate initial risk in dollars
+                    const initialRiskDollars = (trade.entryPrice - trade.initialStop) * originalShares;
+                    
+                    // Recalculate R-multiple
+                    if (initialRiskDollars > 0) {
+                        trade.rMultiple = totalPnLDollars / initialRiskDollars;
+                        recalculated++;
+                    }
                 }
             });
             
