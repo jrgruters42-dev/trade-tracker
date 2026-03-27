@@ -3592,16 +3592,37 @@
                 return;
             }
             
-            alert('⚠️ R-Multiple Recalculation\n\n' +
-                  'Unfortunately, trades closed BEFORE this fix don\'t have the partial sale data saved.\n\n' +
-                  'To fix trades with partials:\n' +
-                  '1. Click "Edit" on the trade\n' +
-                  '2. Manually calculate:\n' +
-                  '   • Portfolio P&L % = (Total $ P&L) / (Account Size) × 100\n' +
-                  '   • R-Multiple = (Total $ P&L) / (Original $ Risk)\n' +
-                  '3. Enter the correct values\n' +
-                  '4. Save\n\n' +
-                  'Going forward, ALL new closed trades will calculate correctly automatically!');
+            if (!confirm('Recalculate R-Multiples for all closed trades?\n\nThis will fix incorrect R-multiples using:\nR = Total P&L $ / Initial Risk $\nWhere Initial Risk $ = (Entry - Initial Stop) × Original Shares')) {
+                return;
+            }
+            
+            const accountSize = getAccountSize();
+            let recalculated = 0;
+            
+            closedTrades.forEach(trade => {
+                // Calculate original shares from account weight
+                // Account Weight % = (Entry Price × Original Shares) / Account Size × 100
+                // Original Shares = (Account Weight % × Account Size) / (Entry Price × 100)
+                const originalShares = (trade.accountWeight * accountSize) / (trade.entryPrice * 100);
+                
+                // Calculate total P&L in dollars
+                const totalPnLDollars = (trade.portfolioPnlPercent / 100) * accountSize;
+                
+                // Calculate initial risk in dollars
+                const initialRiskDollars = (trade.entryPrice - trade.initialStop) * originalShares;
+                
+                // Recalculate R-multiple
+                if (initialRiskDollars > 0) {
+                    trade.rMultiple = totalPnLDollars / initialRiskDollars;
+                    recalculated++;
+                }
+            });
+            
+            // Save to Firebase
+            saveToFirebase();
+            updateAllDisplays();
+            
+            alert(`✅ Recalculated R-Multiples for ${recalculated} trades!\n\nAll R-multiples now use the correct formula.`);
         }
 
         // Partial sell
