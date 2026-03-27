@@ -1521,7 +1521,7 @@
         function saveToFirebase() {
             if (!isFirebaseInitialized || !dbRef) {
                 console.error('❌ Cannot save: Firebase not initialized');
-                return;
+                return Promise.reject('Firebase not initialized');
             }
             
             window.pendingSave = true; // Track that save is in progress
@@ -1548,7 +1548,7 @@
                 lastModified: new Date().toISOString()
             };
 
-            dbRef.set(data).then(() => {
+            return dbRef.set(data).then(() => {
                 const now = new Date();
                 const timeStr = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
                 updateSyncStatus('Synced ✓', true);
@@ -1732,25 +1732,39 @@
                 };
             });
             
-            // Recalculate R-multiples for all closed trades (fixes old trades with incorrect R-multiples)
+            // Auto-fix R-multiples for all closed trades on load
+            // This ensures old trades with incorrect R-multiples get fixed automatically
             const accountSize = parseFloat(document.getElementById('accountSize').value) || 250000;
+            let autoFixed = 0;
+            
             closedTrades.forEach(trade => {
-                if (trade.portfolioPnlPercent !== undefined && trade.accountWeight > 0 && trade.initialRiskPercent > 0) {
-                    // Calculate P/L in dollars from portfolio P/L %
-                    const pnlDollars = (trade.portfolioPnlPercent / 100) * accountSize;
+                // Calculate original shares from P&L data
+                if (trade.pnlPercent !== 0 && trade.entryPrice > 0 && trade.initialStop > 0) {
+                    const originalShares = (trade.portfolioPnlPercent * accountSize) / (trade.pnlPercent * trade.entryPrice);
                     
-                    // Calculate cost basis (original position value)
-                    const costBasis = (trade.accountWeight / 100) * accountSize;
+                    // Calculate total P&L in dollars
+                    const totalPnLDollars = (trade.portfolioPnlPercent / 100) * accountSize;
                     
-                    // Calculate initial risk in dollars
-                    const riskDollars = (trade.initialRiskPercent / 100) * costBasis;
+                    // Calculate initial risk in dollars using entry-stop distance
+                    const initialRiskDollars = (trade.entryPrice - trade.initialStop) * originalShares;
                     
-                    // Recalculate R-multiple
-                    if (riskDollars > 0) {
-                        trade.rMultiple = pnlDollars / riskDollars;
+                    // Recalculate R-multiple if it's incorrect
+                    if (initialRiskDollars > 0) {
+                        const correctRMultiple = totalPnLDollars / initialRiskDollars;
+                        // Only update if significantly different (more than 0.1 R difference)
+                        if (Math.abs(trade.rMultiple - correctRMultiple) > 0.1) {
+                            trade.rMultiple = correctRMultiple;
+                            autoFixed++;
+                        }
                     }
                 }
             });
+            
+            if (autoFixed > 0) {
+                console.log(`🔧 Auto-fixed ${autoFixed} R-multiples on load`);
+                // Save the corrected values back to Firebase
+                setTimeout(() => saveToFirebase(), 1000);
+            }
             
             // Don't automatically recalculate - only when user explicitly requests it
             // This prevents overwriting user-entered values on every page load
@@ -3598,7 +3612,7 @@
         }
         
         // Recalculate R-multiples for all closed trades (fixes trades with partials)
-        function recalculateClosedTradeRMultiples() {
+        async function recalculateClosedTradeRMultiples() {
             if (closedTrades.length === 0) {
                 alert('No closed trades to recalculate!');
                 return;
@@ -3648,11 +3662,15 @@
             
             console.log(`\n=== RECALCULATED ${recalculated} TRADES ===`);
             
-            // Save to Firebase
-            saveToFirebase();
-            updateAllDisplays();
-            
-            alert(`✅ Recalculated R-Multiples for ${recalculated} trades!\n\nCheck browser console (F12) for details.`);
+            // Save to Firebase and wait for completion
+            try {
+                await saveToFirebase();
+                updateAllDisplays();
+                alert(`✅ Recalculated and saved ${recalculated} trades!\n\nR-multiples have been fixed and saved to Firebase.`);
+            } catch (error) {
+                console.error('Failed to save recalculated R-multiples:', error);
+                alert('⚠️ Recalculation complete but save failed. Please try again.');
+            }
         }
 
         // Partial sell
