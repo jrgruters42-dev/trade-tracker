@@ -1,7 +1,7 @@
 const CACHE_NAME = 'trade-tracker-v1';
 const urlsToCache = [
-  '/',
-  '/index.html'
+  '/trade-tracker/',
+  '/trade-tracker/index.html'
 ];
 
 // Install service worker and cache files

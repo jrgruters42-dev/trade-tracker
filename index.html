@@ -8,13 +8,13 @@
     <!-- PWA Meta Tags -->
     <meta name="theme-color" content="#667eea">
     <meta name="description" content="Personal trade tracking and portfolio management">
-    <link rel="manifest" href="manifest.json">
+    <link rel="manifest" href="/trade-tracker/manifest.json">
     
     <!-- iOS Meta Tags -->
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="Trade Tracker">
-    <link rel="apple-touch-icon" href="icon-192.png">
+    <link rel="apple-touch-icon" href="/trade-tracker/icon-192.png">
     
     <script src="https://cdn.plot.ly/plotly-2.26.0.min.js"></script>
     
@@ -4129,7 +4129,7 @@
     <script>
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
-                navigator.serviceWorker.register('/service-worker.js')
+                navigator.serviceWorker.register('/trade-tracker/service-worker.js')
                     .then(registration => {
                         console.log('✅ PWA: Service Worker registered successfully');
                         

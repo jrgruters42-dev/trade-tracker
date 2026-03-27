@@ -2,20 +2,20 @@
   "name": "Trade Tracker",
   "short_name": "Tracker",
   "description": "Personal trade tracking and portfolio management app",
-  "start_url": "/",
+  "start_url": "/trade-tracker/",
   "display": "standalone",
   "background_color": "#ffffff",
   "theme_color": "#667eea",
   "orientation": "portrait-primary",
   "icons": [
     {
-      "src": "icon-192.png",
+      "src": "/trade-tracker/icon-192.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "any maskable"
     },
     {
-      "src": "icon-512.png",
+      "src": "/trade-tracker/icon-512.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any maskable"
