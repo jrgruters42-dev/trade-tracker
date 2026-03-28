@@ -2306,6 +2306,19 @@
                 } else {
                     tradingYTDElement.parentElement.style.background = 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)';
                 }
+                
+                // Add gold outline if beating SPY
+                const spyYTDText = document.getElementById('spyYTD').textContent;
+                if (spyYTDText && spyYTDText !== '--') {
+                    const spyYTD = parseFloat(spyYTDText.replace('%', ''));
+                    if (!isNaN(spyYTD) && tradingYTD > spyYTD) {
+                        tradingYTDElement.parentElement.style.border = '3px solid #fbbf24'; // Gold border
+                        tradingYTDElement.parentElement.style.boxShadow = '0 0 10px rgba(251, 191, 36, 0.5)'; // Gold glow
+                    } else {
+                        tradingYTDElement.parentElement.style.border = 'none';
+                        tradingYTDElement.parentElement.style.boxShadow = 'none';
+                    }
+                }
             }
             
             // Color code My Roth YTD
@@ -2317,6 +2330,19 @@
                 } else {
                     myRothYTDElement.parentElement.style.background = 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)';
                 }
+                
+                // Add gold outline if beating SPY
+                const spyYTDText = document.getElementById('spyYTD').textContent;
+                if (spyYTDText && spyYTDText !== '--') {
+                    const spyYTD = parseFloat(spyYTDText.replace('%', ''));
+                    if (!isNaN(spyYTD) && myRothYTD > spyYTD) {
+                        myRothYTDElement.parentElement.style.border = '3px solid #fbbf24'; // Gold border
+                        myRothYTDElement.parentElement.style.boxShadow = '0 0 10px rgba(251, 191, 36, 0.5)'; // Gold glow
+                    } else {
+                        myRothYTDElement.parentElement.style.border = 'none';
+                        myRothYTDElement.parentElement.style.boxShadow = 'none';
+                    }
+                }
             }
             
             // Color code Wife Roth YTD
@@ -2327,6 +2353,19 @@
                     wifeRothYTDElement.parentElement.style.background = 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)';
                 } else {
                     wifeRothYTDElement.parentElement.style.background = 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)';
+                }
+                
+                // Add gold outline if beating SPY
+                const spyYTDText = document.getElementById('spyYTD').textContent;
+                if (spyYTDText && spyYTDText !== '--') {
+                    const spyYTD = parseFloat(spyYTDText.replace('%', ''));
+                    if (!isNaN(spyYTD) && wifeRothYTD > spyYTD) {
+                        wifeRothYTDElement.parentElement.style.border = '3px solid #fbbf24'; // Gold border
+                        wifeRothYTDElement.parentElement.style.boxShadow = '0 0 10px rgba(251, 191, 36, 0.5)'; // Gold glow
+                    } else {
+                        wifeRothYTDElement.parentElement.style.border = 'none';
+                        wifeRothYTDElement.parentElement.style.boxShadow = 'none';
+                    }
                 }
             }
         }
