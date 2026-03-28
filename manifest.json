@@ -2,7 +2,7 @@
   "name": "Trade Tracker",
   "short_name": "Tracker",
   "description": "Personal trade tracking and portfolio management app",
-  "start_url": "/trade-tracker/",
+  "start_url": "https://jrgruters42-dev.github.io/trade-tracker/",
   "display": "standalone",
   "background_color": "#ffffff",
   "theme_color": "#667eea",
