@@ -2267,8 +2267,7 @@
             const wifeRothJan1 = parseFloat(document.getElementById('wifeRothJan1').value) || 0;
             const wifeRothYTD = wifeRothJan1 > 0 ? ((wifeRoth - wifeRothJan1) / wifeRothJan1) * 100 : 0;
             
-            // Update SPY YTD (will be set by updateSPYPrice function)
-            updateSPYPrice();
+            // Note: SPY YTD is updated when you click "Update All Prices"
             
             // Update Portfolio Summary display elements
             const closedPnlElement = document.getElementById('closedPnlPercent');
@@ -3507,21 +3506,24 @@
                     return;
                 }
                 
-                // Get or fetch Jan 1, 2026 price
+                // Get or fetch first trading day of 2026 price (Jan 2, 2026 - Jan 1 was a holiday)
                 let spyJan1 = parseFloat(document.getElementById('spyJan1').value);
                 
-                // If we don't have Jan 1 price yet, fetch it (Jan 1, 2026 was a Wednesday - market was open)
+                // If we don't have Jan 2 price yet, fetch it
                 if (!spyJan1 || spyJan1 === 0) {
-                    // Fetch historical price for Jan 1, 2026 (timestamp: 1735689600)
-                    const jan1Timestamp = 1735689600; // Jan 1, 2026 00:00:00 UTC
+                    // Fetch historical price for Jan 2, 2026 (first trading day of 2026)
                     const jan2Timestamp = 1735776000; // Jan 2, 2026 00:00:00 UTC
-                    const response = await fetch(`https://finnhub.io/api/v1/stock/candle?symbol=SPY&resolution=D&from=${jan1Timestamp}&to=${jan2Timestamp}&token=${apiKey}`);
+                    const jan3Timestamp = 1735862400; // Jan 3, 2026 00:00:00 UTC
+                    const response = await fetch(`https://finnhub.io/api/v1/stock/candle?symbol=SPY&resolution=D&from=${jan2Timestamp}&to=${jan3Timestamp}&token=${apiKey}`);
                     const data = await response.json();
                     
                     if (data && data.c && data.c.length > 0) {
-                        spyJan1 = data.c[0]; // Closing price on Jan 1, 2026
+                        spyJan1 = data.c[0]; // Closing price on Jan 2, 2026
                         document.getElementById('spyJan1').value = spyJan1;
-                        saveToFirebase(); // Save the Jan 1 price
+                        saveToFirebase(); // Save the Jan 2 price
+                        console.log('SPY Jan 2, 2026 price fetched and saved:', spyJan1);
+                    } else {
+                        console.error('Failed to fetch SPY historical price:', data);
                     }
                 }
                 
@@ -3529,6 +3531,7 @@
                 if (spyJan1 > 0) {
                     const spyYTD = ((currentPrice - spyJan1) / spyJan1) * 100;
                     document.getElementById('spyYTD').textContent = spyYTD.toFixed(2) + '%';
+                    console.log('SPY YTD calculated:', spyYTD.toFixed(2) + '%', 'Current:', currentPrice, 'Jan2:', spyJan1);
                 } else {
                     document.getElementById('spyYTD').textContent = '--';
                 }
@@ -4200,6 +4203,13 @@
                 
                 // Auto-save disabled - data saves when you make changes
                 // This prevents save/load loops that cause data loss
+                
+                // Update SPY YTD on page load (with delay to ensure Firebase data is loaded)
+                setTimeout(() => {
+                    if (document.getElementById('apiKey').value) {
+                        updateSPYPrice();
+                    }
+                }, 2000);
             }
         };
     </script>
