@@ -621,8 +621,10 @@
                     <label style="font-size: 10px;">Wife Roth Jan 1 ($)</label>
                     <input type="number" id="wifeRothJan1" value="0" style="padding: 4px; font-size: 12px;">
                 </div>
-                <!-- Hidden field for SPY Jan 1 price -->
-                <input type="hidden" id="spyJan1" value="0">
+                <div class="form-group" style="margin-bottom: 0;">
+                    <label style="font-size: 10px;">SPY Jan 2 ($)</label>
+                    <input type="number" step="0.01" id="spyJan1" value="0" style="padding: 4px; font-size: 12px;" onchange="saveToFirebase(); updateSPYPrice();">
+                </div>
             </div>
             
             <!-- API Key and Buttons -->
@@ -3506,32 +3508,14 @@
                     return;
                 }
                 
-                // Get or fetch first trading day of 2026 price (Jan 2, 2026 - Jan 1 was a holiday)
-                let spyJan1 = parseFloat(document.getElementById('spyJan1').value);
-                
-                // If we don't have Jan 2 price yet, fetch it
-                if (!spyJan1 || spyJan1 === 0) {
-                    // Fetch historical price for Jan 2, 2026 (first trading day of 2026)
-                    const jan2Timestamp = 1735776000; // Jan 2, 2026 00:00:00 UTC
-                    const jan3Timestamp = 1735862400; // Jan 3, 2026 00:00:00 UTC
-                    const response = await fetch(`https://finnhub.io/api/v1/stock/candle?symbol=SPY&resolution=D&from=${jan2Timestamp}&to=${jan3Timestamp}&token=${apiKey}`);
-                    const data = await response.json();
-                    
-                    if (data && data.c && data.c.length > 0) {
-                        spyJan1 = data.c[0]; // Closing price on Jan 2, 2026
-                        document.getElementById('spyJan1').value = spyJan1;
-                        saveToFirebase(); // Save the Jan 2 price
-                        console.log('SPY Jan 2, 2026 price fetched and saved:', spyJan1);
-                    } else {
-                        console.error('Failed to fetch SPY historical price:', data);
-                    }
-                }
+                // Get manually entered Jan 2, 2026 price
+                const spyJan2 = parseFloat(document.getElementById('spyJan1').value);
                 
                 // Calculate and display YTD %
-                if (spyJan1 > 0) {
-                    const spyYTD = ((currentPrice - spyJan1) / spyJan1) * 100;
+                if (spyJan2 > 0) {
+                    const spyYTD = ((currentPrice - spyJan2) / spyJan2) * 100;
                     document.getElementById('spyYTD').textContent = spyYTD.toFixed(2) + '%';
-                    console.log('SPY YTD calculated:', spyYTD.toFixed(2) + '%', 'Current:', currentPrice, 'Jan2:', spyJan1);
+                    console.log('SPY YTD calculated:', spyYTD.toFixed(2) + '%', 'Current:', currentPrice, 'Jan2:', spyJan2);
                 } else {
                     document.getElementById('spyYTD').textContent = '--';
                 }
