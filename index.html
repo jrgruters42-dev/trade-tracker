@@ -2621,22 +2621,37 @@
                 
                 openPositions.forEach(pos => {
                     const metrics = calculatePositionMetrics(pos);
-                    const unrealizedProfitDollars = (metrics.portfolioPnlPercent / 100) * accountSize;
                     
-                    if (unrealizedProfitDollars > 0 && unrealizedProfitDollars > totalLast10LossDollars && totalLast10LossDollars > 0) {
-                        // Calculate required stop price to lock in minimum profit
-                        const minProfitNeeded = totalLast10LossDollars + 1; // $1 more than total losses
+                    // Calculate realized profit from partial sales on this position
+                    let realizedProfitFromPartials = 0;
+                    if (pos.partialSells && pos.partialSells.length > 0) {
+                        pos.partialSells.forEach(sell => {
+                            realizedProfitFromPartials += (sell.price - pos.entryPrice) * sell.shares;
+                        });
+                    }
+                    
+                    // Calculate remaining losses to cover (after accounting for partials already sold)
+                    const remainingLossesToCover = Math.max(0, totalLast10LossDollars - realizedProfitFromPartials);
+                    
+                    // Only show alert if there are still losses to cover AND unrealized profit is enough
+                    const unrealizedProfitDollars = metrics.unrealizedPnL; // Just the unrealized portion
+                    
+                    if (remainingLossesToCover > 0 && unrealizedProfitDollars > 0 && unrealizedProfitDollars > remainingLossesToCover) {
+                        // Calculate required stop price to lock in minimum profit (remaining losses + $1)
+                        const minProfitNeeded = remainingLossesToCover + 1;
                         
-                        // Calculate stop price: entryPrice + (minProfit / shares)
+                        // Calculate stop price: entryPrice + (minProfit / remaining shares)
                         const requiredStopPrice = pos.entryPrice + (minProfitNeeded / pos.shares);
                         
                         tradesNeedingRegStop.push({
                             symbol: pos.symbol,
                             unrealizedProfit: unrealizedProfitDollars,
+                            realizedFromPartials: realizedProfitFromPartials,
                             currentPrice: pos.currentPrice,
                             currentStop: pos.currentStop,
                             requiredStop: requiredStopPrice,
-                            totalLosses: totalLast10LossDollars
+                            totalLosses: totalLast10LossDollars,
+                            remainingLosses: remainingLossesToCover
                         });
                     }
                 });
@@ -2645,7 +2660,15 @@
                     regressiveStopAlert.style.display = 'block';
                     let html = '<ul style="margin: 0; padding-left: 20px;">';
                     tradesNeedingRegStop.forEach(trade => {
-                        html += `<li><strong>${trade.symbol}:</strong> Up $${trade.unrealizedProfit.toFixed(0)} (> $${trade.totalLosses.toFixed(0)} total losses). Move stop from $${trade.currentStop.toFixed(2)} → <strong style="color: #10b981;">$${trade.requiredStop.toFixed(2)}</strong> to lock in $${(trade.totalLosses + 1).toFixed(0)} profit.</li>`;
+                        let message = `<li><strong>${trade.symbol}:</strong> Unrealized: $${trade.unrealizedProfit.toFixed(0)}`;
+                        
+                        if (trade.realizedFromPartials > 0) {
+                            message += ` + Already locked in: $${trade.realizedFromPartials.toFixed(0)} from partials`;
+                        }
+                        
+                        message += `. Need to cover $${trade.remainingLosses.toFixed(0)} more losses. Move stop from $${trade.currentStop.toFixed(2)} → <strong style="color: #10b981;">$${trade.requiredStop.toFixed(2)}</strong> to lock in remaining $${(trade.remainingLosses + 1).toFixed(0)}.</li>`;
+                        
+                        html += message;
                     });
                     html += '</ul>';
                     regressiveStopList.innerHTML = html;
