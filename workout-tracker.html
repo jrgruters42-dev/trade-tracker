@@ -4,18 +4,12 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>Iron Log</title>
-
-  <!-- PWA: standalone app mode -->
+  <link rel="manifest" href="ironlog-manifest.json" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <meta name="apple-mobile-web-app-title" content="Iron Log" />
   <meta name="mobile-web-app-capable" content="yes" />
   <meta name="theme-color" content="#0f0f0f" />
-  <link rel="manifest" href="data:application/manifest+json,{%22name%22:%22Iron%20Log%22,%22short_name%22:%22Iron%20Log%22,%22display%22:%22standalone%22,%22background_color%22:%22%230f0f0f%22,%22theme_color%22:%22%230f0f0f%22,%22start_url%22:%22.%2Fworkout-tracker.html%22,%22icons%22:[{%22src%22:%22data:image/svg+xml,%253Csvg%2520xmlns%253D%2527http%253A%252F%252Fwww.w3.org%252F2000%252Fsvg%2527%2520viewBox%253D%25270%25200%2520100%2520100%2527%253E%253Crect%2520width%253D%2527100%2527%2520height%253D%2527100%2527%2520fill%253D%2527%25230f0f0f%2527%252F%253E%253Ctext%2520y%253D%2527.9em%2527%2520font-size%253D%252780%2527%2520x%253D%252710%2527%253E%25F0%259F%2592%25AA%253C%252Ftext%253E%253C%252Fsvg%253E%22,%22sizes%22:%22192x192%22,%22type%22:%22image/svg+xml%22}]}" />
-
-  <!-- Apple touch icon -->
-  <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%230f0f0f'/><text y='.9em' font-size='80' x='10'>💪</text></svg>" />
-
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;600;700&family=Barlow:wght@400;500;600&display=swap" rel="stylesheet" />
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
@@ -24,34 +18,15 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.2/babel.min.js"></script>
-
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
-    html, body {
-      width: 100%;
-      background: #0f0f0f;
-      font-family: 'Barlow', sans-serif;
-      color: #fff;
-      /* prevent rubber-band scroll showing white */
-      overscroll-behavior: none;
-    }
-    /* safe area insets for iPhone notch / home bar */
-    #root {
-      width: 100%;
-      padding-top: env(safe-area-inset-top);
-      padding-bottom: env(safe-area-inset-bottom);
-      min-height: 100vh;
-      min-height: -webkit-fill-available;
-    }
-    input[type=number]::-webkit-inner-spin-button,
-    input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; }
+    html, body { width: 100%; background: #0f0f0f; font-family: 'Barlow', sans-serif; color: #fff; overscroll-behavior: none; font-size: 18px; }
+    #root { width: 100%; padding-top: env(safe-area-inset-top); padding-bottom: env(safe-area-inset-bottom); min-height: 100vh; }
+    input[type=number]::-webkit-inner-spin-button, input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; }
     input[type=number] { -moz-appearance: textfield; }
     input:focus, select:focus { border-color: #f97316 !important; outline: none; }
     select option { background: #1a1a1a; color: #fff; }
     button:active { opacity: 0.8; }
-    ::-webkit-scrollbar { width: 4px; }
-    ::-webkit-scrollbar-track { background: #111; }
-    ::-webkit-scrollbar-thumb { background: #333; border-radius: 2px; }
   </style>
 </head>
 <body>
@@ -90,21 +65,16 @@
     });
   }
 
-  const thSt = { fontFamily: "Oswald,sans-serif", fontSize: 14, letterSpacing: 1.5, color: "#666", padding: "10px 6px", textAlign: "center", borderBottom: "1px solid #2a2a2a" };
-  const tdSt = { padding: "10px 6px", textAlign: "center", borderBottom: "1px solid #1e1e1e" };
-  const inSt = { width: "100%", background: "#111", border: "1px solid #333", borderRadius: 6, color: "#fff", fontFamily: "Barlow,sans-serif", fontSize: 24, fontWeight: 600, padding: "12px 6px", textAlign: "center", outline: "none" };
-  const selSt = (val) => ({ width: "100%", background: "#111", border: "1px solid #333", borderRadius: 8, color: val ? "#fff" : "#666", fontFamily: "Barlow,sans-serif", fontSize: 20, padding: "14px" });
-  const slabel = { fontFamily: "Oswald,sans-serif", fontSize: 13, letterSpacing: 2, color: "#666" };
-  const btnSm = { padding: "10px 24px", background: "#1e1e1e", border: "1px solid #444", borderRadius: 8, color: "#fff", fontSize: 17, cursor: "pointer", fontFamily: "Barlow,sans-serif" };
+  // Base font sizes — everything scaled up for no-glasses gym use
+  const thSt = { fontFamily: "Oswald,sans-serif", fontSize: 16, letterSpacing: 1.5, color: "#666", padding: "12px 8px", textAlign: "center", borderBottom: "1px solid #2a2a2a" };
+  const tdSt = { padding: "12px 8px", textAlign: "center", borderBottom: "1px solid #1e1e1e" };
+  const inSt = { width: "100%", background: "#111", border: "1px solid #333", borderRadius: 8, color: "#fff", fontFamily: "Barlow,sans-serif", fontSize: 32, fontWeight: 600, padding: "16px 8px", textAlign: "center", outline: "none" };
+  const selSt = (val) => ({ width: "100%", background: "#111", border: "1px solid #333", borderRadius: 10, color: val ? "#fff" : "#666", fontFamily: "Barlow,sans-serif", fontSize: 22, padding: "18px 16px" });
+  const slabel = { fontFamily: "Oswald,sans-serif", fontSize: 15, letterSpacing: 2, color: "#666" };
+  const btnSm = { padding: "12px 28px", background: "#1e1e1e", border: "1px solid #444", borderRadius: 8, color: "#fff", fontSize: 20, cursor: "pointer", fontFamily: "Barlow,sans-serif" };
 
   function addBtn(active, isCardio) {
-    return {
-      width: "100%", padding: 18, border: "none", borderRadius: 10,
-      background: active ? (isCardio ? "#38bdf8" : "#f97316") : "#222",
-      color: active ? (isCardio ? "#0a0a0a" : "#fff") : "#555",
-      fontFamily: "Oswald,sans-serif", fontSize: 20, fontWeight: 600,
-      letterSpacing: 2, cursor: active ? "pointer" : "not-allowed"
-    };
+    return { width: "100%", padding: 22, border: "none", borderRadius: 12, background: active ? (isCardio ? "#38bdf8" : "#f97316") : "#222", color: active ? (isCardio ? "#0a0a0a" : "#fff") : "#555", fontFamily: "Oswald,sans-serif", fontSize: 22, fontWeight: 600, letterSpacing: 2, cursor: active ? "pointer" : "not-allowed" };
   }
 
   function SignIn() {
@@ -115,15 +85,14 @@
       catch(e) { setErr("Sign in failed — please try again."); setLoading(false); }
     }
     return (
-      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", minHeight: "100vh", padding: 24, background: "#0f0f0f" }}>
-        <div style={{ fontFamily: "Oswald,sans-serif", fontSize: 48, fontWeight: 700, letterSpacing: 6, color: "#f97316" }}>IRON LOG</div>
-        <div style={{ fontFamily: "Oswald,sans-serif", fontSize: 14, letterSpacing: 3, color: "#444", marginBottom: 64, marginTop: 8 }}>TRACK · PROGRESS · CRUSH</div>
+      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", minHeight: "100vh", padding: 28, background: "#0f0f0f" }}>
+        <div style={{ fontFamily: "Oswald,sans-serif", fontSize: 52, fontWeight: 700, letterSpacing: 6, color: "#f97316" }}>IRON LOG</div>
+        <div style={{ fontFamily: "Oswald,sans-serif", fontSize: 16, letterSpacing: 3, color: "#444", marginBottom: 64, marginTop: 10 }}>TRACK · PROGRESS · CRUSH</div>
         <button onClick={handleSignIn} disabled={loading}
-          style={{ background: loading ? "#222" : "#fff", color: loading ? "#555" : "#111", border: "none", borderRadius: 12, padding: "20px 0", fontSize: 20, fontFamily: "Barlow,sans-serif", fontWeight: 600, cursor: "pointer", width: "100%" }}>
+          style={{ background: loading ? "#222" : "#fff", color: loading ? "#555" : "#111", border: "none", borderRadius: 14, padding: "22px 0", fontSize: 22, fontFamily: "Barlow,sans-serif", fontWeight: 600, cursor: "pointer", width: "100%" }}>
           {loading ? "Signing in..." : "Sign in with Google"}
         </button>
-        {err && <div style={{ color: "#ef4444", marginTop: 16, fontSize: 16 }}>{err}</div>}
-        <div style={{ color: "#2a2a2a", fontSize: 14, marginTop: 48, textAlign: "center", lineHeight: 1.8 }}>Your data syncs across all your devices.</div>
+        {err && <div style={{ color: "#ef4444", marginTop: 18, fontSize: 18 }}>{err}</div>}
       </div>
     );
   }
@@ -140,16 +109,16 @@
     const pct = (sec / DUR) * 100;
     const color = sec > 45 ? "#22c55e" : sec > 20 ? "#eab308" : "#ef4444";
     return (
-      <div style={{ position: "fixed", bottom: `calc(12px + env(safe-area-inset-bottom))`, left: 12, right: 12, zIndex: 100, background: "#0d0d0d", border: `2px solid ${color}`, borderRadius: 14, padding: "14px 16px", textAlign: "center", boxShadow: "0 4px 32px rgba(0,0,0,0.7)" }}>
-        <div style={{ fontFamily: "Oswald,sans-serif", fontSize: 12, letterSpacing: 3, color: "#888", marginBottom: 4 }}>REST TIMER</div>
-        <div style={{ fontFamily: "Oswald,sans-serif", fontSize: 64, fontWeight: 700, color, lineHeight: 1 }}>
+      <div style={{ position: "fixed", bottom: "calc(12px + env(safe-area-inset-bottom))", left: 12, right: 12, zIndex: 100, background: "#0d0d0d", border: `3px solid ${color}`, borderRadius: 16, padding: "16px 20px", textAlign: "center", boxShadow: "0 4px 32px rgba(0,0,0,0.9)" }}>
+        <div style={{ fontFamily: "Oswald,sans-serif", fontSize: 14, letterSpacing: 3, color: "#888", marginBottom: 4 }}>REST TIMER</div>
+        <div style={{ fontFamily: "Oswald,sans-serif", fontSize: 80, fontWeight: 700, color, lineHeight: 1 }}>
           {Math.floor(sec / 60)}:{String(sec % 60).padStart(2, "0")}
         </div>
-        <div style={{ height: 7, background: "#2a2a2a", borderRadius: 3, margin: "10px 0", overflow: "hidden" }}>
-          <div style={{ height: "100%", width: `${pct}%`, background: color, borderRadius: 3, transition: "width 1s linear" }} />
+        <div style={{ height: 8, background: "#2a2a2a", borderRadius: 4, margin: "12px 0", overflow: "hidden" }}>
+          <div style={{ height: "100%", width: `${pct}%`, background: color, borderRadius: 4, transition: "width 1s linear" }} />
         </div>
-        {sec === 0 && <div style={{ color: "#ef4444", fontSize: 18, marginBottom: 8 }}>Time's up! 💪</div>}
-        <div style={{ display: "flex", gap: 8, justifyContent: "center" }}>
+        {sec === 0 && <div style={{ color: "#ef4444", fontSize: 22, marginBottom: 10 }}>Time's up! 💪</div>}
+        <div style={{ display: "flex", gap: 10, justifyContent: "center" }}>
           <button onClick={() => setSec(DUR)} style={btnSm}>Reset</button>
           <button onClick={onDismiss} style={{ ...btnSm, background: "#2a2a2a" }}>Dismiss</button>
         </div>
@@ -160,27 +129,13 @@
   function SetTable({ sets, readonly, entryId, onUpdate, onRepsBlur }) {
     return (
       <table style={{ width: "100%", borderCollapse: "collapse" }}>
-        <thead>
-          <tr>
-            <th style={thSt}>SET</th>
-            <th style={thSt}>WEIGHT (lb)</th>
-            <th style={thSt}>REPS</th>
-          </tr>
-        </thead>
+        <thead><tr><th style={thSt}>SET</th><th style={thSt}>WEIGHT (lb)</th><th style={thSt}>REPS</th></tr></thead>
         <tbody>
           {sets.map((s, i) => (
             <tr key={i}>
-              <td style={{ ...tdSt, color: "#f97316", fontFamily: "Oswald,sans-serif", fontSize: 22, fontWeight: 700, width: 48 }}>{i + 1}</td>
-              <td style={tdSt}>
-                {readonly
-                  ? <span style={{ color: "#ccc", fontSize: 20 }}>{s.weight || "—"}</span>
-                  : <input type="number" inputMode="decimal" placeholder="0" value={s.weight} onChange={e => onUpdate(entryId, i, "weight", e.target.value)} style={inSt} />}
-              </td>
-              <td style={tdSt}>
-                {readonly
-                  ? <span style={{ color: "#ccc", fontSize: 20 }}>{s.reps || "—"}</span>
-                  : <input type="number" inputMode="numeric" placeholder="0" value={s.reps} onChange={e => onUpdate(entryId, i, "reps", e.target.value)} onBlur={e => onRepsBlur(e.target.value)} style={inSt} />}
-              </td>
+              <td style={{ ...tdSt, color: "#f97316", fontFamily: "Oswald,sans-serif", fontSize: 28, fontWeight: 700, width: 52 }}>{i + 1}</td>
+              <td style={tdSt}>{readonly ? <span style={{ color: "#ccc", fontSize: 24 }}>{s.weight || "—"}</span> : <input type="number" inputMode="decimal" placeholder="0" value={s.weight} onChange={e => onUpdate(entryId, i, "weight", e.target.value)} style={inSt} />}</td>
+              <td style={tdSt}>{readonly ? <span style={{ color: "#ccc", fontSize: 24 }}>{s.reps || "—"}</span> : <input type="number" inputMode="numeric" placeholder="0" value={s.reps} onChange={e => onUpdate(entryId, i, "reps", e.target.value)} onBlur={e => onRepsBlur(e.target.value)} style={inSt} />}</td>
             </tr>
           ))}
         </tbody>
@@ -190,22 +145,18 @@
 
   function LastTimeBanner({ last, isCardio }) {
     const accent = isCardio ? "#38bdf8" : "#f97316";
-    if (!last) return <div style={{ color: accent, fontSize: 17, fontStyle: "italic", paddingLeft: 2 }}>First time — let's set a baseline! 🔥</div>;
+    if (!last) return <div style={{ color: accent, fontSize: 20, fontStyle: "italic", paddingLeft: 4 }}>First time — let's set a baseline! 🔥</div>;
     return (
-      <div style={{ background: "#0f0f0f", borderLeft: `3px solid ${accent}`, padding: "10px 12px", borderRadius: "0 6px 6px 0" }}>
-        <div style={{ fontFamily: "Oswald,sans-serif", fontSize: 12, letterSpacing: 2, color: accent, marginBottom: 6 }}>LAST TIME · {formatDate(last.date)}</div>
+      <div style={{ background: "#0f0f0f", borderLeft: `4px solid ${accent}`, padding: "12px 14px", borderRadius: "0 8px 8px 0" }}>
+        <div style={{ fontFamily: "Oswald,sans-serif", fontSize: 13, letterSpacing: 2, color: accent, marginBottom: 8 }}>LAST TIME · {formatDate(last.date)}</div>
         {isCardio ? (
-          <div style={{ display: "flex", gap: 8 }}>
-            <span style={{ fontSize: 16, color: "#ccc", background: "#1e1e1e", padding: "5px 12px", borderRadius: 4 }}>{last.duration} min</span>
-            {last.distance && <span style={{ fontSize: 16, color: "#ccc", background: "#1e1e1e", padding: "5px 12px", borderRadius: 4 }}>{last.distance} mi</span>}
+          <div style={{ display: "flex", gap: 10 }}>
+            <span style={{ fontSize: 20, color: "#ccc", background: "#1e1e1e", padding: "6px 14px", borderRadius: 6 }}>{last.duration} min</span>
+            {last.distance && <span style={{ fontSize: 20, color: "#ccc", background: "#1e1e1e", padding: "6px 14px", borderRadius: 6 }}>{last.distance} mi</span>}
           </div>
         ) : (
-          <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
-            {last.sets.map((s, i) => (
-              <span key={i} style={{ fontSize: 15, color: "#ccc", background: "#1e1e1e", padding: "5px 10px", borderRadius: 4 }}>
-                Set {i + 1}: {s.weight || "—"}lb × {s.reps || "—"}
-              </span>
-            ))}
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+            {last.sets.map((s, i) => <span key={i} style={{ fontSize: 18, color: "#ccc", background: "#1e1e1e", padding: "6px 12px", borderRadius: 6 }}>Set {i + 1}: {s.weight || "—"}lb × {s.reps || "—"}</span>)}
           </div>
         )}
       </div>
@@ -216,27 +167,27 @@
     const [open, setOpen] = useState(false);
     const total = (strength?.length || 0) + (cardio?.length || 0);
     return (
-      <div style={{ background: "#1a1a1a", borderRadius: 10, overflow: "hidden", border: "1px solid #2a2a2a" }}>
-        <button onClick={() => setOpen(o => !o)} style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between", padding: "16px", background: "none", border: "none", cursor: "pointer", color: "#fff" }}>
-          <span style={{ fontFamily: "Oswald,sans-serif", fontSize: 20, fontWeight: 600 }}>{formatDate(date)}</span>
-          <span style={{ fontSize: 14, color: "#888" }}>{total} activit{total !== 1 ? "ies" : "y"} {open ? "▲" : "▼"}</span>
+      <div style={{ background: "#1a1a1a", borderRadius: 12, overflow: "hidden", border: "1px solid #2a2a2a" }}>
+        <button onClick={() => setOpen(o => !o)} style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between", padding: "18px 16px", background: "none", border: "none", cursor: "pointer", color: "#fff" }}>
+          <span style={{ fontFamily: "Oswald,sans-serif", fontSize: 22, fontWeight: 600 }}>{formatDate(date)}</span>
+          <span style={{ fontSize: 17, color: "#888" }}>{total} activit{total !== 1 ? "ies" : "y"} {open ? "▲" : "▼"}</span>
         </button>
         {open && <>
           {cardio?.length > 0 && (
-            <div style={{ borderTop: "1px solid #2a2a2a", padding: "12px 14px" }}>
-              <div style={{ fontFamily: "Oswald,sans-serif", fontSize: 13, letterSpacing: 2, color: "#38bdf8", marginBottom: 8 }}>CARDIO</div>
+            <div style={{ borderTop: "1px solid #2a2a2a", padding: "14px 16px" }}>
+              <div style={{ fontFamily: "Oswald,sans-serif", fontSize: 14, letterSpacing: 2, color: "#38bdf8", marginBottom: 10 }}>CARDIO</div>
               {cardio.map((c, i) => (
-                <div key={i} style={{ display: "flex", alignItems: "center", gap: 12, padding: "8px 0", borderBottom: i < cardio.length - 1 ? "1px solid #1e1e1e" : "none" }}>
-                  <span style={{ fontFamily: "Oswald,sans-serif", fontSize: 18, color: "#fff", flex: 1 }}>{c.name}</span>
-                  <span style={{ fontSize: 16, color: "#ccc" }}>{c.duration} min</span>
-                  {c.distance && <span style={{ fontSize: 15, color: "#888" }}>{c.distance} mi</span>}
+                <div key={i} style={{ display: "flex", alignItems: "center", gap: 14, padding: "10px 0", borderBottom: i < cardio.length - 1 ? "1px solid #1e1e1e" : "none" }}>
+                  <span style={{ fontFamily: "Oswald,sans-serif", fontSize: 22, color: "#fff", flex: 1 }}>{c.name}</span>
+                  <span style={{ fontSize: 20, color: "#ccc" }}>{c.duration} min</span>
+                  {c.distance && <span style={{ fontSize: 18, color: "#888" }}>{c.distance} mi</span>}
                 </div>
               ))}
             </div>
           )}
           {strength?.map((entry, i) => (
-            <div key={i} style={{ borderTop: "1px solid #2a2a2a", padding: "12px 14px" }}>
-              <div style={{ color: "#f97316", fontFamily: "Oswald,sans-serif", fontSize: 18, marginBottom: 8 }}>{entry.name}</div>
+            <div key={i} style={{ borderTop: "1px solid #2a2a2a", padding: "14px 16px" }}>
+              <div style={{ color: "#f97316", fontFamily: "Oswald,sans-serif", fontSize: 22, marginBottom: 10 }}>{entry.name}</div>
               <SetTable sets={entry.sets} readonly />
             </div>
           ))}
@@ -247,18 +198,18 @@
 
   function ExItem({ name, accent, onDelete }) {
     return (
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "16px", background: "#1a1a1a", borderRadius: 8, border: "1px solid #2a2a2a", borderLeft: `3px solid ${accent}` }}>
-        <span style={{ fontSize: 20, color: "#fff", fontFamily: "Barlow,sans-serif" }}>{name}</span>
-        <button onClick={onDelete} style={{ background: "none", border: "1px solid #3a3a3a", borderRadius: 6, color: "#666", fontSize: 16, padding: "6px 14px", cursor: "pointer" }}>✕</button>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "18px 16px", background: "#1a1a1a", borderRadius: 10, border: "1px solid #2a2a2a", borderLeft: `4px solid ${accent}` }}>
+        <span style={{ fontSize: 22, color: "#fff", fontFamily: "Barlow,sans-serif" }}>{name}</span>
+        <button onClick={onDelete} style={{ background: "none", border: "1px solid #3a3a3a", borderRadius: 8, color: "#666", fontSize: 18, padding: "8px 16px", cursor: "pointer" }}>✕</button>
       </div>
     );
   }
 
   function SectionHeader({ color, label }) {
     return (
-      <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10 }}>
-        <div style={{ width: 4, height: 24, background: color, borderRadius: 2 }} />
-        <span style={{ fontFamily: "Oswald,sans-serif", fontSize: 18, letterSpacing: 3, color }}>{label}</span>
+      <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 12 }}>
+        <div style={{ width: 5, height: 28, background: color, borderRadius: 3 }} />
+        <span style={{ fontFamily: "Oswald,sans-serif", fontSize: 22, letterSpacing: 3, color }}>{label}</span>
       </div>
     );
   }
@@ -301,8 +252,7 @@
       setSaveStatus("saving");
       if (saveTimer.current) clearTimeout(saveTimer.current);
       saveTimer.current = setTimeout(() => {
-        saveUserData(user.uid, { exercises, workouts, cardioExercises, cardioWorkouts })
-          .then(() => setSaveStatus("saved"));
+        saveUserData(user.uid, { exercises, workouts, cardioExercises, cardioWorkouts }).then(() => setSaveStatus("saved"));
       }, 1500);
     }, [exercises, workouts, cardioExercises, cardioWorkouts, loaded]);
 
@@ -363,39 +313,37 @@
 
     if (!loaded) return (
       <div style={{ display: "flex", alignItems: "center", justifyContent: "center", minHeight: "100vh", background: "#0f0f0f" }}>
-        <div style={{ color: "#444", fontFamily: "Oswald,sans-serif", fontSize: 18, letterSpacing: 3 }}>LOADING...</div>
+        <div style={{ color: "#444", fontFamily: "Oswald,sans-serif", fontSize: 20, letterSpacing: 3 }}>LOADING...</div>
       </div>
     );
 
-    const P = 12;
-    const card = { background: "#1a1a1a", borderRadius: 10, padding: P, display: "flex", flexDirection: "column", gap: 14, border: "1px solid #2a2a2a" };
-    const col = { display: "flex", flexDirection: "column", gap: 14 };
+    const P = 14;
+    const card = { background: "#1a1a1a", borderRadius: 12, padding: P, display: "flex", flexDirection: "column", gap: 16, border: "1px solid #2a2a2a" };
+    const col = { display: "flex", flexDirection: "column", gap: 16 };
 
     return (
       <div style={{ background: "#0f0f0f", color: "#fff", minHeight: "100vh", width: "100%" }}>
         {timerVisible && <RestTimer timerKey={timerKey} onDismiss={() => setTimerVisible(false)} />}
 
-        <header style={{ padding: `14px ${P}px 10px`, borderBottom: "2px solid #f97316", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+        <header style={{ padding: `16px ${P}px 12px`, borderBottom: "2px solid #f97316", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
           <div>
-            <div style={{ fontFamily: "Oswald,sans-serif", fontSize: 32, fontWeight: 700, letterSpacing: 5, color: "#f97316", lineHeight: 1 }}>IRON LOG</div>
-            <div style={{ fontSize: 13, color: "#555", textTransform: "uppercase", letterSpacing: 1, marginTop: 3 }}>
+            <div style={{ fontFamily: "Oswald,sans-serif", fontSize: 36, fontWeight: 700, letterSpacing: 5, color: "#f97316", lineHeight: 1 }}>IRON LOG</div>
+            <div style={{ fontSize: 14, color: "#555", textTransform: "uppercase", letterSpacing: 1, marginTop: 4 }}>
               {new Date().toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" })}
             </div>
           </div>
-          <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 6 }}>
-            <div style={{ fontSize: 11, color: saveStatus === "saving" ? "#eab308" : "#3a3a3a", fontFamily: "Oswald,sans-serif", letterSpacing: 1 }}>
+          <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 8 }}>
+            <div style={{ fontSize: 12, color: saveStatus === "saving" ? "#eab308" : "#3a3a3a", fontFamily: "Oswald,sans-serif", letterSpacing: 1 }}>
               {saveStatus === "saving" ? "● SAVING..." : "● SAVED"}
             </div>
-            <button onClick={() => auth.signOut()} style={{ background: "none", border: "1px solid #2a2a2a", borderRadius: 6, color: "#555", fontSize: 13, padding: "5px 10px", cursor: "pointer", fontFamily: "Barlow,sans-serif" }}>
-              Sign out
-            </button>
+            <button onClick={() => auth.signOut()} style={{ background: "none", border: "1px solid #2a2a2a", borderRadius: 6, color: "#555", fontSize: 14, padding: "6px 12px", cursor: "pointer", fontFamily: "Barlow,sans-serif" }}>Sign out</button>
           </div>
         </header>
 
         <nav style={{ display: "flex", background: "#111", borderBottom: "1px solid #222" }}>
           {[["log", "📋 LOG"], ["history", "📊 HISTORY"], ["exercises", "⚙️ EXERCISES"]].map(([t, label]) => (
             <button key={t} onClick={() => setTab(t)}
-              style={{ flex: 1, padding: "15px 4px", background: "none", border: "none", borderBottom: tab === t ? "3px solid #f97316" : "3px solid transparent", color: tab === t ? "#f97316" : "#555", fontFamily: "Oswald,sans-serif", fontSize: 13, fontWeight: 600, letterSpacing: 0.5, cursor: "pointer" }}>
+              style={{ flex: 1, padding: "18px 4px", background: "none", border: "none", borderBottom: tab === t ? "3px solid #f97316" : "3px solid transparent", color: tab === t ? "#f97316" : "#555", fontFamily: "Oswald,sans-serif", fontSize: 15, fontWeight: 600, letterSpacing: 0.5, cursor: "pointer" }}>
               {label}
             </button>
           ))}
@@ -403,7 +351,7 @@
 
         <main style={{ padding: P }}>
           {tab === "log" && (
-            <div style={{ ...col, gap: 20 }}>
+            <div style={{ ...col, gap: 24 }}>
               <div style={col}>
                 <SectionHeader color="#38bdf8" label="CARDIO" />
                 <div style={card}>
@@ -413,28 +361,28 @@
                     {cardioExercises.map(ex => <option key={ex} value={ex}>{ex}</option>)}
                   </select>
                   {selCardio && <LastTimeBanner last={getLastCardio(selCardio)} isCardio />}
-                  <div style={{ display: "flex", gap: 10 }}>
+                  <div style={{ display: "flex", gap: 12 }}>
                     <div style={{ flex: 1 }}>
-                      <div style={{ ...slabel, marginBottom: 6 }}>DURATION (min)</div>
-                      <input type="number" inputMode="numeric" placeholder="25" value={cardioDuration} onChange={e => setCardioDuration(e.target.value)} style={{ ...inSt, fontSize: 26, padding: "14px 8px" }} />
+                      <div style={{ ...slabel, marginBottom: 8 }}>DURATION (min)</div>
+                      <input type="number" inputMode="numeric" placeholder="25" value={cardioDuration} onChange={e => setCardioDuration(e.target.value)} style={{ ...inSt, fontSize: 32, padding: "16px 8px" }} />
                     </div>
                     <div style={{ flex: 1 }}>
-                      <div style={{ ...slabel, marginBottom: 6 }}>DISTANCE (mi) <span style={{ color: "#444", fontSize: 11 }}>optional</span></div>
-                      <input type="number" inputMode="decimal" placeholder="—" value={cardioDistance} onChange={e => setCardioDistance(e.target.value)} style={{ ...inSt, fontSize: 26, padding: "14px 8px" }} />
+                      <div style={{ ...slabel, marginBottom: 8 }}>DISTANCE (mi) <span style={{ color: "#444", fontSize: 12 }}>optional</span></div>
+                      <input type="number" inputMode="decimal" placeholder="—" value={cardioDistance} onChange={e => setCardioDistance(e.target.value)} style={{ ...inSt, fontSize: 32, padding: "16px 8px" }} />
                     </div>
                   </div>
                   <button onClick={addCardio} disabled={!selCardio || !cardioDuration} style={addBtn(selCardio && cardioDuration, true)}>+ ADD CARDIO</button>
                 </div>
                 {todayCardio.map(c => (
-                  <div key={c.id} style={{ background: "#1a1a1a", borderRadius: 10, border: "1px solid #2a2a2a", borderLeft: "3px solid #38bdf8", padding: "14px", display: "flex", alignItems: "center" }}>
+                  <div key={c.id} style={{ background: "#1a1a1a", borderRadius: 12, border: "1px solid #2a2a2a", borderLeft: "4px solid #38bdf8", padding: "16px", display: "flex", alignItems: "center" }}>
                     <div style={{ flex: 1 }}>
-                      <div style={{ fontFamily: "Oswald,sans-serif", fontSize: 22, fontWeight: 600 }}>{c.name}</div>
-                      <div style={{ marginTop: 8, display: "flex", gap: 8 }}>
-                        <span style={{ background: "#0a1e2e", color: "#38bdf8", padding: "5px 14px", borderRadius: 20, fontSize: 17, fontWeight: 600 }}>{c.duration} min</span>
-                        {c.distance && <span style={{ background: "#111", color: "#aaa", padding: "5px 14px", borderRadius: 20, fontSize: 17 }}>{c.distance} mi</span>}
+                      <div style={{ fontFamily: "Oswald,sans-serif", fontSize: 26, fontWeight: 600 }}>{c.name}</div>
+                      <div style={{ marginTop: 10, display: "flex", gap: 10 }}>
+                        <span style={{ background: "#0a1e2e", color: "#38bdf8", padding: "6px 16px", borderRadius: 20, fontSize: 20, fontWeight: 600 }}>{c.duration} min</span>
+                        {c.distance && <span style={{ background: "#111", color: "#aaa", padding: "6px 16px", borderRadius: 20, fontSize: 20 }}>{c.distance} mi</span>}
                       </div>
                     </div>
-                    <button onClick={() => setCardioWorkouts(prev => ({ ...prev, [TODAY]: prev[TODAY].filter(e => e.id !== c.id) }))} style={{ background: "none", border: "1px solid #333", borderRadius: 6, color: "#555", fontSize: 16, padding: "5px 12px", cursor: "pointer" }}>✕</button>
+                    <button onClick={() => setCardioWorkouts(prev => ({ ...prev, [TODAY]: prev[TODAY].filter(e => e.id !== c.id) }))} style={{ background: "none", border: "1px solid #333", borderRadius: 8, color: "#555", fontSize: 18, padding: "8px 14px", cursor: "pointer" }}>✕</button>
                   </div>
                 ))}
               </div>
@@ -451,55 +399,48 @@
                   </select>
                   {selEx && <LastTimeBanner last={getLastStrength(selEx)} isCardio={false} />}
                   <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                    <span style={{ fontFamily: "Oswald,sans-serif", fontSize: 16, letterSpacing: 2, color: "#777" }}>SETS</span>
-                    <div style={{ display: "flex", alignItems: "center", gap: 20 }}>
-                      <button onClick={() => setNumSets(s => Math.max(1, s - 1))} style={{ width: 48, height: 48, background: "#2a2a2a", border: "1px solid #444", borderRadius: 8, color: "#fff", fontSize: 28, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>−</button>
-                      <span style={{ fontFamily: "Oswald,sans-serif", fontSize: 34, fontWeight: 700, color: "#fff", minWidth: 36, textAlign: "center" }}>{numSets}</span>
-                      <button onClick={() => setNumSets(s => Math.min(10, s + 1))} style={{ width: 48, height: 48, background: "#2a2a2a", border: "1px solid #444", borderRadius: 8, color: "#fff", fontSize: 28, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>+</button>
+                    <span style={{ fontFamily: "Oswald,sans-serif", fontSize: 20, letterSpacing: 2, color: "#777" }}>SETS</span>
+                    <div style={{ display: "flex", alignItems: "center", gap: 24 }}>
+                      <button onClick={() => setNumSets(s => Math.max(1, s - 1))} style={{ width: 58, height: 58, background: "#2a2a2a", border: "1px solid #444", borderRadius: 10, color: "#fff", fontSize: 34, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>−</button>
+                      <span style={{ fontFamily: "Oswald,sans-serif", fontSize: 42, fontWeight: 700, color: "#fff", minWidth: 44, textAlign: "center" }}>{numSets}</span>
+                      <button onClick={() => setNumSets(s => Math.min(10, s + 1))} style={{ width: 58, height: 58, background: "#2a2a2a", border: "1px solid #444", borderRadius: 10, color: "#fff", fontSize: 34, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>+</button>
                     </div>
                   </div>
                   <button onClick={addStrength} disabled={!selEx} style={addBtn(selEx, false)}>+ ADD TO WORKOUT</button>
                 </div>
                 {todayStrength.map(entry => (
-                  <div key={entry.id} style={{ background: "#1a1a1a", borderRadius: 10, overflow: "hidden", border: "1px solid #2a2a2a" }}>
-                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "14px", background: "#222", borderBottom: "1px solid #333" }}>
-                      <span style={{ fontFamily: "Oswald,sans-serif", fontSize: 24, fontWeight: 600, letterSpacing: 1 }}>{entry.name}</span>
-                      <button onClick={() => setWorkouts(prev => ({ ...prev, [TODAY]: prev[TODAY].filter(e => e.id !== entry.id) }))} style={{ background: "none", border: "1px solid #444", borderRadius: 6, color: "#666", fontSize: 16, padding: "5px 12px", cursor: "pointer" }}>✕</button>
+                  <div key={entry.id} style={{ background: "#1a1a1a", borderRadius: 12, overflow: "hidden", border: "1px solid #2a2a2a" }}>
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "16px", background: "#222", borderBottom: "1px solid #333" }}>
+                      <span style={{ fontFamily: "Oswald,sans-serif", fontSize: 26, fontWeight: 600, letterSpacing: 1 }}>{entry.name}</span>
+                      <button onClick={() => setWorkouts(prev => ({ ...prev, [TODAY]: prev[TODAY].filter(e => e.id !== entry.id) }))} style={{ background: "none", border: "1px solid #444", borderRadius: 8, color: "#666", fontSize: 18, padding: "6px 14px", cursor: "pointer" }}>✕</button>
                     </div>
                     <SetTable sets={entry.sets} entryId={entry.id} onUpdate={updateSet} onRepsBlur={onRepsBlur} />
                   </div>
                 ))}
                 {todayStrength.length === 0 && todayCardio.length === 0 && (
-                  <div style={{ textAlign: "center", color: "#333", fontSize: 16, padding: "20px 0 30px" }}>Nothing logged yet. Add cardio or weights above.</div>
+                  <div style={{ textAlign: "center", color: "#333", fontSize: 18, padding: "24px 0 36px" }}>Nothing logged yet. Add cardio or weights above.</div>
                 )}
               </div>
-              <div style={{ height: timerVisible ? 140 : 0 }} />
+              <div style={{ height: timerVisible ? 160 : 0 }} />
             </div>
           )}
 
           {tab === "history" && (
             <div style={col}>
-              <div style={{ display: "flex", border: "1px solid #2a2a2a", borderRadius: 10, overflow: "hidden" }}>
+              <div style={{ display: "flex", border: "1px solid #2a2a2a", borderRadius: 12, overflow: "hidden" }}>
                 {[["date", "BY DATE"], ["exercise", "BY EXERCISE"]].map(([v, label]) => (
-                  <button key={v} onClick={() => setHistView(v)}
-                    style={{ flex: 1, padding: 16, border: "none", cursor: "pointer", background: histView === v ? "#f97316" : "#1a1a1a", color: histView === v ? "#fff" : "#666", fontFamily: "Oswald,sans-serif", fontSize: 15, letterSpacing: 1 }}>
-                    {label}
-                  </button>
+                  <button key={v} onClick={() => setHistView(v)} style={{ flex: 1, padding: 18, border: "none", cursor: "pointer", background: histView === v ? "#f97316" : "#1a1a1a", color: histView === v ? "#fff" : "#666", fontFamily: "Oswald,sans-serif", fontSize: 17, letterSpacing: 1 }}>{label}</button>
                 ))}
               </div>
-              {histView === "date" && (
-                allDates.length === 0
-                  ? <div style={{ textAlign: "center", color: "#444", fontSize: 17, padding: "40px 0" }}>No workout history yet.</div>
-                  : allDates.map(date => <DateCard key={date} date={date} strength={workouts[date]} cardio={cardioWorkouts[date]} />)
+              {histView === "date" && (allDates.length === 0
+                ? <div style={{ textAlign: "center", color: "#444", fontSize: 20, padding: "48px 0" }}>No workout history yet.</div>
+                : allDates.map(date => <DateCard key={date} date={date} strength={workouts[date]} cardio={cardioWorkouts[date]} />)
               )}
               {histView === "exercise" && (
                 <div style={col}>
-                  <div style={{ display: "flex", border: "1px solid #2a2a2a", borderRadius: 8, overflow: "hidden" }}>
+                  <div style={{ display: "flex", border: "1px solid #2a2a2a", borderRadius: 10, overflow: "hidden" }}>
                     {[["strength", "WEIGHTS", "#f97316", "#fff"], ["cardio", "CARDIO", "#38bdf8", "#0a0a0a"]].map(([v, label, bg, fg]) => (
-                      <button key={v} onClick={() => setHistType(v)}
-                        style={{ flex: 1, padding: 14, border: "none", cursor: "pointer", background: histType === v ? bg : "#1a1a1a", color: histType === v ? fg : "#555", fontFamily: "Oswald,sans-serif", fontSize: 14, letterSpacing: 1 }}>
-                        {label}
-                      </button>
+                      <button key={v} onClick={() => setHistType(v)} style={{ flex: 1, padding: 16, border: "none", cursor: "pointer", background: histType === v ? bg : "#1a1a1a", color: histType === v ? fg : "#555", fontFamily: "Oswald,sans-serif", fontSize: 16, letterSpacing: 1 }}>{label}</button>
                     ))}
                   </div>
                   {histType === "strength" && <>
@@ -510,13 +451,13 @@
                     {histEx && (() => {
                       const hist = getStrengthHistory(histEx);
                       return hist.length === 0
-                        ? <div style={{ textAlign: "center", color: "#444", fontSize: 17, padding: "30px 0" }}>No history yet.</div>
+                        ? <div style={{ textAlign: "center", color: "#444", fontSize: 20, padding: "36px 0" }}>No history yet.</div>
                         : hist.map(({ date, sets }) => (
-                            <div key={date} style={{ background: "#1a1a1a", borderRadius: 10, overflow: "hidden", border: "1px solid #2a2a2a" }}>
-                              <div style={{ padding: "12px 14px", background: "#222", borderBottom: "1px solid #333", fontFamily: "Oswald,sans-serif", fontSize: 17, color: "#f97316" }}>{formatDate(date)}</div>
-                              <SetTable sets={sets} readonly />
-                            </div>
-                          ));
+                          <div key={date} style={{ background: "#1a1a1a", borderRadius: 12, overflow: "hidden", border: "1px solid #2a2a2a" }}>
+                            <div style={{ padding: "14px 16px", background: "#222", borderBottom: "1px solid #333", fontFamily: "Oswald,sans-serif", fontSize: 20, color: "#f97316" }}>{formatDate(date)}</div>
+                            <SetTable sets={sets} readonly />
+                          </div>
+                        ));
                     })()}
                   </>}
                   {histType === "cardio" && <>
@@ -527,14 +468,14 @@
                     {histCardioEx && (() => {
                       const hist = getCardioHistory(histCardioEx);
                       return hist.length === 0
-                        ? <div style={{ textAlign: "center", color: "#444", fontSize: 17, padding: "30px 0" }}>No history yet.</div>
+                        ? <div style={{ textAlign: "center", color: "#444", fontSize: 20, padding: "36px 0" }}>No history yet.</div>
                         : hist.map(({ date, duration, distance }) => (
-                            <div key={date} style={{ background: "#1a1a1a", borderRadius: 10, border: "1px solid #2a2a2a", borderLeft: "3px solid #38bdf8", padding: "14px", display: "flex", alignItems: "center", gap: 12 }}>
-                              <span style={{ fontFamily: "Oswald,sans-serif", fontSize: 16, color: "#38bdf8", flex: 1 }}>{formatDate(date)}</span>
-                              <span style={{ background: "#0a1e2e", color: "#38bdf8", padding: "5px 14px", borderRadius: 20, fontSize: 16, fontWeight: 600 }}>{duration} min</span>
-                              {distance && <span style={{ background: "#111", color: "#aaa", padding: "5px 14px", borderRadius: 20, fontSize: 16 }}>{distance} mi</span>}
-                            </div>
-                          ));
+                          <div key={date} style={{ background: "#1a1a1a", borderRadius: 12, border: "1px solid #2a2a2a", borderLeft: "4px solid #38bdf8", padding: "16px", display: "flex", alignItems: "center", gap: 14 }}>
+                            <span style={{ fontFamily: "Oswald,sans-serif", fontSize: 18, color: "#38bdf8", flex: 1 }}>{formatDate(date)}</span>
+                            <span style={{ background: "#0a1e2e", color: "#38bdf8", padding: "6px 16px", borderRadius: 20, fontSize: 18, fontWeight: 600 }}>{duration} min</span>
+                            {distance && <span style={{ background: "#111", color: "#aaa", padding: "6px 16px", borderRadius: 20, fontSize: 18 }}>{distance} mi</span>}
+                          </div>
+                        ));
                     })()}
                   </>}
                 </div>
@@ -543,22 +484,20 @@
           )}
 
           {tab === "exercises" && (
-            <div style={{ ...col, gap: 20 }}>
+            <div style={{ ...col, gap: 24 }}>
               <div style={col}>
                 <SectionHeader color="#38bdf8" label="CARDIO ACTIVITIES" />
                 <div style={card}>
                   <input type="text" value={newCardioEx} onChange={e => setNewCardioEx(e.target.value)}
                     onKeyDown={e => e.key === "Enter" && addEx(newCardioEx, cardioExercises, setCardioExercises, setNewCardioEx)}
-                    placeholder="e.g. Stairs, Treadmill, Bike..."
-                    style={{ width: "100%", background: "#111", border: "1px solid #333", borderRadius: 8, color: "#fff", fontFamily: "Barlow,sans-serif", fontSize: 20, padding: "14px" }} />
+                    placeholder="e.g. Stairs, Treadmill..."
+                    style={{ width: "100%", background: "#111", border: "1px solid #333", borderRadius: 10, color: "#fff", fontFamily: "Barlow,sans-serif", fontSize: 22, padding: "16px" }} />
                   <button disabled={!newCardioEx.trim() || cardioExercises.includes(newCardioEx.trim())}
                     onClick={() => addEx(newCardioEx, cardioExercises, setCardioExercises, setNewCardioEx)}
-                    style={addBtn(newCardioEx.trim() && !cardioExercises.includes(newCardioEx.trim()), true)}>
-                    + ADD ACTIVITY
-                  </button>
+                    style={addBtn(newCardioEx.trim() && !cardioExercises.includes(newCardioEx.trim()), true)}>+ ADD ACTIVITY</button>
                 </div>
                 {cardioExercises.length === 0
-                  ? <div style={{ color: "#444", fontSize: 16, padding: "8px 0" }}>No activities added yet.</div>
+                  ? <div style={{ color: "#444", fontSize: 18, padding: "10px 0" }}>No activities added yet.</div>
                   : cardioExercises.map(ex => <ExItem key={ex} name={ex} accent="#38bdf8" onDelete={() => setCardioExercises(prev => prev.filter(e => e !== ex))} />)
                 }
               </div>
@@ -569,15 +508,13 @@
                   <input type="text" value={newEx} onChange={e => setNewEx(e.target.value)}
                     onKeyDown={e => e.key === "Enter" && addEx(newEx, exercises, setExercises, setNewEx)}
                     placeholder="e.g. Bench Press, Squat..."
-                    style={{ width: "100%", background: "#111", border: "1px solid #333", borderRadius: 8, color: "#fff", fontFamily: "Barlow,sans-serif", fontSize: 20, padding: "14px" }} />
+                    style={{ width: "100%", background: "#111", border: "1px solid #333", borderRadius: 10, color: "#fff", fontFamily: "Barlow,sans-serif", fontSize: 22, padding: "16px" }} />
                   <button disabled={!newEx.trim() || exercises.includes(newEx.trim())}
                     onClick={() => addEx(newEx, exercises, setExercises, setNewEx)}
-                    style={addBtn(newEx.trim() && !exercises.includes(newEx.trim()), false)}>
-                    + ADD EXERCISE
-                  </button>
+                    style={addBtn(newEx.trim() && !exercises.includes(newEx.trim()), false)}>+ ADD EXERCISE</button>
                 </div>
                 {exercises.length === 0
-                  ? <div style={{ color: "#444", fontSize: 16, padding: "8px 0" }}>No exercises added yet.</div>
+                  ? <div style={{ color: "#444", fontSize: 18, padding: "10px 0" }}>No exercises added yet.</div>
                   : exercises.map(ex => <ExItem key={ex} name={ex} accent="#f97316" onDelete={() => setExercises(prev => prev.filter(e => e !== ex))} />)
                 }
               </div>
@@ -590,15 +527,8 @@
 
   function Root() {
     const [user, setUser] = useState(undefined);
-    useEffect(() => {
-      const unsub = auth.onAuthStateChanged(u => setUser(u || null));
-      return unsub;
-    }, []);
-    if (user === undefined) return (
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "center", minHeight: "100vh", background: "#0f0f0f" }}>
-        <div style={{ color: "#333", fontFamily: "Oswald,sans-serif", fontSize: 18, letterSpacing: 3 }}>LOADING...</div>
-      </div>
-    );
+    useEffect(() => { const unsub = auth.onAuthStateChanged(u => setUser(u || null)); return unsub; }, []);
+    if (user === undefined) return <div style={{ display: "flex", alignItems: "center", justifyContent: "center", minHeight: "100vh", background: "#0f0f0f" }}><div style={{ color: "#333", fontFamily: "Oswald,sans-serif", fontSize: 20, letterSpacing: 3 }}>LOADING...</div></div>;
     if (!user) return <SignIn />;
     return <App user={user} />;
   }
