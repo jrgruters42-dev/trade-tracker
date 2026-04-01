@@ -2,8 +2,20 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>Iron Log</title>
+
+  <!-- PWA: standalone app mode -->
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Iron Log" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="theme-color" content="#0f0f0f" />
+  <link rel="manifest" href="data:application/manifest+json,{%22name%22:%22Iron%20Log%22,%22short_name%22:%22Iron%20Log%22,%22display%22:%22standalone%22,%22background_color%22:%22%230f0f0f%22,%22theme_color%22:%22%230f0f0f%22,%22start_url%22:%22.%2Fworkout-tracker.html%22,%22icons%22:[{%22src%22:%22data:image/svg+xml,%253Csvg%2520xmlns%253D%2527http%253A%252F%252Fwww.w3.org%252F2000%252Fsvg%2527%2520viewBox%253D%25270%25200%2520100%2520100%2527%253E%253Crect%2520width%253D%2527100%2527%2520height%253D%2527100%2527%2520fill%253D%2527%25230f0f0f%2527%252F%253E%253Ctext%2520y%253D%2527.9em%2527%2520font-size%253D%252780%2527%2520x%253D%252710%2527%253E%25F0%259F%2592%25AA%253C%252Ftext%253E%253C%252Fsvg%253E%22,%22sizes%22:%22192x192%22,%22type%22:%22image/svg+xml%22}]}" />
+
+  <!-- Apple touch icon -->
+  <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%230f0f0f'/><text y='.9em' font-size='80' x='10'>💪</text></svg>" />
+
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;600;700&family=Barlow:wght@400;500;600&display=swap" rel="stylesheet" />
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
@@ -12,10 +24,25 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.2/babel.min.js"></script>
+
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
-    html, body { width: 100%; background: #0f0f0f; font-family: 'Barlow', sans-serif; color: #fff; }
-    #root { width: 100%; max-width: 600px; margin: 0 auto; min-height: 100vh; }
+    html, body {
+      width: 100%;
+      background: #0f0f0f;
+      font-family: 'Barlow', sans-serif;
+      color: #fff;
+      /* prevent rubber-band scroll showing white */
+      overscroll-behavior: none;
+    }
+    /* safe area insets for iPhone notch / home bar */
+    #root {
+      width: 100%;
+      padding-top: env(safe-area-inset-top);
+      padding-bottom: env(safe-area-inset-bottom);
+      min-height: 100vh;
+      min-height: -webkit-fill-available;
+    }
     input[type=number]::-webkit-inner-spin-button,
     input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; }
     input[type=number] { -moz-appearance: textfield; }
@@ -63,8 +90,6 @@
     });
   }
 
-  const P = 12; // standard padding in px
-
   const thSt = { fontFamily: "Oswald,sans-serif", fontSize: 14, letterSpacing: 1.5, color: "#666", padding: "10px 6px", textAlign: "center", borderBottom: "1px solid #2a2a2a" };
   const tdSt = { padding: "10px 6px", textAlign: "center", borderBottom: "1px solid #1e1e1e" };
   const inSt = { width: "100%", background: "#111", border: "1px solid #333", borderRadius: 6, color: "#fff", fontFamily: "Barlow,sans-serif", fontSize: 24, fontWeight: 600, padding: "12px 6px", textAlign: "center", outline: "none" };
@@ -98,9 +123,7 @@
           {loading ? "Signing in..." : "Sign in with Google"}
         </button>
         {err && <div style={{ color: "#ef4444", marginTop: 16, fontSize: 16 }}>{err}</div>}
-        <div style={{ color: "#2a2a2a", fontSize: 14, marginTop: 48, textAlign: "center", lineHeight: 1.8 }}>
-          Your data syncs across all your devices.
-        </div>
+        <div style={{ color: "#2a2a2a", fontSize: 14, marginTop: 48, textAlign: "center", lineHeight: 1.8 }}>Your data syncs across all your devices.</div>
       </div>
     );
   }
@@ -117,7 +140,7 @@
     const pct = (sec / DUR) * 100;
     const color = sec > 45 ? "#22c55e" : sec > 20 ? "#eab308" : "#ef4444";
     return (
-      <div style={{ position: "fixed", bottom: 12, left: 12, right: 12, zIndex: 100, background: "#0d0d0d", border: `2px solid ${color}`, borderRadius: 14, padding: "14px 16px", textAlign: "center", boxShadow: "0 4px 32px rgba(0,0,0,0.7)" }}>
+      <div style={{ position: "fixed", bottom: `calc(12px + env(safe-area-inset-bottom))`, left: 12, right: 12, zIndex: 100, background: "#0d0d0d", border: `2px solid ${color}`, borderRadius: 14, padding: "14px 16px", textAlign: "center", boxShadow: "0 4px 32px rgba(0,0,0,0.7)" }}>
         <div style={{ fontFamily: "Oswald,sans-serif", fontSize: 12, letterSpacing: 3, color: "#888", marginBottom: 4 }}>REST TIMER</div>
         <div style={{ fontFamily: "Oswald,sans-serif", fontSize: 64, fontWeight: 700, color, lineHeight: 1 }}>
           {Math.floor(sec / 60)}:{String(sec % 60).padStart(2, "0")}
@@ -344,6 +367,7 @@
       </div>
     );
 
+    const P = 12;
     const card = { background: "#1a1a1a", borderRadius: 10, padding: P, display: "flex", flexDirection: "column", gap: 14, border: "1px solid #2a2a2a" };
     const col = { display: "flex", flexDirection: "column", gap: 14 };
 
@@ -362,8 +386,7 @@
             <div style={{ fontSize: 11, color: saveStatus === "saving" ? "#eab308" : "#3a3a3a", fontFamily: "Oswald,sans-serif", letterSpacing: 1 }}>
               {saveStatus === "saving" ? "● SAVING..." : "● SAVED"}
             </div>
-            <button onClick={() => auth.signOut()}
-              style={{ background: "none", border: "1px solid #2a2a2a", borderRadius: 6, color: "#555", fontSize: 13, padding: "5px 10px", cursor: "pointer", fontFamily: "Barlow,sans-serif" }}>
+            <button onClick={() => auth.signOut()} style={{ background: "none", border: "1px solid #2a2a2a", borderRadius: 6, color: "#555", fontSize: 13, padding: "5px 10px", cursor: "pointer", fontFamily: "Barlow,sans-serif" }}>
               Sign out
             </button>
           </div>
@@ -379,7 +402,6 @@
         </nav>
 
         <main style={{ padding: P }}>
-
           {tab === "log" && (
             <div style={{ ...col, gap: 20 }}>
               <div style={col}>
