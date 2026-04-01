@@ -6,12 +6,17 @@
   <title>Iron Log</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;600;700&family=Barlow:wght@400;500;600&display=swap" rel="stylesheet" />
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.2/babel.min.js"></script>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body { background: #0f0f0f; font-family: 'Barlow', sans-serif; color: #fff; }
+    #root { max-width: 520px; margin: 0 auto; min-height: 100vh; }
+    @media (max-width: 520px) { #root { max-width: 100%; width: 100%; } }
     input[type=number]::-webkit-inner-spin-button,
     input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; }
     input[type=number] { -moz-appearance: textfield; }
@@ -24,520 +29,582 @@
   </style>
 </head>
 <body>
-  <div id="root"></div>
+<div id="root"></div>
 
-  <script type="text/babel">
-    const { useState, useEffect } = React;
+<script>
+  const firebaseConfig = {
+    apiKey: "AIzaSyCOnsbvHzyhh5x5hNvXO0MGTcofBgti1vg",
+    authDomain: "iron-log-45723.firebaseapp.com",
+    projectId: "iron-log-45723",
+    storageBucket: "iron-log-45723.firebasestorage.app",
+    messagingSenderId: "307059739548",
+    appId: "1:307059739548:web:28a9cb45f791c707909659"
+  };
+  firebase.initializeApp(firebaseConfig);
+  const auth = firebase.auth();
+  const db = firebase.firestore();
+  const googleProvider = new firebase.auth.GoogleAuthProvider();
+</script>
 
-    const TODAY = new Date().toISOString().split("T")[0];
+<script type="text/babel">
+  const { useState, useEffect, useRef } = React;
+  const TODAY = new Date().toISOString().split("T")[0];
 
-    function loadStore(key) {
-      try { const v = localStorage.getItem(key); return v ? JSON.parse(v) : null; }
-      catch { return null; }
-    }
-    function saveStore(key, val) {
-      try { localStorage.setItem(key, JSON.stringify(val)); } catch {}
-    }
+  async function loadUserData(uid) {
+    try {
+      const doc = await db.collection("users").doc(uid).get();
+      return doc.exists ? doc.data() : {};
+    } catch(e) { return {}; }
+  }
+  async function saveUserData(uid, data) {
+    try { await db.collection("users").doc(uid).set(data); } catch(e) { console.error(e); }
+  }
 
-    function formatDate(ds) {
-      return new Date(ds + "T12:00:00").toLocaleDateString("en-US", {
-        weekday: "short", month: "short", day: "numeric", year: "numeric"
-      });
-    }
-
-    const thSt = {
-      fontFamily: "Oswald,sans-serif", fontSize: 13, letterSpacing: 1.5,
-      color: "#666", padding: "10px 6px", textAlign: "center",
-      borderBottom: "1px solid #2a2a2a"
-    };
-    const tdSt = { padding: "8px 6px", textAlign: "center", borderBottom: "1px solid #1e1e1e" };
-    const inSt = {
-      width: "100%", background: "#111", border: "1px solid #333", borderRadius: 6,
-      color: "#fff", fontFamily: "Barlow,sans-serif", fontSize: 22, fontWeight: 600,
-      padding: "11px 6px", textAlign: "center", outline: "none"
-    };
-    const selSt = (val) => ({
-      width: "100%", background: "#111", border: "1px solid #333", borderRadius: 8,
-      color: val ? "#fff" : "#666", fontFamily: "Barlow,sans-serif", fontSize: 18, padding: "13px 14px"
+  function formatDate(ds) {
+    return new Date(ds + "T12:00:00").toLocaleDateString("en-US", {
+      weekday: "short", month: "short", day: "numeric", year: "numeric"
     });
-    const slabel = { fontFamily: "Oswald,sans-serif", fontSize: 12, letterSpacing: 2, color: "#666" };
-    const btnSm = {
-      padding: "8px 22px", background: "#1e1e1e", border: "1px solid #444",
-      borderRadius: 8, color: "#fff", fontSize: 16, cursor: "pointer", fontFamily: "Barlow,sans-serif"
+  }
+
+  const thSt = { fontFamily: "Oswald,sans-serif", fontSize: 13, letterSpacing: 1.5, color: "#666", padding: "10px 6px", textAlign: "center", borderBottom: "1px solid #2a2a2a" };
+  const tdSt = { padding: "8px 6px", textAlign: "center", borderBottom: "1px solid #1e1e1e" };
+  const inSt = { width: "100%", background: "#111", border: "1px solid #333", borderRadius: 6, color: "#fff", fontFamily: "Barlow,sans-serif", fontSize: 22, fontWeight: 600, padding: "11px 6px", textAlign: "center", outline: "none" };
+  const selSt = (val) => ({ width: "100%", background: "#111", border: "1px solid #333", borderRadius: 8, color: val ? "#fff" : "#666", fontFamily: "Barlow,sans-serif", fontSize: 18, padding: "13px 14px" });
+  const slabel = { fontFamily: "Oswald,sans-serif", fontSize: 12, letterSpacing: 2, color: "#666" };
+  const btnSm = { padding: "8px 22px", background: "#1e1e1e", border: "1px solid #444", borderRadius: 8, color: "#fff", fontSize: 16, cursor: "pointer", fontFamily: "Barlow,sans-serif" };
+
+  function addBtn(active, isCardio) {
+    return {
+      width: "100%", padding: 16, border: "none", borderRadius: 10,
+      background: active ? (isCardio ? "#38bdf8" : "#f97316") : "#222",
+      color: active ? (isCardio ? "#0a0a0a" : "#fff") : "#555",
+      fontFamily: "Oswald,sans-serif", fontSize: 18, fontWeight: 600,
+      letterSpacing: 2, cursor: active ? "pointer" : "not-allowed"
     };
+  }
 
-    function addBtn(active, isCardio) {
-      return {
-        width: "100%", padding: 16, border: "none", borderRadius: 10,
-        background: active ? (isCardio ? "#38bdf8" : "#f97316") : "#222",
-        color: active ? (isCardio ? "#0a0a0a" : "#fff") : "#555",
-        fontFamily: "Oswald,sans-serif", fontSize: 18, fontWeight: 600,
-        letterSpacing: 2, cursor: active ? "pointer" : "not-allowed"
-      };
+  // ── Sign In Screen ───────────────────────────────────────────────
+  function SignIn() {
+    const [err, setErr] = useState(null);
+    const [loading, setLoading] = useState(false);
+    async function handleSignIn() {
+      try {
+        setErr(null); setLoading(true);
+        await auth.signInWithPopup(googleProvider);
+      } catch(e) {
+        setErr("Sign in failed — please try again.");
+        setLoading(false);
+      }
     }
-
-    function RestTimer({ timerKey, onDismiss }) {
-      const DUR = 90;
-      const [sec, setSec] = useState(DUR);
-      useEffect(() => { setSec(DUR); }, [timerKey]);
-      useEffect(() => {
-        if (sec <= 0) return;
-        const t = setTimeout(() => setSec(s => s - 1), 1000);
-        return () => clearTimeout(t);
-      }, [sec]);
-      const pct = (sec / DUR) * 100;
-      const color = sec > 45 ? "#22c55e" : sec > 20 ? "#eab308" : "#ef4444";
-      return (
-        <div style={{
-          position: "fixed", bottom: 16, left: "50%", transform: "translateX(-50%)",
-          width: "calc(100% - 32px)", maxWidth: 460, zIndex: 100,
-          background: "#0d0d0d", border: `2px solid ${color}`, borderRadius: 14,
-          padding: "12px 16px", textAlign: "center", boxShadow: "0 4px 32px rgba(0,0,0,0.7)"
-        }}>
-          <div style={{ fontFamily: "Oswald,sans-serif", fontSize: 11, letterSpacing: 3, color: "#888", marginBottom: 4 }}>REST TIMER</div>
-          <div style={{ fontFamily: "Oswald,sans-serif", fontSize: 56, fontWeight: 700, color, lineHeight: 1 }}>
-            {Math.floor(sec / 60)}:{String(sec % 60).padStart(2, "0")}
-          </div>
-          <div style={{ height: 6, background: "#2a2a2a", borderRadius: 3, margin: "10px 0", overflow: "hidden" }}>
-            <div style={{ height: "100%", width: `${pct}%`, background: color, borderRadius: 3, transition: "width 1s linear" }} />
-          </div>
-          {sec === 0 && <div style={{ color: "#ef4444", fontSize: 16, marginBottom: 8 }}>Time's up! 💪</div>}
-          <div style={{ display: "flex", gap: 8, justifyContent: "center" }}>
-            <button onClick={() => setSec(DUR)} style={btnSm}>Reset</button>
-            <button onClick={onDismiss} style={{ ...btnSm, background: "#2a2a2a" }}>Dismiss</button>
-          </div>
+    return (
+      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", minHeight: "100vh", padding: 32, background: "#0f0f0f" }}>
+        <div style={{ fontFamily: "Oswald,sans-serif", fontSize: 44, fontWeight: 700, letterSpacing: 6, color: "#f97316" }}>IRON LOG</div>
+        <div style={{ fontFamily: "Oswald,sans-serif", fontSize: 13, letterSpacing: 3, color: "#444", marginBottom: 64, marginTop: 6 }}>TRACK · PROGRESS · CRUSH</div>
+        <button onClick={handleSignIn} disabled={loading}
+          style={{ background: loading ? "#222" : "#fff", color: loading ? "#555" : "#111", border: "none", borderRadius: 12, padding: "18px 0", fontSize: 18, fontFamily: "Barlow,sans-serif", fontWeight: 600, cursor: "pointer", width: "100%", maxWidth: 320 }}>
+          {loading ? "Signing in..." : "Sign in with Google"}
+        </button>
+        {err && <div style={{ color: "#ef4444", marginTop: 16, fontSize: 15 }}>{err}</div>}
+        <div style={{ color: "#2a2a2a", fontSize: 13, marginTop: 48, textAlign: "center", lineHeight: 1.8 }}>
+          Your data syncs across all your devices.<br/>Log on your phone, review on your desktop.
         </div>
-      );
-    }
+      </div>
+    );
+  }
 
-    function SetTable({ sets, readonly, entryId, onUpdate, onRepsBlur }) {
-      return (
-        <table style={{ width: "100%", borderCollapse: "collapse" }}>
-          <thead>
-            <tr>
-              <th style={thSt}>SET</th>
-              <th style={thSt}>WEIGHT (lb)</th>
-              <th style={thSt}>REPS</th>
+  // ── Rest Timer ───────────────────────────────────────────────────
+  function RestTimer({ timerKey, onDismiss }) {
+    const DUR = 90;
+    const [sec, setSec] = useState(DUR);
+    useEffect(() => { setSec(DUR); }, [timerKey]);
+    useEffect(() => {
+      if (sec <= 0) return;
+      const t = setTimeout(() => setSec(s => s - 1), 1000);
+      return () => clearTimeout(t);
+    }, [sec]);
+    const pct = (sec / DUR) * 100;
+    const color = sec > 45 ? "#22c55e" : sec > 20 ? "#eab308" : "#ef4444";
+    return (
+      <div style={{ position: "fixed", bottom: 16, left: "50%", transform: "translateX(-50%)", width: "calc(100% - 32px)", maxWidth: 460, zIndex: 100, background: "#0d0d0d", border: `2px solid ${color}`, borderRadius: 14, padding: "12px 16px", textAlign: "center", boxShadow: "0 4px 32px rgba(0,0,0,0.7)" }}>
+        <div style={{ fontFamily: "Oswald,sans-serif", fontSize: 11, letterSpacing: 3, color: "#888", marginBottom: 4 }}>REST TIMER</div>
+        <div style={{ fontFamily: "Oswald,sans-serif", fontSize: 56, fontWeight: 700, color, lineHeight: 1 }}>
+          {Math.floor(sec / 60)}:{String(sec % 60).padStart(2, "0")}
+        </div>
+        <div style={{ height: 6, background: "#2a2a2a", borderRadius: 3, margin: "10px 0", overflow: "hidden" }}>
+          <div style={{ height: "100%", width: `${pct}%`, background: color, borderRadius: 3, transition: "width 1s linear" }} />
+        </div>
+        {sec === 0 && <div style={{ color: "#ef4444", fontSize: 16, marginBottom: 8 }}>Time's up! 💪</div>}
+        <div style={{ display: "flex", gap: 8, justifyContent: "center" }}>
+          <button onClick={() => setSec(DUR)} style={btnSm}>Reset</button>
+          <button onClick={onDismiss} style={{ ...btnSm, background: "#2a2a2a" }}>Dismiss</button>
+        </div>
+      </div>
+    );
+  }
+
+  // ── Set Table ────────────────────────────────────────────────────
+  function SetTable({ sets, readonly, entryId, onUpdate, onRepsBlur }) {
+    return (
+      <table style={{ width: "100%", borderCollapse: "collapse" }}>
+        <thead>
+          <tr>
+            <th style={thSt}>SET</th>
+            <th style={thSt}>WEIGHT (lb)</th>
+            <th style={thSt}>REPS</th>
+          </tr>
+        </thead>
+        <tbody>
+          {sets.map((s, i) => (
+            <tr key={i}>
+              <td style={{ ...tdSt, color: "#f97316", fontFamily: "Oswald,sans-serif", fontSize: 20, fontWeight: 700, width: 44 }}>{i + 1}</td>
+              <td style={tdSt}>
+                {readonly
+                  ? <span style={{ color: "#ccc", fontSize: 18 }}>{s.weight || "—"}</span>
+                  : <input type="number" inputMode="decimal" placeholder="0" value={s.weight} onChange={e => onUpdate(entryId, i, "weight", e.target.value)} style={inSt} />}
+              </td>
+              <td style={tdSt}>
+                {readonly
+                  ? <span style={{ color: "#ccc", fontSize: 18 }}>{s.reps || "—"}</span>
+                  : <input type="number" inputMode="numeric" placeholder="0" value={s.reps} onChange={e => onUpdate(entryId, i, "reps", e.target.value)} onBlur={e => onRepsBlur(e.target.value)} style={inSt} />}
+              </td>
             </tr>
-          </thead>
-          <tbody>
-            {sets.map((s, i) => (
-              <tr key={i}>
-                <td style={{ ...tdSt, color: "#f97316", fontFamily: "Oswald,sans-serif", fontSize: 20, fontWeight: 700, width: 44 }}>{i + 1}</td>
-                <td style={tdSt}>
-                  {readonly
-                    ? <span style={{ color: "#ccc", fontSize: 18 }}>{s.weight || "—"}</span>
-                    : <input type="number" inputMode="decimal" placeholder="0" value={s.weight}
-                        onChange={e => onUpdate(entryId, i, "weight", e.target.value)} style={inSt} />}
-                </td>
-                <td style={tdSt}>
-                  {readonly
-                    ? <span style={{ color: "#ccc", fontSize: 18 }}>{s.reps || "—"}</span>
-                    : <input type="number" inputMode="numeric" placeholder="0" value={s.reps}
-                        onChange={e => onUpdate(entryId, i, "reps", e.target.value)}
-                        onBlur={e => onRepsBlur(e.target.value)} style={inSt} />}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      );
-    }
+          ))}
+        </tbody>
+      </table>
+    );
+  }
 
-    function LastTimeBanner({ last, isCardio }) {
-      const accent = isCardio ? "#38bdf8" : "#f97316";
-      if (!last) return (
-        <div style={{ color: accent, fontSize: 15, fontStyle: "italic", paddingLeft: 2 }}>
-          First time — let's set a baseline! 🔥
-        </div>
-      );
-      return (
-        <div style={{ background: "#0f0f0f", borderLeft: `3px solid ${accent}`, padding: "10px 12px", borderRadius: "0 6px 6px 0" }}>
-          <div style={{ fontFamily: "Oswald,sans-serif", fontSize: 11, letterSpacing: 2, color: accent, marginBottom: 6 }}>
-            LAST TIME · {formatDate(last.date)}
+  // ── Last Time Banner ─────────────────────────────────────────────
+  function LastTimeBanner({ last, isCardio }) {
+    const accent = isCardio ? "#38bdf8" : "#f97316";
+    if (!last) return <div style={{ color: accent, fontSize: 15, fontStyle: "italic", paddingLeft: 2 }}>First time — let's set a baseline! 🔥</div>;
+    return (
+      <div style={{ background: "#0f0f0f", borderLeft: `3px solid ${accent}`, padding: "10px 12px", borderRadius: "0 6px 6px 0" }}>
+        <div style={{ fontFamily: "Oswald,sans-serif", fontSize: 11, letterSpacing: 2, color: accent, marginBottom: 6 }}>LAST TIME · {formatDate(last.date)}</div>
+        {isCardio ? (
+          <div style={{ display: "flex", gap: 8 }}>
+            <span style={{ fontSize: 14, color: "#ccc", background: "#1e1e1e", padding: "4px 10px", borderRadius: 4 }}>{last.duration} min</span>
+            {last.distance && <span style={{ fontSize: 14, color: "#ccc", background: "#1e1e1e", padding: "4px 10px", borderRadius: 4 }}>{last.distance} mi</span>}
           </div>
-          {isCardio ? (
-            <div style={{ display: "flex", gap: 8 }}>
-              <span style={{ fontSize: 14, color: "#ccc", background: "#1e1e1e", padding: "4px 10px", borderRadius: 4 }}>{last.duration} min</span>
-              {last.distance && <span style={{ fontSize: 14, color: "#ccc", background: "#1e1e1e", padding: "4px 10px", borderRadius: 4 }}>{last.distance} mi</span>}
-            </div>
-          ) : (
-            <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
-              {last.sets.map((s, i) => (
-                <span key={i} style={{ fontSize: 14, color: "#ccc", background: "#1e1e1e", padding: "4px 10px", borderRadius: 4 }}>
-                  Set {i + 1}: {s.weight || "—"}lb × {s.reps || "—"}
-                </span>
+        ) : (
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+            {last.sets.map((s, i) => (
+              <span key={i} style={{ fontSize: 14, color: "#ccc", background: "#1e1e1e", padding: "4px 10px", borderRadius: 4 }}>
+                Set {i + 1}: {s.weight || "—"}lb × {s.reps || "—"}
+              </span>
+            ))}
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  // ── Date Card (history) ──────────────────────────────────────────
+  function DateCard({ date, strength, cardio }) {
+    const [open, setOpen] = useState(false);
+    const total = (strength?.length || 0) + (cardio?.length || 0);
+    return (
+      <div style={{ background: "#1a1a1a", borderRadius: 10, overflow: "hidden", border: "1px solid #2a2a2a" }}>
+        <button onClick={() => setOpen(o => !o)} style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between", padding: "14px 16px", background: "none", border: "none", cursor: "pointer", color: "#fff" }}>
+          <span style={{ fontFamily: "Oswald,sans-serif", fontSize: 18, fontWeight: 600 }}>{formatDate(date)}</span>
+          <span style={{ fontSize: 13, color: "#888" }}>{total} activit{total !== 1 ? "ies" : "y"} {open ? "▲" : "▼"}</span>
+        </button>
+        {open && <>
+          {cardio?.length > 0 && (
+            <div style={{ borderTop: "1px solid #2a2a2a", padding: "10px 14px" }}>
+              <div style={{ fontFamily: "Oswald,sans-serif", fontSize: 12, letterSpacing: 2, color: "#38bdf8", marginBottom: 8 }}>CARDIO</div>
+              {cardio.map((c, i) => (
+                <div key={i} style={{ display: "flex", alignItems: "center", gap: 12, padding: "6px 0", borderBottom: i < cardio.length - 1 ? "1px solid #1e1e1e" : "none" }}>
+                  <span style={{ fontFamily: "Oswald,sans-serif", fontSize: 16, color: "#fff", flex: 1 }}>{c.name}</span>
+                  <span style={{ fontSize: 15, color: "#ccc" }}>{c.duration} min</span>
+                  {c.distance && <span style={{ fontSize: 14, color: "#888" }}>{c.distance} mi</span>}
+                </div>
               ))}
             </div>
           )}
-        </div>
-      );
+          {strength?.map((entry, i) => (
+            <div key={i} style={{ borderTop: "1px solid #2a2a2a", padding: "12px 14px" }}>
+              <div style={{ color: "#f97316", fontFamily: "Oswald,sans-serif", fontSize: 16, marginBottom: 8 }}>{entry.name}</div>
+              <SetTable sets={entry.sets} readonly />
+            </div>
+          ))}
+        </>}
+      </div>
+    );
+  }
+
+  function ExItem({ name, accent, onDelete }) {
+    return (
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "14px 16px", background: "#1a1a1a", borderRadius: 8, border: "1px solid #2a2a2a", borderLeft: `3px solid ${accent}` }}>
+        <span style={{ fontSize: 18, color: "#fff", fontFamily: "Barlow,sans-serif" }}>{name}</span>
+        <button onClick={onDelete} style={{ background: "none", border: "1px solid #3a3a3a", borderRadius: 6, color: "#666", fontSize: 14, padding: "5px 12px", cursor: "pointer" }}>✕</button>
+      </div>
+    );
+  }
+
+  function SectionHeader({ color, label }) {
+    return (
+      <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10 }}>
+        <div style={{ width: 4, height: 22, background: color, borderRadius: 2 }} />
+        <span style={{ fontFamily: "Oswald,sans-serif", fontSize: 16, letterSpacing: 3, color }}>{label}</span>
+      </div>
+    );
+  }
+
+  // ── Main App (shown after sign in) ───────────────────────────────
+  function App({ user }) {
+    const [tab, setTab] = useState("log");
+    const [exercises, setExercises] = useState([]);
+    const [workouts, setWorkouts] = useState({});
+    const [selEx, setSelEx] = useState("");
+    const [numSets, setNumSets] = useState(3);
+    const [newEx, setNewEx] = useState("");
+    const [cardioExercises, setCardioExercises] = useState([]);
+    const [cardioWorkouts, setCardioWorkouts] = useState({});
+    const [selCardio, setSelCardio] = useState("");
+    const [cardioDuration, setCardioDuration] = useState("");
+    const [cardioDistance, setCardioDistance] = useState("");
+    const [newCardioEx, setNewCardioEx] = useState("");
+    const [timerVisible, setTimerVisible] = useState(false);
+    const [timerKey, setTimerKey] = useState(0);
+    const [histView, setHistView] = useState("date");
+    const [histEx, setHistEx] = useState("");
+    const [histCardioEx, setHistCardioEx] = useState("");
+    const [histType, setHistType] = useState("strength");
+    const [loaded, setLoaded] = useState(false);
+    const [saveStatus, setSaveStatus] = useState("saved");
+    const saveTimer = useRef(null);
+
+    // Load from Firestore on mount
+    useEffect(() => {
+      loadUserData(user.uid).then(data => {
+        if (data.exercises) setExercises(data.exercises);
+        if (data.workouts) setWorkouts(data.workouts);
+        if (data.cardioExercises) setCardioExercises(data.cardioExercises);
+        if (data.cardioWorkouts) setCardioWorkouts(data.cardioWorkouts);
+        setLoaded(true);
+      });
+    }, [user.uid]);
+
+    // Save to Firestore with debounce
+    useEffect(() => {
+      if (!loaded) return;
+      setSaveStatus("saving");
+      if (saveTimer.current) clearTimeout(saveTimer.current);
+      saveTimer.current = setTimeout(() => {
+        saveUserData(user.uid, { exercises, workouts, cardioExercises, cardioWorkouts })
+          .then(() => setSaveStatus("saved"));
+      }, 1500);
+    }, [exercises, workouts, cardioExercises, cardioWorkouts, loaded]);
+
+    const todayStrength = workouts[TODAY] || [];
+    const todayCardio = cardioWorkouts[TODAY] || [];
+    const allDates = [...new Set([...Object.keys(workouts), ...Object.keys(cardioWorkouts)])].sort().reverse();
+
+    function addStrength() {
+      if (!selEx) return;
+      const sets = Array.from({ length: numSets }, () => ({ weight: "", reps: "" }));
+      setWorkouts(prev => ({ ...prev, [TODAY]: [...(prev[TODAY] || []), { id: Date.now(), name: selEx, sets }] }));
+    }
+    function updateSet(entryId, si, field, value) {
+      setWorkouts(prev => {
+        const day = [...(prev[TODAY] || [])];
+        const ei = day.findIndex(e => e.id === entryId);
+        if (ei < 0) return prev;
+        day[ei] = { ...day[ei], sets: day[ei].sets.map((s, i) => i === si ? { ...s, [field]: value } : s) };
+        return { ...prev, [TODAY]: day };
+      });
+    }
+    function onRepsBlur(val) {
+      if (val && val.trim()) { setTimerVisible(true); setTimerKey(k => k + 1); }
+    }
+    function getLastStrength(name) {
+      for (const d of Object.keys(workouts).filter(d => d < TODAY).sort().reverse()) {
+        const e = workouts[d]?.find(e => e.name === name);
+        if (e) return { date: d, sets: e.sets };
+      }
+      return null;
+    }
+    function getStrengthHistory(name) {
+      return Object.keys(workouts).filter(d => workouts[d]?.some(e => e.name === name))
+        .sort().reverse().map(d => ({ date: d, sets: workouts[d].find(e => e.name === name).sets }));
+    }
+    function addCardio() {
+      if (!selCardio || !cardioDuration) return;
+      setCardioWorkouts(prev => ({ ...prev, [TODAY]: [...(prev[TODAY] || []), { id: Date.now(), name: selCardio, duration: cardioDuration, distance: cardioDistance }] }));
+      setCardioDuration(""); setCardioDistance("");
+    }
+    function getLastCardio(name) {
+      for (const d of Object.keys(cardioWorkouts).filter(d => d < TODAY).sort().reverse()) {
+        const e = cardioWorkouts[d]?.find(e => e.name === name);
+        if (e) return { date: d, duration: e.duration, distance: e.distance };
+      }
+      return null;
+    }
+    function getCardioHistory(name) {
+      return Object.keys(cardioWorkouts).filter(d => cardioWorkouts[d]?.some(e => e.name === name))
+        .sort().reverse().map(d => ({ date: d, ...cardioWorkouts[d].find(e => e.name === name) }));
+    }
+    function addEx(val, list, setter, setVal) {
+      const t = val.trim();
+      if (!t || list.includes(t)) return;
+      setter(prev => [...prev, t].sort((a, b) => a.localeCompare(b)));
+      setVal("");
     }
 
-    function DateCard({ date, strength, cardio }) {
-      const [open, setOpen] = useState(false);
-      const total = (strength?.length || 0) + (cardio?.length || 0);
-      return (
-        <div style={{ background: "#1a1a1a", borderRadius: 10, overflow: "hidden", border: "1px solid #2a2a2a" }}>
-          <button onClick={() => setOpen(o => !o)}
-            style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between", padding: "14px 16px", background: "none", border: "none", cursor: "pointer", color: "#fff" }}>
-            <span style={{ fontFamily: "Oswald,sans-serif", fontSize: 18, fontWeight: 600 }}>{formatDate(date)}</span>
-            <span style={{ fontSize: 13, color: "#888" }}>{total} activit{total !== 1 ? "ies" : "y"} {open ? "▲" : "▼"}</span>
-          </button>
-          {open && <>
-            {cardio?.length > 0 && (
-              <div style={{ borderTop: "1px solid #2a2a2a", padding: "10px 14px" }}>
-                <div style={{ fontFamily: "Oswald,sans-serif", fontSize: 12, letterSpacing: 2, color: "#38bdf8", marginBottom: 8 }}>CARDIO</div>
-                {cardio.map((c, i) => (
-                  <div key={i} style={{ display: "flex", alignItems: "center", gap: 12, padding: "6px 0", borderBottom: i < cardio.length - 1 ? "1px solid #1e1e1e" : "none" }}>
-                    <span style={{ fontFamily: "Oswald,sans-serif", fontSize: 16, color: "#fff", flex: 1 }}>{c.name}</span>
-                    <span style={{ fontSize: 15, color: "#ccc" }}>{c.duration} min</span>
-                    {c.distance && <span style={{ fontSize: 14, color: "#888" }}>{c.distance} mi</span>}
+    if (!loaded) return (
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "center", minHeight: "100vh", background: "#0f0f0f" }}>
+        <div style={{ color: "#444", fontFamily: "Oswald,sans-serif", fontSize: 18, letterSpacing: 3 }}>LOADING...</div>
+      </div>
+    );
+
+    const card = { background: "#1a1a1a", borderRadius: 10, padding: 16, display: "flex", flexDirection: "column", gap: 14, border: "1px solid #2a2a2a" };
+    const col = { display: "flex", flexDirection: "column", gap: 14 };
+
+    return (
+      <div style={{ fontFamily: "Barlow,sans-serif", background: "#0f0f0f", color: "#fff", minHeight: "100vh" }}>
+        {timerVisible && <RestTimer timerKey={timerKey} onDismiss={() => setTimerVisible(false)} />}
+
+        {/* HEADER */}
+        <header style={{ padding: "16px 16px 10px", borderBottom: "2px solid #f97316", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+          <div>
+            <div style={{ fontFamily: "Oswald,sans-serif", fontSize: 30, fontWeight: 700, letterSpacing: 5, color: "#f97316", lineHeight: 1 }}>IRON LOG</div>
+            <div style={{ fontSize: 12, color: "#555", textTransform: "uppercase", letterSpacing: 1, marginTop: 3 }}>
+              {new Date().toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" })}
+            </div>
+          </div>
+          <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 6 }}>
+            <div style={{ fontSize: 11, color: saveStatus === "saving" ? "#eab308" : "#3a3a3a", fontFamily: "Oswald,sans-serif", letterSpacing: 1 }}>
+              {saveStatus === "saving" ? "● SAVING..." : "● SAVED"}
+            </div>
+            <button onClick={() => auth.signOut()}
+              style={{ background: "none", border: "1px solid #2a2a2a", borderRadius: 6, color: "#555", fontSize: 12, padding: "4px 10px", cursor: "pointer", fontFamily: "Barlow,sans-serif" }}>
+              Sign out
+            </button>
+          </div>
+        </header>
+
+        {/* NAV */}
+        <nav style={{ display: "flex", background: "#111", borderBottom: "1px solid #222" }}>
+          {[["log", "📋 LOG"], ["history", "📊 HISTORY"], ["exercises", "⚙️ EXERCISES"]].map(([t, label]) => (
+            <button key={t} onClick={() => setTab(t)}
+              style={{ flex: 1, padding: "14px 4px", background: "none", border: "none", borderBottom: tab === t ? "3px solid #f97316" : "3px solid transparent", color: tab === t ? "#f97316" : "#555", fontFamily: "Oswald,sans-serif", fontSize: 12, fontWeight: 600, letterSpacing: 0.5, cursor: "pointer" }}>
+              {label}
+            </button>
+          ))}
+        </nav>
+
+        <main style={{ padding: 16 }}>
+
+          {/* ── LOG TAB ── */}
+          {tab === "log" && (
+            <div style={{ ...col, gap: 20 }}>
+              <div style={col}>
+                <SectionHeader color="#38bdf8" label="CARDIO" />
+                <div style={card}>
+                  <div style={slabel}>ADD CARDIO</div>
+                  <select value={selCardio} onChange={e => setSelCardio(e.target.value)} style={selSt(selCardio)}>
+                    <option value="">— Select Activity —</option>
+                    {cardioExercises.map(ex => <option key={ex} value={ex}>{ex}</option>)}
+                  </select>
+                  {selCardio && <LastTimeBanner last={getLastCardio(selCardio)} isCardio />}
+                  <div style={{ display: "flex", gap: 10 }}>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ ...slabel, marginBottom: 6 }}>DURATION (min)</div>
+                      <input type="number" inputMode="numeric" placeholder="25" value={cardioDuration} onChange={e => setCardioDuration(e.target.value)} style={{ ...inSt, fontSize: 24, padding: "13px 8px" }} />
+                    </div>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ ...slabel, marginBottom: 6 }}>DISTANCE (mi) <span style={{ color: "#444", fontSize: 10 }}>optional</span></div>
+                      <input type="number" inputMode="decimal" placeholder="—" value={cardioDistance} onChange={e => setCardioDistance(e.target.value)} style={{ ...inSt, fontSize: 24, padding: "13px 8px" }} />
+                    </div>
+                  </div>
+                  <button onClick={addCardio} disabled={!selCardio || !cardioDuration} style={addBtn(selCardio && cardioDuration, true)}>+ ADD CARDIO</button>
+                </div>
+                {todayCardio.map(c => (
+                  <div key={c.id} style={{ background: "#1a1a1a", borderRadius: 10, border: "1px solid #2a2a2a", borderLeft: "3px solid #38bdf8", padding: "12px 14px", display: "flex", alignItems: "center" }}>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontFamily: "Oswald,sans-serif", fontSize: 20, fontWeight: 600 }}>{c.name}</div>
+                      <div style={{ marginTop: 6, display: "flex", gap: 8 }}>
+                        <span style={{ background: "#0a1e2e", color: "#38bdf8", padding: "4px 12px", borderRadius: 20, fontSize: 15, fontWeight: 600 }}>{c.duration} min</span>
+                        {c.distance && <span style={{ background: "#111", color: "#aaa", padding: "4px 12px", borderRadius: 20, fontSize: 15 }}>{c.distance} mi</span>}
+                      </div>
+                    </div>
+                    <button onClick={() => setCardioWorkouts(prev => ({ ...prev, [TODAY]: prev[TODAY].filter(e => e.id !== c.id) }))} style={{ background: "none", border: "1px solid #333", borderRadius: 6, color: "#555", fontSize: 14, padding: "4px 10px", cursor: "pointer" }}>✕</button>
                   </div>
                 ))}
               </div>
-            )}
-            {strength?.map((entry, i) => (
-              <div key={i} style={{ borderTop: "1px solid #2a2a2a", padding: "12px 14px" }}>
-                <div style={{ color: "#f97316", fontFamily: "Oswald,sans-serif", fontSize: 16, marginBottom: 8 }}>{entry.name}</div>
-                <SetTable sets={entry.sets} readonly />
-              </div>
-            ))}
-          </>}
-        </div>
-      );
-    }
 
-    function ExItem({ name, accent, onDelete }) {
-      return (
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "14px 16px", background: "#1a1a1a", borderRadius: 8, border: "1px solid #2a2a2a", borderLeft: `3px solid ${accent}` }}>
-          <span style={{ fontSize: 18, color: "#fff", fontFamily: "Barlow,sans-serif" }}>{name}</span>
-          <button onClick={onDelete} style={{ background: "none", border: "1px solid #3a3a3a", borderRadius: 6, color: "#666", fontSize: 14, padding: "5px 12px", cursor: "pointer" }}>✕</button>
-        </div>
-      );
-    }
+              <div style={{ borderTop: "1px solid #1e1e1e" }} />
 
-    function SectionHeader({ color, label }) {
-      return (
-        <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10 }}>
-          <div style={{ width: 4, height: 22, background: color, borderRadius: 2 }} />
-          <span style={{ fontFamily: "Oswald,sans-serif", fontSize: 16, letterSpacing: 3, color }}>{label}</span>
-        </div>
-      );
-    }
-
-    function App() {
-      const [tab, setTab] = useState("log");
-      const [exercises, setExercises] = useState(() => loadStore("wj_exercises") || []);
-      const [workouts, setWorkouts] = useState(() => loadStore("wj_workouts") || {});
-      const [selEx, setSelEx] = useState("");
-      const [numSets, setNumSets] = useState(3);
-      const [newEx, setNewEx] = useState("");
-      const [cardioExercises, setCardioExercises] = useState(() => loadStore("wj_cardio_exercises") || []);
-      const [cardioWorkouts, setCardioWorkouts] = useState(() => loadStore("wj_cardio_workouts") || {});
-      const [selCardio, setSelCardio] = useState("");
-      const [cardioDuration, setCardioDuration] = useState("");
-      const [cardioDistance, setCardioDistance] = useState("");
-      const [newCardioEx, setNewCardioEx] = useState("");
-      const [timerVisible, setTimerVisible] = useState(false);
-      const [timerKey, setTimerKey] = useState(0);
-      const [histView, setHistView] = useState("date");
-      const [histEx, setHistEx] = useState("");
-      const [histCardioEx, setHistCardioEx] = useState("");
-      const [histType, setHistType] = useState("strength");
-
-      useEffect(() => { saveStore("wj_exercises", exercises); }, [exercises]);
-      useEffect(() => { saveStore("wj_workouts", workouts); }, [workouts]);
-      useEffect(() => { saveStore("wj_cardio_exercises", cardioExercises); }, [cardioExercises]);
-      useEffect(() => { saveStore("wj_cardio_workouts", cardioWorkouts); }, [cardioWorkouts]);
-
-      const todayStrength = workouts[TODAY] || [];
-      const todayCardio = cardioWorkouts[TODAY] || [];
-      const allDates = [...new Set([...Object.keys(workouts), ...Object.keys(cardioWorkouts)])].sort().reverse();
-
-      function addStrength() {
-        if (!selEx) return;
-        const sets = Array.from({ length: numSets }, () => ({ weight: "", reps: "" }));
-        setWorkouts(prev => ({ ...prev, [TODAY]: [...(prev[TODAY] || []), { id: Date.now(), name: selEx, sets }] }));
-      }
-      function updateSet(entryId, si, field, value) {
-        setWorkouts(prev => {
-          const day = [...(prev[TODAY] || [])];
-          const ei = day.findIndex(e => e.id === entryId);
-          if (ei < 0) return prev;
-          day[ei] = { ...day[ei], sets: day[ei].sets.map((s, i) => i === si ? { ...s, [field]: value } : s) };
-          return { ...prev, [TODAY]: day };
-        });
-      }
-      function onRepsBlur(val) {
-        if (val && val.trim()) { setTimerVisible(true); setTimerKey(k => k + 1); }
-      }
-      function getLastStrength(name) {
-        for (const d of Object.keys(workouts).filter(d => d < TODAY).sort().reverse()) {
-          const e = workouts[d]?.find(e => e.name === name);
-          if (e) return { date: d, sets: e.sets };
-        }
-        return null;
-      }
-      function getStrengthHistory(name) {
-        return Object.keys(workouts).filter(d => workouts[d]?.some(e => e.name === name))
-          .sort().reverse().map(d => ({ date: d, sets: workouts[d].find(e => e.name === name).sets }));
-      }
-      function addCardio() {
-        if (!selCardio || !cardioDuration) return;
-        setCardioWorkouts(prev => ({ ...prev, [TODAY]: [...(prev[TODAY] || []), { id: Date.now(), name: selCardio, duration: cardioDuration, distance: cardioDistance }] }));
-        setCardioDuration(""); setCardioDistance("");
-      }
-      function getLastCardio(name) {
-        for (const d of Object.keys(cardioWorkouts).filter(d => d < TODAY).sort().reverse()) {
-          const e = cardioWorkouts[d]?.find(e => e.name === name);
-          if (e) return { date: d, duration: e.duration, distance: e.distance };
-        }
-        return null;
-      }
-      function getCardioHistory(name) {
-        return Object.keys(cardioWorkouts).filter(d => cardioWorkouts[d]?.some(e => e.name === name))
-          .sort().reverse().map(d => ({ date: d, ...cardioWorkouts[d].find(e => e.name === name) }));
-      }
-      function addEx(val, list, setter, setVal) {
-        const t = val.trim();
-        if (!t || list.includes(t)) return;
-        setter(prev => [...prev, t].sort((a, b) => a.localeCompare(b)));
-        setVal("");
-      }
-
-      const card = { background: "#1a1a1a", borderRadius: 10, padding: 16, display: "flex", flexDirection: "column", gap: 14, border: "1px solid #2a2a2a" };
-      const col = { display: "flex", flexDirection: "column", gap: 14 };
-
-      return (
-        <div style={{ fontFamily: "Barlow,sans-serif", background: "#0f0f0f", color: "#fff", minHeight: "100vh", maxWidth: 480, margin: "0 auto" }}>
-
-          {timerVisible && <RestTimer timerKey={timerKey} onDismiss={() => setTimerVisible(false)} />}
-
-          <header style={{ padding: "20px 16px 12px", borderBottom: "2px solid #f97316" }}>
-            <div style={{ fontFamily: "Oswald,sans-serif", fontSize: 34, fontWeight: 700, letterSpacing: 5, color: "#f97316" }}>IRON LOG</div>
-            <div style={{ fontSize: 13, color: "#666", textTransform: "uppercase", letterSpacing: 1, marginTop: 2 }}>
-              {new Date().toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" })}
-            </div>
-          </header>
-
-          <nav style={{ display: "flex", background: "#111", borderBottom: "1px solid #222" }}>
-            {[["log", "📋 LOG"], ["history", "📊 HISTORY"], ["exercises", "⚙️ EXERCISES"]].map(([t, label]) => (
-              <button key={t} onClick={() => setTab(t)}
-                style={{ flex: 1, padding: "14px 4px", background: "none", border: "none", borderBottom: tab === t ? "3px solid #f97316" : "3px solid transparent", color: tab === t ? "#f97316" : "#555", fontFamily: "Oswald,sans-serif", fontSize: 12, fontWeight: 600, letterSpacing: 0.5, cursor: "pointer" }}>
-                {label}
-              </button>
-            ))}
-          </nav>
-
-          <main style={{ padding: 16 }}>
-
-            {/* LOG TAB */}
-            {tab === "log" && (
-              <div style={{ ...col, gap: 20 }}>
-                <div style={col}>
-                  <SectionHeader color="#38bdf8" label="CARDIO" />
-                  <div style={card}>
-                    <div style={slabel}>ADD CARDIO</div>
-                    <select value={selCardio} onChange={e => setSelCardio(e.target.value)} style={selSt(selCardio)}>
-                      <option value="">— Select Activity —</option>
-                      {cardioExercises.map(ex => <option key={ex} value={ex}>{ex}</option>)}
-                    </select>
-                    {selCardio && <LastTimeBanner last={getLastCardio(selCardio)} isCardio />}
-                    <div style={{ display: "flex", gap: 10 }}>
-                      <div style={{ flex: 1 }}>
-                        <div style={{ ...slabel, marginBottom: 6 }}>DURATION (min)</div>
-                        <input type="number" inputMode="numeric" placeholder="25" value={cardioDuration}
-                          onChange={e => setCardioDuration(e.target.value)}
-                          style={{ ...inSt, fontSize: 24, padding: "13px 8px" }} />
-                      </div>
-                      <div style={{ flex: 1 }}>
-                        <div style={{ ...slabel, marginBottom: 6 }}>DISTANCE (mi) <span style={{ color: "#444", fontSize: 10 }}>optional</span></div>
-                        <input type="number" inputMode="decimal" placeholder="—" value={cardioDistance}
-                          onChange={e => setCardioDistance(e.target.value)}
-                          style={{ ...inSt, fontSize: 24, padding: "13px 8px" }} />
-                      </div>
+              <div style={col}>
+                <SectionHeader color="#f97316" label="WEIGHTS" />
+                <div style={card}>
+                  <div style={slabel}>ADD EXERCISE</div>
+                  <select value={selEx} onChange={e => setSelEx(e.target.value)} style={selSt(selEx)}>
+                    <option value="">— Select Exercise —</option>
+                    {exercises.map(ex => <option key={ex} value={ex}>{ex}</option>)}
+                  </select>
+                  {selEx && <LastTimeBanner last={getLastStrength(selEx)} isCardio={false} />}
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                    <span style={{ fontFamily: "Oswald,sans-serif", fontSize: 14, letterSpacing: 2, color: "#777" }}>SETS</span>
+                    <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+                      <button onClick={() => setNumSets(s => Math.max(1, s - 1))} style={{ width: 42, height: 42, background: "#2a2a2a", border: "1px solid #444", borderRadius: 8, color: "#fff", fontSize: 24, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>−</button>
+                      <span style={{ fontFamily: "Oswald,sans-serif", fontSize: 30, fontWeight: 700, color: "#fff", minWidth: 32, textAlign: "center" }}>{numSets}</span>
+                      <button onClick={() => setNumSets(s => Math.min(10, s + 1))} style={{ width: 42, height: 42, background: "#2a2a2a", border: "1px solid #444", borderRadius: 8, color: "#fff", fontSize: 24, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>+</button>
                     </div>
-                    <button onClick={addCardio} disabled={!selCardio || !cardioDuration} style={addBtn(selCardio && cardioDuration, true)}>
-                      + ADD CARDIO
-                    </button>
                   </div>
-                  {todayCardio.map(c => (
-                    <div key={c.id} style={{ background: "#1a1a1a", borderRadius: 10, border: "1px solid #2a2a2a", borderLeft: "3px solid #38bdf8", padding: "12px 14px", display: "flex", alignItems: "center" }}>
-                      <div style={{ flex: 1 }}>
-                        <div style={{ fontFamily: "Oswald,sans-serif", fontSize: 20, fontWeight: 600 }}>{c.name}</div>
-                        <div style={{ marginTop: 6, display: "flex", gap: 8 }}>
-                          <span style={{ background: "#0a1e2e", color: "#38bdf8", padding: "4px 12px", borderRadius: 20, fontSize: 15, fontWeight: 600 }}>{c.duration} min</span>
-                          {c.distance && <span style={{ background: "#111", color: "#aaa", padding: "4px 12px", borderRadius: 20, fontSize: 15 }}>{c.distance} mi</span>}
-                        </div>
-                      </div>
-                      <button onClick={() => setCardioWorkouts(prev => ({ ...prev, [TODAY]: prev[TODAY].filter(e => e.id !== c.id) }))}
-                        style={{ background: "none", border: "1px solid #333", borderRadius: 6, color: "#555", fontSize: 14, padding: "4px 10px", cursor: "pointer" }}>✕</button>
-                    </div>
-                  ))}
+                  <button onClick={addStrength} disabled={!selEx} style={addBtn(selEx, false)}>+ ADD TO WORKOUT</button>
                 </div>
+                {todayStrength.map(entry => (
+                  <div key={entry.id} style={{ background: "#1a1a1a", borderRadius: 10, overflow: "hidden", border: "1px solid #2a2a2a" }}>
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 14px", background: "#222", borderBottom: "1px solid #333" }}>
+                      <span style={{ fontFamily: "Oswald,sans-serif", fontSize: 22, fontWeight: 600, letterSpacing: 1 }}>{entry.name}</span>
+                      <button onClick={() => setWorkouts(prev => ({ ...prev, [TODAY]: prev[TODAY].filter(e => e.id !== entry.id) }))} style={{ background: "none", border: "1px solid #444", borderRadius: 6, color: "#666", fontSize: 14, padding: "4px 10px", cursor: "pointer" }}>✕</button>
+                    </div>
+                    <SetTable sets={entry.sets} entryId={entry.id} onUpdate={updateSet} onRepsBlur={onRepsBlur} />
+                  </div>
+                ))}
+                {todayStrength.length === 0 && todayCardio.length === 0 && (
+                  <div style={{ textAlign: "center", color: "#333", fontSize: 15, padding: "16px 0 30px" }}>Nothing logged yet. Add cardio or weights above.</div>
+                )}
+              </div>
+              <div style={{ height: timerVisible ? 120 : 0 }} />
+            </div>
+          )}
 
-                <div style={{ borderTop: "1px solid #1e1e1e" }} />
-
+          {/* ── HISTORY TAB ── */}
+          {tab === "history" && (
+            <div style={col}>
+              <div style={{ display: "flex", border: "1px solid #2a2a2a", borderRadius: 10, overflow: "hidden" }}>
+                {[["date", "BY DATE"], ["exercise", "BY EXERCISE"]].map(([v, label]) => (
+                  <button key={v} onClick={() => setHistView(v)}
+                    style={{ flex: 1, padding: 14, border: "none", cursor: "pointer", background: histView === v ? "#f97316" : "#1a1a1a", color: histView === v ? "#fff" : "#666", fontFamily: "Oswald,sans-serif", fontSize: 14, letterSpacing: 1 }}>
+                    {label}
+                  </button>
+                ))}
+              </div>
+              {histView === "date" && (
+                allDates.length === 0
+                  ? <div style={{ textAlign: "center", color: "#444", fontSize: 16, padding: "40px 0" }}>No workout history yet.</div>
+                  : allDates.map(date => <DateCard key={date} date={date} strength={workouts[date]} cardio={cardioWorkouts[date]} />)
+              )}
+              {histView === "exercise" && (
                 <div style={col}>
-                  <SectionHeader color="#f97316" label="WEIGHTS" />
-                  <div style={card}>
-                    <div style={slabel}>ADD EXERCISE</div>
-                    <select value={selEx} onChange={e => setSelEx(e.target.value)} style={selSt(selEx)}>
+                  <div style={{ display: "flex", border: "1px solid #2a2a2a", borderRadius: 8, overflow: "hidden" }}>
+                    {[["strength", "WEIGHTS", "#f97316", "#fff"], ["cardio", "CARDIO", "#38bdf8", "#0a0a0a"]].map(([v, label, bg, fg]) => (
+                      <button key={v} onClick={() => setHistType(v)}
+                        style={{ flex: 1, padding: 12, border: "none", cursor: "pointer", background: histType === v ? bg : "#1a1a1a", color: histType === v ? fg : "#555", fontFamily: "Oswald,sans-serif", fontSize: 13, letterSpacing: 1 }}>
+                        {label}
+                      </button>
+                    ))}
+                  </div>
+                  {histType === "strength" && <>
+                    <select value={histEx} onChange={e => setHistEx(e.target.value)} style={selSt(histEx)}>
                       <option value="">— Select Exercise —</option>
                       {exercises.map(ex => <option key={ex} value={ex}>{ex}</option>)}
                     </select>
-                    {selEx && <LastTimeBanner last={getLastStrength(selEx)} isCardio={false} />}
-                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                      <span style={{ fontFamily: "Oswald,sans-serif", fontSize: 14, letterSpacing: 2, color: "#777" }}>SETS</span>
-                      <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
-                        <button onClick={() => setNumSets(s => Math.max(1, s - 1))}
-                          style={{ width: 42, height: 42, background: "#2a2a2a", border: "1px solid #444", borderRadius: 8, color: "#fff", fontSize: 24, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>−</button>
-                        <span style={{ fontFamily: "Oswald,sans-serif", fontSize: 30, fontWeight: 700, color: "#fff", minWidth: 32, textAlign: "center" }}>{numSets}</span>
-                        <button onClick={() => setNumSets(s => Math.min(10, s + 1))}
-                          style={{ width: 42, height: 42, background: "#2a2a2a", border: "1px solid #444", borderRadius: 8, color: "#fff", fontSize: 24, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>+</button>
-                      </div>
-                    </div>
-                    <button onClick={addStrength} disabled={!selEx} style={addBtn(selEx, false)}>
-                      + ADD TO WORKOUT
-                    </button>
-                  </div>
-                  {todayStrength.map(entry => (
-                    <div key={entry.id} style={{ background: "#1a1a1a", borderRadius: 10, overflow: "hidden", border: "1px solid #2a2a2a" }}>
-                      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 14px", background: "#222", borderBottom: "1px solid #333" }}>
-                        <span style={{ fontFamily: "Oswald,sans-serif", fontSize: 22, fontWeight: 600, letterSpacing: 1 }}>{entry.name}</span>
-                        <button onClick={() => setWorkouts(prev => ({ ...prev, [TODAY]: prev[TODAY].filter(e => e.id !== entry.id) }))}
-                          style={{ background: "none", border: "1px solid #444", borderRadius: 6, color: "#666", fontSize: 14, padding: "4px 10px", cursor: "pointer" }}>✕</button>
-                      </div>
-                      <SetTable sets={entry.sets} entryId={entry.id} onUpdate={updateSet} onRepsBlur={onRepsBlur} />
-                    </div>
-                  ))}
-                  {todayStrength.length === 0 && todayCardio.length === 0 && (
-                    <div style={{ textAlign: "center", color: "#333", fontSize: 15, padding: "16px 0 30px" }}>
-                      Nothing logged yet. Add cardio or weights above.
-                    </div>
-                  )}
+                    {histEx && (() => {
+                      const hist = getStrengthHistory(histEx);
+                      return hist.length === 0
+                        ? <div style={{ textAlign: "center", color: "#444", fontSize: 16, padding: "30px 0" }}>No history yet.</div>
+                        : hist.map(({ date, sets }) => (
+                            <div key={date} style={{ background: "#1a1a1a", borderRadius: 10, overflow: "hidden", border: "1px solid #2a2a2a" }}>
+                              <div style={{ padding: "10px 14px", background: "#222", borderBottom: "1px solid #333", fontFamily: "Oswald,sans-serif", fontSize: 16, color: "#f97316" }}>{formatDate(date)}</div>
+                              <SetTable sets={sets} readonly />
+                            </div>
+                          ));
+                    })()}
+                  </>}
+                  {histType === "cardio" && <>
+                    <select value={histCardioEx} onChange={e => setHistCardioEx(e.target.value)} style={selSt(histCardioEx)}>
+                      <option value="">— Select Activity —</option>
+                      {cardioExercises.map(ex => <option key={ex} value={ex}>{ex}</option>)}
+                    </select>
+                    {histCardioEx && (() => {
+                      const hist = getCardioHistory(histCardioEx);
+                      return hist.length === 0
+                        ? <div style={{ textAlign: "center", color: "#444", fontSize: 16, padding: "30px 0" }}>No history yet.</div>
+                        : hist.map(({ date, duration, distance }) => (
+                            <div key={date} style={{ background: "#1a1a1a", borderRadius: 10, border: "1px solid #2a2a2a", borderLeft: "3px solid #38bdf8", padding: "12px 14px", display: "flex", alignItems: "center", gap: 12 }}>
+                              <span style={{ fontFamily: "Oswald,sans-serif", fontSize: 15, color: "#38bdf8", flex: 1 }}>{formatDate(date)}</span>
+                              <span style={{ background: "#0a1e2e", color: "#38bdf8", padding: "4px 12px", borderRadius: 20, fontSize: 15, fontWeight: 600 }}>{duration} min</span>
+                              {distance && <span style={{ background: "#111", color: "#aaa", padding: "4px 12px", borderRadius: 20, fontSize: 15 }}>{distance} mi</span>}
+                            </div>
+                          ));
+                    })()}
+                  </>}
                 </div>
-                <div style={{ height: timerVisible ? 120 : 0 }} />
-              </div>
-            )}
+              )}
+            </div>
+          )}
 
-            {/* HISTORY TAB */}
-            {tab === "history" && (
+          {/* ── EXERCISES TAB ── */}
+          {tab === "exercises" && (
+            <div style={{ ...col, gap: 20 }}>
               <div style={col}>
-                <div style={{ display: "flex", border: "1px solid #2a2a2a", borderRadius: 10, overflow: "hidden" }}>
-                  {[["date", "BY DATE"], ["exercise", "BY EXERCISE"]].map(([v, label]) => (
-                    <button key={v} onClick={() => setHistView(v)}
-                      style={{ flex: 1, padding: 14, border: "none", cursor: "pointer", background: histView === v ? "#f97316" : "#1a1a1a", color: histView === v ? "#fff" : "#666", fontFamily: "Oswald,sans-serif", fontSize: 14, letterSpacing: 1 }}>
-                      {label}
-                    </button>
-                  ))}
+                <SectionHeader color="#38bdf8" label="CARDIO ACTIVITIES" />
+                <div style={card}>
+                  <input type="text" value={newCardioEx} onChange={e => setNewCardioEx(e.target.value)}
+                    onKeyDown={e => e.key === "Enter" && addEx(newCardioEx, cardioExercises, setCardioExercises, setNewCardioEx)}
+                    placeholder="e.g. Stairs, Treadmill, Bike..."
+                    style={{ width: "100%", background: "#111", border: "1px solid #333", borderRadius: 8, color: "#fff", fontFamily: "Barlow,sans-serif", fontSize: 18, padding: "13px 14px" }} />
+                  <button disabled={!newCardioEx.trim() || cardioExercises.includes(newCardioEx.trim())}
+                    onClick={() => addEx(newCardioEx, cardioExercises, setCardioExercises, setNewCardioEx)}
+                    style={addBtn(newCardioEx.trim() && !cardioExercises.includes(newCardioEx.trim()), true)}>
+                    + ADD ACTIVITY
+                  </button>
                 </div>
-                {histView === "date" && (
-                  allDates.length === 0
-                    ? <div style={{ textAlign: "center", color: "#444", fontSize: 16, padding: "40px 0" }}>No workout history yet.</div>
-                    : allDates.map(date => (
-                        <DateCard key={date} date={date} strength={workouts[date]} cardio={cardioWorkouts[date]} />
-                      ))
-                )}
-                {histView === "exercise" && (
-                  <div style={col}>
-                    <div style={{ display: "flex", border: "1px solid #2a2a2a", borderRadius: 8, overflow: "hidden" }}>
-                      {[["strength", "WEIGHTS", "#f97316", "#fff"], ["cardio", "CARDIO", "#38bdf8", "#0a0a0a"]].map(([v, label, bg, fg]) => (
-                        <button key={v} onClick={() => setHistType(v)}
-                          style={{ flex: 1, padding: 12, border: "none", cursor: "pointer", background: histType === v ? bg : "#1a1a1a", color: histType === v ? fg : "#555", fontFamily: "Oswald,sans-serif", fontSize: 13, letterSpacing: 1 }}>
-                          {label}
-                        </button>
-                      ))}
-                    </div>
-                    {histType === "strength" && <>
-                      <select value={histEx} onChange={e => setHistEx(e.target.value)} style={selSt(histEx)}>
-                        <option value="">— Select Exercise —</option>
-                        {exercises.map(ex => <option key={ex} value={ex}>{ex}</option>)}
-                      </select>
-                      {histEx && (() => {
-                        const hist = getStrengthHistory(histEx);
-                        return hist.length === 0
-                          ? <div style={{ textAlign: "center", color: "#444", fontSize: 16, padding: "30px 0" }}>No history yet.</div>
-                          : hist.map(({ date, sets }) => (
-                              <div key={date} style={{ background: "#1a1a1a", borderRadius: 10, overflow: "hidden", border: "1px solid #2a2a2a" }}>
-                                <div style={{ padding: "10px 14px", background: "#222", borderBottom: "1px solid #333", fontFamily: "Oswald,sans-serif", fontSize: 16, color: "#f97316" }}>{formatDate(date)}</div>
-                                <SetTable sets={sets} readonly />
-                              </div>
-                            ));
-                      })()}
-                    </>}
-                    {histType === "cardio" && <>
-                      <select value={histCardioEx} onChange={e => setHistCardioEx(e.target.value)} style={selSt(histCardioEx)}>
-                        <option value="">— Select Activity —</option>
-                        {cardioExercises.map(ex => <option key={ex} value={ex}>{ex}</option>)}
-                      </select>
-                      {histCardioEx && (() => {
-                        const hist = getCardioHistory(histCardioEx);
-                        return hist.length === 0
-                          ? <div style={{ textAlign: "center", color: "#444", fontSize: 16, padding: "30px 0" }}>No history yet.</div>
-                          : hist.map(({ date, duration, distance }) => (
-                              <div key={date} style={{ background: "#1a1a1a", borderRadius: 10, border: "1px solid #2a2a2a", borderLeft: "3px solid #38bdf8", padding: "12px 14px", display: "flex", alignItems: "center", gap: 12 }}>
-                                <span style={{ fontFamily: "Oswald,sans-serif", fontSize: 15, color: "#38bdf8", flex: 1 }}>{formatDate(date)}</span>
-                                <span style={{ background: "#0a1e2e", color: "#38bdf8", padding: "4px 12px", borderRadius: 20, fontSize: 15, fontWeight: 600 }}>{duration} min</span>
-                                {distance && <span style={{ background: "#111", color: "#aaa", padding: "4px 12px", borderRadius: 20, fontSize: 15 }}>{distance} mi</span>}
-                              </div>
-                            ));
-                      })()}
-                    </>}
-                  </div>
-                )}
+                {cardioExercises.length === 0
+                  ? <div style={{ color: "#444", fontSize: 15, padding: "8px 0" }}>No activities added yet.</div>
+                  : cardioExercises.map(ex => <ExItem key={ex} name={ex} accent="#38bdf8" onDelete={() => setCardioExercises(prev => prev.filter(e => e !== ex))} />)
+                }
               </div>
-            )}
 
-            {/* EXERCISES TAB */}
-            {tab === "exercises" && (
-              <div style={{ ...col, gap: 20 }}>
-                <div style={col}>
-                  <SectionHeader color="#38bdf8" label="CARDIO ACTIVITIES" />
-                  <div style={card}>
-                    <input type="text" value={newCardioEx} onChange={e => setNewCardioEx(e.target.value)}
-                      onKeyDown={e => e.key === "Enter" && addEx(newCardioEx, cardioExercises, setCardioExercises, setNewCardioEx)}
-                      placeholder="e.g. Stairs, Treadmill, Bike..."
-                      style={{ width: "100%", background: "#111", border: "1px solid #333", borderRadius: 8, color: "#fff", fontFamily: "Barlow,sans-serif", fontSize: 18, padding: "13px 14px" }} />
-                    <button disabled={!newCardioEx.trim() || cardioExercises.includes(newCardioEx.trim())}
-                      onClick={() => addEx(newCardioEx, cardioExercises, setCardioExercises, setNewCardioEx)}
-                      style={addBtn(newCardioEx.trim() && !cardioExercises.includes(newCardioEx.trim()), true)}>
-                      + ADD ACTIVITY
-                    </button>
-                  </div>
-                  {cardioExercises.length === 0
-                    ? <div style={{ color: "#444", fontSize: 15, padding: "8px 0" }}>No activities added yet.</div>
-                    : cardioExercises.map(ex => <ExItem key={ex} name={ex} accent="#38bdf8" onDelete={() => setCardioExercises(prev => prev.filter(e => e !== ex))} />)
-                  }
+              <div style={{ borderTop: "1px solid #1e1e1e" }} />
+
+              <div style={col}>
+                <SectionHeader color="#f97316" label="STRENGTH EXERCISES" />
+                <div style={card}>
+                  <input type="text" value={newEx} onChange={e => setNewEx(e.target.value)}
+                    onKeyDown={e => e.key === "Enter" && addEx(newEx, exercises, setExercises, setNewEx)}
+                    placeholder="e.g. Bench Press, Squat..."
+                    style={{ width: "100%", background: "#111", border: "1px solid #333", borderRadius: 8, color: "#fff", fontFamily: "Barlow,sans-serif", fontSize: 18, padding: "13px 14px" }} />
+                  <button disabled={!newEx.trim() || exercises.includes(newEx.trim())}
+                    onClick={() => addEx(newEx, exercises, setExercises, setNewEx)}
+                    style={addBtn(newEx.trim() && !exercises.includes(newEx.trim()), false)}>
+                    + ADD EXERCISE
+                  </button>
                 </div>
-                <div style={{ borderTop: "1px solid #1e1e1e" }} />
-                <div style={col}>
-                  <SectionHeader color="#f97316" label="STRENGTH EXERCISES" />
-                  <div style={card}>
-                    <input type="text" value={newEx} onChange={e => setNewEx(e.target.value)}
-                      onKeyDown={e => e.key === "Enter" && addEx(newEx, exercises, setExercises, setNewEx)}
-                      placeholder="e.g. Bench Press, Squat..."
-                      style={{ width: "100%", background: "#111", border: "1px solid #333", borderRadius: 8, color: "#fff", fontFamily: "Barlow,sans-serif", fontSize: 18, padding: "13px 14px" }} />
-                    <button disabled={!newEx.trim() || exercises.includes(newEx.trim())}
-                      onClick={() => addEx(newEx, exercises, setExercises, setNewEx)}
-                      style={addBtn(newEx.trim() && !exercises.includes(newEx.trim()), false)}>
-                      + ADD EXERCISE
-                    </button>
-                  </div>
-                  {exercises.length === 0
-                    ? <div style={{ color: "#444", fontSize: 15, padding: "8px 0" }}>No exercises added yet.</div>
-                    : exercises.map(ex => <ExItem key={ex} name={ex} accent="#f97316" onDelete={() => setExercises(prev => prev.filter(e => e !== ex))} />)
-                  }
-                </div>
+                {exercises.length === 0
+                  ? <div style={{ color: "#444", fontSize: 15, padding: "8px 0" }}>No exercises added yet.</div>
+                  : exercises.map(ex => <ExItem key={ex} name={ex} accent="#f97316" onDelete={() => setExercises(prev => prev.filter(e => e !== ex))} />)
+                }
               </div>
-            )}
-          </main>
-        </div>
-      );
-    }
+            </div>
+          )}
+        </main>
+      </div>
+    );
+  }
 
-    ReactDOM.createRoot(document.getElementById("root")).render(<App />);
-  </script>
+  // ── Root (handles auth state) ────────────────────────────────────
+  function Root() {
+    const [user, setUser] = useState(undefined);
+    useEffect(() => {
+      const unsub = auth.onAuthStateChanged(u => setUser(u || null));
+      return unsub;
+    }, []);
+
+    if (user === undefined) return (
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "center", minHeight: "100vh", background: "#0f0f0f" }}>
+        <div style={{ color: "#333", fontFamily: "Oswald,sans-serif", fontSize: 18, letterSpacing: 3 }}>LOADING...</div>
+      </div>
+    );
+    if (!user) return <SignIn />;
+    return <App user={user} />;
+  }
+
+  ReactDOM.createRoot(document.getElementById("root")).render(<Root />);
+</script>
 </body>
 </html>
