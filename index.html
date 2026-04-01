@@ -733,7 +733,6 @@
                     <div class="stat-box-compact" style="padding: 6px; cursor: help; min-width: 100px;" id="recoveryStatusBox" title="Total open profits ÷ Total losses from recent trades (configurable lookback) - Warns if >1.5x">
                         <div class="stat-label" style="font-size: 0.65em;">Recovery Status</div>
                         <div class="stat-value" style="font-size: 1em;" id="recoveryStatus">0.00x</div>
-                        <div id="recoveryProximity" style="font-size: 0.55em; margin-top: 2px; opacity: 0.9; white-space: nowrap;"></div>
                     </div>
                     <div class="stat-box-compact" style="padding: 6px; cursor: help; min-width: 100px;" id="netRBox">
                         <div class="stat-label" style="font-size: 0.65em;">Net R</div>
@@ -755,6 +754,7 @@
                 <h2 style="font-size: 1em; margin-bottom: 10px; color: #92400e;">⚠️ Regressive Stop Required</h2>
                 <p style="font-size: 0.9em; margin-bottom: 10px; color: #78350f;">You are "Net Long hope" - move these stops to lock in profit!</p>
                 <div id="regressiveStopList" style="font-size: 0.9em;"></div>
+                <div id="recoveryProximity" style="font-size: 0.85em; margin-top: 10px; padding-top: 10px; border-top: 1px solid rgba(120, 53, 15, 0.2); color: #78350f;"></div>
             </div>
 
             <div class="card" style="padding: 12px; margin-bottom: 12px;">
@@ -2558,39 +2558,11 @@
             
             const recoveryStatusEl = document.getElementById('recoveryStatus');
             const recoveryStatusBox = document.getElementById('recoveryStatusBox');
-            const recoveryProximityEl = document.getElementById('recoveryProximity');
             
             if (recoveryStatusEl && recoveryStatusBox) {
                 if (totalLast10LossDollars > 0) {
                     const recoveryRatio = totalOpenProfitDollars / totalLast10LossDollars;
                     recoveryStatusEl.textContent = recoveryRatio.toFixed(2) + 'x';
-                    
-                    // Calculate how much profit is locked in at current stops
-                    let lockedInAtStops = 0;
-                    openPositions.forEach(pos => {
-                        if (pos.currentStop > pos.entryPrice) {
-                            const profitPerShare = pos.currentStop - pos.entryPrice;
-                            lockedInAtStops += profitPerShare * pos.shares;
-                        }
-                    });
-                    
-                    // Calculate remaining losses after accounting for partials
-                    let totalRealizedFromPartials = 0;
-                    openPositions.forEach(pos => {
-                        if (pos.partialSells && pos.partialSells.length > 0) {
-                            pos.partialSells.forEach(sell => {
-                                totalRealizedFromPartials += (sell.price - pos.entryPrice) * sell.shares;
-                            });
-                        }
-                    });
-                    
-                    const remainingLosses = Math.max(0, totalLast10LossDollars - totalRealizedFromPartials);
-                    const gapToGoal = Math.max(0, remainingLosses - lockedInAtStops);
-                    
-                    // Display proximity info (horizontal compact with hover tooltips)
-                    if (recoveryProximityEl) {
-                        recoveryProximityEl.innerHTML = `<span title="Profit locked in at current stop prices">Stops: $${lockedInAtStops.toFixed(0)}</span> | <span title="Total unrealized profit still at risk">Unrealized: $${totalOpenProfitDollars.toFixed(0)}</span> | <span title="Additional profit needed to cover all losses">Need: $${gapToGoal.toFixed(0)}</span>`;
-                    }
                     
                     // If > 1.5, highlight in yellow with warning message
                     if (recoveryRatio > 1.5) {
@@ -2605,9 +2577,6 @@
                 } else {
                     // No losses in recent trades
                     recoveryStatusEl.textContent = 'N/A';
-                    if (recoveryProximityEl) {
-                        recoveryProximityEl.textContent = '';
-                    }
                     recoveryStatusBox.style.background = 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)';
                     recoveryStatusBox.title = `No realized losses in last ${RECOVERY_STATUS_LOOKBACK} trades`;
                     recoveryStatusBox.style.cursor = 'default';
@@ -2758,14 +2727,46 @@
                             
                             html += '</ul>';
                             regressiveStopList.innerHTML = html;
+                            
+                            // Calculate and display proximity info
+                            const recoveryProximityEl = document.getElementById('recoveryProximity');
+                            if (recoveryProximityEl) {
+                                // Calculate how much profit is locked in at current stops
+                                let lockedInAtStops = 0;
+                                openPositions.forEach(pos => {
+                                    if (pos.currentStop > pos.entryPrice) {
+                                        const profitPerShare = pos.currentStop - pos.entryPrice;
+                                        lockedInAtStops += profitPerShare * pos.shares;
+                                    }
+                                });
+                                
+                                // Calculate total unrealized profit
+                                let totalUnrealizedProfit = 0;
+                                openPositions.forEach(pos => {
+                                    const metrics = calculatePositionMetrics(pos);
+                                    if (metrics.unrealizedPnL > 0) {
+                                        totalUnrealizedProfit += metrics.unrealizedPnL;
+                                    }
+                                });
+                                
+                                const gapToGoal = Math.max(0, remainingLossesToCover - lockedInAtStops);
+                                
+                                recoveryProximityEl.innerHTML = `<strong>Progress to Goal:</strong> <span title="Profit locked in at current stop prices">Stops: $${lockedInAtStops.toFixed(0)}</span> | <span title="Total unrealized profit still at risk">Unrealized: $${totalUnrealizedProfit.toFixed(0)}</span> | <span title="Additional profit needed to cover all losses">Need: $${gapToGoal.toFixed(0)}</span>`;
+                            }
                         } else {
                             regressiveStopAlert.style.display = 'none';
+                            const recoveryProximityEl = document.getElementById('recoveryProximity');
+                            if (recoveryProximityEl) recoveryProximityEl.innerHTML = '';
                         }
                     } else {
                         regressiveStopAlert.style.display = 'none';
+                        const recoveryProximityEl = document.getElementById('recoveryProximity');
+                        if (recoveryProximityEl) recoveryProximityEl.innerHTML = '';
                     }
                 } else {
                     regressiveStopAlert.style.display = 'none';
+                    const recoveryProximityEl = document.getElementById('recoveryProximity');
+                    if (recoveryProximityEl) recoveryProximityEl.innerHTML = '';
                 }
             }
         }
