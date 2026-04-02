@@ -2817,74 +2817,8 @@
 
         // Update closed trade stats
         function updateClosedTradeStats() {
-            const last10 = closedTrades.slice(-10);
-            if (last10.length > 0) {
-                const stats = calculateTradeStats(last10);
-                const el1 = document.getElementById('last10Pnl');
-                const el2 = document.getElementById('last10WinRate');
-                const el3 = document.getElementById('last10WLRatio');
-                const el4 = document.getElementById('last10AvgR');
-                
-                if (el1) el1.textContent = stats.totalPnl.toFixed(2) + '%';
-                if (el2) el2.textContent = stats.winRate.toFixed(1) + '%';
-                if (el3) el3.textContent = stats.wlRatio.toFixed(2);
-                if (el4) el4.textContent = stats.avgR.toFixed(2) + 'R';
-                
-                // Color code Last 10 P/L
-                const last10PnlElement = document.getElementById('last10Pnl');
-                if (stats.totalPnl > 0) {
-                    last10PnlElement.parentElement.style.background = 'linear-gradient(135deg, #10b981 0%, #059669 100%)';
-                } else if (stats.totalPnl < 0) {
-                    last10PnlElement.parentElement.style.background = 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)';
-                } else {
-                    last10PnlElement.parentElement.style.background = 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)';
-                }
-                
-                // Color code Last 10 Win Rate (>= 35% green, < 35% yellow)
-                const last10WinElement = document.getElementById('last10WinRate');
-                if (stats.winRate >= 35) {
-                    last10WinElement.parentElement.style.background = 'linear-gradient(135deg, #10b981 0%, #059669 100%)';
-                } else {
-                    last10WinElement.parentElement.style.background = 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)';
-                }
-            }
-            
-            if (closedTrades.length > 0) {
-                const stats = calculateTradeStats(closedTrades);
-                const el1 = document.getElementById('totalClosedPnl');
-                const el2 = document.getElementById('overallWinRate');
-                const el3 = document.getElementById('overallWLRatio');
-                const el4 = document.getElementById('avgRMultiple');
-                const el4b = document.getElementById('avgRMultipleDetailed');
-                const el5 = document.getElementById('avgGain');
-                const el6 = document.getElementById('avgLoss');
-                
-                if (el1) el1.textContent = stats.totalPnl.toFixed(2) + '%';
-                if (el2) el2.textContent = stats.winRate.toFixed(1) + '%';
-                if (el3) el3.textContent = stats.wlRatio.toFixed(2);
-                if (el4) el4.textContent = stats.avgR.toFixed(2) + 'R';
-                if (el4b) el4b.textContent = stats.avgR.toFixed(2) + 'R';
-                if (el5) el5.textContent = stats.avgGain.toFixed(2) + '%';
-                if (el6) el6.textContent = '-' + stats.avgLoss.toFixed(2) + '%';
-                
-                // Color code Total Closed P/L
-                const totalClosedElement = document.getElementById('totalClosedPnl');
-                if (stats.totalPnl > 0) {
-                    totalClosedElement.parentElement.style.background = 'linear-gradient(135deg, #10b981 0%, #059669 100%)';
-                } else if (stats.totalPnl < 0) {
-                    totalClosedElement.parentElement.style.background = 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)';
-                } else {
-                    totalClosedElement.parentElement.style.background = 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)';
-                }
-                
-                // Color code Overall Win Rate (>= 35% green, < 35% yellow)
-                const overallWinElement = document.getElementById('overallWinRate');
-                if (stats.winRate >= 35) {
-                    overallWinElement.parentElement.style.background = 'linear-gradient(135deg, #10b981 0%, #059669 100%)';
-                } else {
-                    overallWinElement.parentElement.style.background = 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)';
-                }
-            }
+            // Old stat boxes removed - closed trade stats now calculated on-demand in closed trades tab
+            // This function is kept as a stub to avoid breaking updateAllDisplays() calls
         }
 
         // Update closed trades table
