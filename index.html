@@ -596,15 +596,15 @@
                 <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px;">
                     <div class="form-group" style="margin-bottom: 0;">
                         <label style="font-size: 10px;">Trading Account ($)</label>
-                        <input type="number" id="accountSize" value="250000" style="padding: 4px; font-size: 12px;">
+                        <input type="number" id="accountSize" value="250000" style="padding: 4px; font-size: 12px;" onchange="saveToFirebase(); updateAllDisplays();">
                     </div>
                     <div class="form-group" style="margin-bottom: 0;">
                         <label style="font-size: 10px;">My Roth ($)</label>
-                        <input type="number" id="myRoth" value="0" style="padding: 4px; font-size: 12px;">
+                        <input type="number" id="myRoth" value="0" style="padding: 4px; font-size: 12px;" onchange="saveToFirebase(); updateAllDisplays();">
                     </div>
                     <div class="form-group" style="margin-bottom: 0;">
                         <label style="font-size: 10px;">Wife Roth ($)</label>
-                        <input type="number" id="wifeRoth" value="0" style="padding: 4px; font-size: 12px;">
+                        <input type="number" id="wifeRoth" value="0" style="padding: 4px; font-size: 12px;" onchange="saveToFirebase(); updateAllDisplays();">
                     </div>
                 </div>
             </div>
@@ -613,15 +613,15 @@
             <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 8px;">
                 <div class="form-group" style="margin-bottom: 0;">
                     <label style="font-size: 10px;">Trading Jan 1 ($)</label>
-                    <input type="number" id="startingAccount" value="248288" style="padding: 4px; font-size: 12px;">
+                    <input type="number" id="startingAccount" value="248288" style="padding: 4px; font-size: 12px;" onchange="saveToFirebase(); updateAllDisplays();">
                 </div>
                 <div class="form-group" style="margin-bottom: 0;">
                     <label style="font-size: 10px;">My Roth Jan 1 ($)</label>
-                    <input type="number" id="myRothJan1" value="0" style="padding: 4px; font-size: 12px;">
+                    <input type="number" id="myRothJan1" value="0" style="padding: 4px; font-size: 12px;" onchange="saveToFirebase(); updateAllDisplays();">
                 </div>
                 <div class="form-group" style="margin-bottom: 0;">
                     <label style="font-size: 10px;">Wife Roth Jan 1 ($)</label>
-                    <input type="number" id="wifeRothJan1" value="0" style="padding: 4px; font-size: 12px;">
+                    <input type="number" id="wifeRothJan1" value="0" style="padding: 4px; font-size: 12px;" onchange="saveToFirebase(); updateAllDisplays();">
                 </div>
             </div>
             
@@ -645,23 +645,105 @@
                 <span id="lastSnapshot" style="color: #666; font-size: 10px; font-style: italic; white-space: nowrap;"></span>
             </div>
             
-            <!-- YTD Stats -->
-            <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; padding-top: 8px; border-top: 1px solid #e0e0e0;">
-                <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 6px; border-radius: 6px; text-align: center;">
-                    <div style="font-size: 0.65em; opacity: 0.95; margin-bottom: 2px;">Trading YTD</div>
-                    <div style="font-size: 1.1em; font-weight: 700;" id="tradingYTD">0.00%</div>
+            <!-- Account Info (Compact) -->
+            <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; padding-top: 6px; border-top: 1px solid #e0e0e0; margin-bottom: 8px;">
+                <div style="padding: 4px; text-align: center; font-size: 0.75em;">
+                    <div style="opacity: 0.7;">Account Size</div>
+                    <div style="font-weight: 600;" id="accountSizeDisplay">$250,000</div>
                 </div>
-                <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 6px; border-radius: 6px; text-align: center;">
-                    <div style="font-size: 0.65em; opacity: 0.95; margin-bottom: 2px;">My Roth YTD</div>
-                    <div style="font-size: 1.1em; font-weight: 700;" id="myRothYTD">0.00%</div>
+                <div style="padding: 4px; text-align: center; font-size: 0.75em;">
+                    <div style="opacity: 0.7;">Starting (Jan 1)</div>
+                    <div style="font-weight: 600;" id="startingAccountDisplay">$248,288</div>
                 </div>
-                <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 6px; border-radius: 6px; text-align: center;">
-                    <div style="font-size: 0.65em; opacity: 0.95; margin-bottom: 2px;">Wife Roth YTD</div>
-                    <div style="font-size: 1.1em; font-weight: 700;" id="wifeRothYTD">0.00%</div>
+                <div style="padding: 4px; text-align: center; font-size: 0.75em;">
+                    <div style="opacity: 0.7;">Cash Available</div>
+                    <div style="font-weight: 600;" id="cashAvailableCompact">$0</div>
                 </div>
-                <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 6px; border-radius: 6px; text-align: center;">
-                    <div style="font-size: 0.65em; opacity: 0.95; margin-bottom: 2px;">SPY YTD</div>
-                    <div style="font-size: 1.1em; font-weight: 700;" id="spyYTD">--</div>
+            </div>
+            
+            <!-- Safety Dashboard -->
+            <div id="safetyDashboard" class="card" style="padding: 10px; margin-bottom: 10px; border-left: 5px solid #10b981;">
+                <div style="display: grid; grid-template-columns: auto 1fr; gap: 12px; align-items: center;">
+                    <!-- Status Indicator -->
+                    <div style="text-align: center;">
+                        <div id="safetyStatusIcon" style="width: 50px; height: 50px; border-radius: 50%; background: linear-gradient(135deg, #10b981 0%, #059669 100%); display: flex; align-items: center; justify-content: center; font-size: 1.5em; color: white;">✓</div>
+                        <div id="safetyStatusText" style="font-size: 0.65em; margin-top: 4px; font-weight: 600;">HEALTHY</div>
+                    </div>
+                    
+                    <!-- Metrics Grid -->
+                    <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px;">
+                        <div style="cursor: help;" title="Your year-to-date performance. Green = profitable, Red = negative">
+                            <div style="font-size: 0.65em; opacity: 0.7;">YTD</div>
+                            <div style="font-size: 1.1em; font-weight: 700;" id="ytdDisplay">+$0 (0.0%)</div>
+                            <div style="font-size: 0.6em; opacity: 0.7; margin-top: 2px;">
+                                <span id="ytdRealizedPct">0%</span> locked | <span id="ytdUnrealizedPct">0%</span> at risk
+                            </div>
+                        </div>
+                        
+                        <div style="cursor: help;" title="Worst-case YTD if all unrealized profit evaporates. Keep this POSITIVE to protect against drawdowns">
+                            <div style="font-size: 0.65em; opacity: 0.7;">YTD Floor</div>
+                            <div style="font-size: 1.1em; font-weight: 700;" id="ytdFloor">$0 (0.0%)</div>
+                        </div>
+                        
+                        <div style="cursor: help;" title="How many times your unrealized profit could cover your YTD net losses. >3.0x = Harvest profits now">
+                            <div style="font-size: 0.65em; opacity: 0.7;">YTD Protection</div>
+                            <div style="font-size: 1.1em; font-weight: 700;" id="ytdProtection">--</div>
+                        </div>
+                        
+                        <div style="cursor: help;" title="Recent recovery from last N trades">
+                            <div style="font-size: 0.65em; opacity: 0.7;">Recent Recovery</div>
+                            <div style="font-size: 1.1em; font-weight: 700;" id="recentRecovery">--</div>
+                        </div>
+                        
+                        <div style="cursor: help;" title="True net R across all trading: Unrealized + Net Realized + Partials">
+                            <div style="font-size: 0.65em; opacity: 0.7;">Net R</div>
+                            <div style="font-size: 1.1em; font-weight: 700;" id="netRCompact">0.00R</div>
+                        </div>
+                        
+                        <div style="cursor: help;" title="SPY year-to-date performance for comparison">
+                            <div style="font-size: 0.65em; opacity: 0.7;">SPY YTD</div>
+                            <div style="font-size: 1.1em; font-weight: 700;" id="spyYTDCompact">--</div>
+                        </div>
+                        
+                        <div style="cursor: help;" title="Net realized profit locked in for the year (your safety cushion)">
+                            <div style="font-size: 0.65em; opacity: 0.7;">Realized Cushion</div>
+                            <div style="font-size: 1.1em; font-weight: 700;" id="realizedCushion">$0</div>
+                        </div>
+                        
+                        <div style="cursor: help;" title="What % of your YTD is unrealized (at risk). >60% = vulnerable to drawdowns">
+                            <div style="font-size: 0.65em; opacity: 0.7;">Buffer %</div>
+                            <div style="font-size: 1.1em; font-weight: 700;" id="bufferPercent">0%</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Recommendation Bar -->
+                <div id="safetyRecommendation" style="margin-top: 8px; padding: 6px; border-radius: 4px; font-size: 0.8em; display: none;"></div>
+            </div>
+            
+            <!-- Core Stats (Compact) -->
+            <div class="card" style="padding: 8px; margin-bottom: 10px;">
+                <div style="display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px;">
+                    <div style="cursor: help; text-align: center;" title="Total capital deployed across all open positions as % of account">
+                        <div style="font-size: 0.65em; opacity: 0.7;">Exposure</div>
+                        <div style="font-size: 1em; font-weight: 600;" id="exposureCompact">0%</div>
+                    </div>
+                    <div style="cursor: help; text-align: center;" title="Total Risk % of your Original Capital">
+                        <div style="font-size: 0.65em; opacity: 0.7;">Total Risk</div>
+                        <div style="font-size: 1em; font-weight: 600;" id="totalRiskCompact">0%</div>
+                    </div>
+                    <div style="cursor: help; text-align: center;" title="Total unrealized profit/loss across all open positions">
+                        <div style="font-size: 0.65em; opacity: 0.7;">Open P&L</div>
+                        <div style="font-size: 1em; font-weight: 600;" id="openPnlCompact">$0 (0%)</div>
+                    </div>
+                    <div style="cursor: help; text-align: center;" title="Expected value per trade in R: (Win Rate × Avg Win R) - (Loss Rate × Avg Loss R)">
+                        <div style="font-size: 0.65em; opacity: 0.7;">Expectancy</div>
+                        <div style="font-size: 1em; font-weight: 600;" id="expectancyCompact">0.00R</div>
+                    </div>
+                    <div style="cursor: help; text-align: center;" title="My Roth YTD vs SPY YTD">
+                        <div style="font-size: 0.65em; opacity: 0.7;">My Roth</div>
+                        <div style="font-size: 1em; font-weight: 600;" id="myRothCompact">0.0%</div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -682,71 +764,11 @@
 
         <!-- Open Positions Tab -->
         <div id="open-positions" class="tab-content active">
-            <!-- Portfolio Stats -->
-            <div class="card" style="padding: 10px; margin-bottom: 12px;">
-                <h2 style="font-size: 1em; margin-bottom: 8px;">Portfolio Summary</h2>
-                <div style="display: flex; gap: 6px; overflow-x: auto; padding-bottom: 5px;">
-                    <div class="stat-box-compact" style="padding: 6px; cursor: help; min-width: 100px;" title="Total capital deployed across all open positions as % of account">
-                        <div class="stat-label" style="font-size: 0.65em;">Exposure</div>
-                        <div class="stat-value" style="font-size: 1em;" id="portfolioExposure">0%</div>
-                    </div>
-                    <div class="stat-box-compact" style="padding: 6px; cursor: help; min-width: 100px;" title="Total Risk % of your Original Capital">
-                        <div class="stat-label" style="font-size: 0.65em;">Total Risk %</div>
-                        <div class="stat-value" style="font-size: 1em;" id="totalPortfolioRisk">0%</div>
-                    </div>
-                    <div class="stat-box-compact" style="padding: 6px; cursor: help; min-width: 100px;" title="Total drawdown from current price to current stop">
-                        <div class="stat-label" style="font-size: 0.65em;">Total Drawdown</div>
-                        <div class="stat-value" style="font-size: 1em;" id="totalPortfolioDrawdown">0%</div>
-                    </div>
-                    <div class="stat-box-compact" style="padding: 6px; cursor: help; min-width: 100px;" title="Total unrealized profit/loss across all open positions">
-                        <div class="stat-label" style="font-size: 0.65em;">Open P&L %</div>
-                        <div class="stat-value" style="font-size: 1em;" id="openPnlPercent">0%</div>
-                    </div>
-                    <div class="stat-box-compact" style="padding: 6px; cursor: help; min-width: 100px;" title="Average Win Size ÷ Average Loss Size (all closed trades)">
-                        <div class="stat-label" style="font-size: 0.65em;">Avg W/L</div>
-                        <div class="stat-value" style="font-size: 1em;" id="avgWLRatio">0.00</div>
-                    </div>
-                    <div class="stat-box-compact" style="padding: 6px; cursor: help; min-width: 100px;" title="Average R-multiple across all closed trades (profit ÷ initial risk)">
-                        <div class="stat-label" style="font-size: 0.65em;">Avg R</div>
-                        <div class="stat-value" style="font-size: 1em;" id="avgRMultiple">0.00R</div>
-                    </div>
-                    <div class="stat-box-compact" style="padding: 6px; cursor: help; min-width: 100px;" title="Total P&L from your last 10 closed trades">
-                        <div class="stat-label" style="font-size: 0.65em;">Last 10 P/L</div>
-                        <div class="stat-value" style="font-size: 1em;" id="last10Pnl">0%</div>
-                    </div>
-                    <div class="stat-box-compact" style="padding: 6px; cursor: help; min-width: 100px;" title="Win rate for your last 10 closed trades">
-                        <div class="stat-label" style="font-size: 0.65em;">Last 10 Win%</div>
-                        <div class="stat-value" style="font-size: 1em;" id="last10WinRate">0%</div>
-                    </div>
-                    <div class="stat-box-compact" style="padding: 6px; cursor: help; min-width: 100px;" title="Total P&L from all closed trades (all-time performance)">
-                        <div class="stat-label" style="font-size: 0.65em;">Total Closed</div>
-                        <div class="stat-value" style="font-size: 1em;" id="totalClosedPnl">0%</div>
-                    </div>
-                    <div class="stat-box-compact" style="padding: 6px; cursor: help; min-width: 100px;" title="Overall win rate across all closed trades">
-                        <div class="stat-label" style="font-size: 0.65em;">Overall Win%</div>
-                        <div class="stat-value" style="font-size: 1em;" id="overallWinRate">0%</div>
-                    </div>
-                    <div class="stat-box-compact" style="padding: 6px; cursor: help; min-width: 100px;" title="Expected value per trade in R: (Win Rate × Avg Win R) - (Loss Rate × Avg Loss R)">
-                        <div class="stat-label" style="font-size: 0.65em;">Expectancy</div>
-                        <div class="stat-value" style="font-size: 1em;" id="expectancy">0.00R</div>
-                    </div>
-                    <div class="stat-box-compact" style="padding: 6px; cursor: help; min-width: 100px;" id="recoveryStatusBox" title="Total open profits ÷ Total losses from recent trades (configurable lookback) - Warns if >1.5x">
-                        <div class="stat-label" style="font-size: 0.65em;">Recovery Status</div>
-                        <div class="stat-value" style="font-size: 1em;" id="recoveryStatus">0.00x</div>
-                    </div>
-                    <div class="stat-box-compact" style="padding: 6px; cursor: help; min-width: 100px;" id="netRBox">
-                        <div class="stat-label" style="font-size: 0.65em;">Net R</div>
-                        <div class="stat-value" style="font-size: 1em;" id="netR">0.00R</div>
-                    </div>
-                    <div class="stat-box-compact" style="padding: 6px; cursor: help; min-width: 100px;" title="Buying power available (Account Size - Total Exposure)">
-                        <div class="stat-label" style="font-size: 0.65em;">Cash Available</div>
-                        <div class="stat-value" style="font-size: 1em;" id="cashAvailable">$0</div>
-                    </div>
-                    <div class="stat-box-compact" style="padding: 6px; cursor: help; min-width: 100px;" title="Account value if all open positions hit their stops">
-                        <div class="stat-label" style="font-size: 0.65em;">If All Stop Out</div>
-                        <div class="stat-value" style="font-size: 1em;" id="ifAllStopOut">$0</div>
-                    </div>
-                </div>
+            
+            <!-- Harvest Calculator (shows when YTD Protection triggered) -->
+            <div id="harvestCalculator" class="card" style="padding: 12px; margin-bottom: 12px; display: none; background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); border: 2px solid #f59e0b;">
+                <h2 style="font-size: 1em; margin-bottom: 10px; color: #92400e;">💰 Harvest Calculator</h2>
+                <div id="harvestCalculatorContent" style="font-size: 0.9em; color: #78350f;"></div>
             </div>
 
             <!-- Regressive Stop Alert -->
@@ -801,6 +823,17 @@
                 </p>
                 <div class="table-scroll" id="openPositionsTable">
                     <div class="empty-state">No open positions</div>
+                </div>
+            </div>
+            
+            <!-- Harvest History -->
+            <div class="card" style="padding: 12px; margin-top: 12px;">
+                <h2 style="font-size: 1em; margin-bottom: 10px; cursor: pointer;" onclick="toggleHarvestHistory()">
+                    📊 Profit Harvesting Performance <span id="harvestHistoryToggle">▼</span>
+                </h2>
+                <div id="harvestHistoryContent" style="display: none;">
+                    <div id="harvestHistoryStats" style="margin-bottom: 10px; padding: 8px; background: #f0f9ff; border-radius: 4px; font-size: 0.85em;"></div>
+                    <div id="harvestHistoryList" style="font-size: 0.85em;"></div>
                 </div>
             </div>
         </div>
@@ -2769,6 +2802,36 @@
                     if (recoveryProximityEl) recoveryProximityEl.innerHTML = '';
                 }
             }
+            
+            // Update compact stats displays
+            document.getElementById('exposureCompact').textContent = totalExposure.toFixed(1) + '%';
+            document.getElementById('totalRiskCompact').textContent = totalPortfolioRisk.toFixed(2) + '%';
+            const totalOpenPnlDollars = (totalOpenPnl / 100) * accountSize;
+            document.getElementById('openPnlCompact').textContent = `$${totalOpenPnlDollars.toLocaleString()} (${totalOpenPnl.toFixed(1)}%)`;
+            document.getElementById('cashAvailableCompact').textContent = '$' + (accountSize - (totalExposure / 100) * accountSize).toLocaleString(undefined, {minimumFractionDigits: 0, maximumFractionDigits: 0});
+            
+            // Update expectancy in compact display
+            if (closedTrades.length > 0) {
+                const stats = calculateTradeStats(closedTrades);
+                const expectancyR = stats.winRate > 0 ? ((stats.winRate / 100) * stats.avgR) : 0;
+                document.getElementById('expectancyCompact').textContent = expectancyR.toFixed(2) + 'R';
+            }
+            
+            // Update My Roth compact display
+            const myRoth = parseFloat(document.getElementById('myRoth').value) || 0;
+            const myRothJan1 = parseFloat(document.getElementById('myRothJan1').value) || 0;
+            const myRothYTD = myRothJan1 > 0 ? ((myRoth - myRothJan1) / myRothJan1) * 100 : 0;
+            const spyYTDText = document.getElementById('spyYTDCompact').textContent;
+            let myRothDisplay = myRothYTD.toFixed(1) + '%';
+            
+            // Add gold outline if beating SPY
+            if (spyYTDText && spyYTDText !== '--') {
+                const spyYTD = parseFloat(spyYTDText.replace('%', ''));
+                if (!isNaN(spyYTD) && myRothYTD > spyYTD) {
+                    myRothDisplay = `<span style="border: 2px solid #fbbf24; padding: 2px 4px; border-radius: 3px; box-shadow: 0 0 6px rgba(251, 191, 36, 0.4);">${myRothYTD.toFixed(1)}%</span>`;
+                }
+            }
+            document.getElementById('myRothCompact').innerHTML = myRothDisplay;
         }
 
         // Calculate trade statistics
@@ -3678,20 +3741,30 @@
                 if (spyJan2 > 0) {
                     const spyYTD = ((currentPrice - spyJan2) / spyJan2) * 100;
                     const spyYTDElement = document.getElementById('spyYTD');
-                    spyYTDElement.textContent = spyYTD.toFixed(2) + '%';
+                    if (spyYTDElement) spyYTDElement.textContent = spyYTD.toFixed(2) + '%';
                     
-                    // Color code SPY YTD box
-                    if (spyYTD > 0) {
-                        spyYTDElement.parentElement.style.background = 'linear-gradient(135deg, #10b981 0%, #059669 100%)'; // Green
-                    } else if (spyYTD < 0) {
-                        spyYTDElement.parentElement.style.background = 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)'; // Red
-                    } else {
-                        spyYTDElement.parentElement.style.background = 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'; // Purple (0%)
+                    // Update compact display
+                    const spyYTDCompact = document.getElementById('spyYTDCompact');
+                    if (spyYTDCompact) {
+                        const spyColor = spyYTD >= 0 ? '#10b981' : '#ef4444';
+                        spyYTDCompact.innerHTML = `<span style="color: ${spyColor};">${spyYTD >= 0 ? '+' : ''}${spyYTD.toFixed(1)}%</span>`;
+                    }
+                    
+                    // Color code SPY YTD box (if old element exists)
+                    if (spyYTDElement && spyYTDElement.parentElement) {
+                        if (spyYTD > 0) {
+                            spyYTDElement.parentElement.style.background = 'linear-gradient(135deg, #10b981 0%, #059669 100%)';
+                        } else if (spyYTD < 0) {
+                            spyYTDElement.parentElement.style.background = 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)';
+                        } else {
+                            spyYTDElement.parentElement.style.background = 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)';
+                        }
                     }
                     
                     console.log('SPY YTD calculated:', spyYTD.toFixed(2) + '%', 'Current:', currentPrice, 'Jan2:', spyJan2);
                 } else {
-                    document.getElementById('spyYTD').textContent = '--';
+                    if (document.getElementById('spyYTD')) document.getElementById('spyYTD').textContent = '--';
+                    if (document.getElementById('spyYTDCompact')) document.getElementById('spyYTDCompact').textContent = '--';
                 }
             } catch (error) {
                 console.error('Error fetching SPY price:', error);
@@ -4115,8 +4188,356 @@
             document.getElementById(tabName).classList.add('active');
         }
 
+        // Update Safety Dashboard
+        function updateSafetyDashboard() {
+            const accountSize = getAccountSize();
+            const startingAccount = parseFloat(document.getElementById('startingAccount').value) || 250000;
+            
+            // Calculate all YTD trades (since Jan 1)
+            const ytdTrades = closedTrades; // All trades are YTD in this system
+            
+            // Calculate total realized P&L from all closed trades
+            let totalRealizedDollars = 0;
+            ytdTrades.forEach(trade => {
+                totalRealizedDollars += (trade.portfolioPnlPercent / 100) * accountSize;
+            });
+            
+            // Calculate total unrealized P&L from open positions
+            let totalUnrealizedDollars = 0;
+            let totalUnrealizedR = 0;
+            let totalNetRealizedR = 0;
+            let totalPartialRealizedR = 0;
+            let totalPartialRealizedDollars = 0;
+            
+            openPositions.forEach(pos => {
+                const metrics = calculatePositionMetrics(pos);
+                
+                // Unrealized dollars and R
+                if (metrics.unrealizedPnL > 0) {
+                    totalUnrealizedDollars += metrics.unrealizedPnL;
+                }
+                if (metrics.initialR && !isNaN(metrics.initialR) && isFinite(metrics.initialR)) {
+                    totalUnrealizedR += metrics.initialR;
+                }
+                
+                // Realized from partials (dollars and R)
+                if (pos.partialSells && pos.partialSells.length > 0) {
+                    const initialRiskDollars = (pos.entryPrice - pos.initialStop) * pos.initialShares;
+                    let partialDollars = 0;
+                    pos.partialSells.forEach(sell => {
+                        partialDollars += (sell.price - pos.entryPrice) * sell.shares;
+                    });
+                    totalPartialRealizedDollars += partialDollars;
+                    if (initialRiskDollars > 0) {
+                        totalPartialRealizedR += partialDollars / initialRiskDollars;
+                    }
+                }
+            });
+            
+            // Calculate NET realized R from closed trades
+            ytdTrades.forEach(trade => {
+                if (trade.rMultiple && !isNaN(trade.rMultiple) && isFinite(trade.rMultiple)) {
+                    totalNetRealizedR += trade.rMultiple;
+                }
+            });
+            
+            // Calculate YTD metrics
+            const currentYTD = accountSize - startingAccount;
+            const currentYTDPercent = (currentYTD / startingAccount) * 100;
+            const ytdRealizedDollars = totalRealizedDollars + totalPartialRealizedDollars;
+            const ytdFloorDollars = currentYTD - totalUnrealizedDollars;
+            const ytdFloorPercent = (ytdFloorDollars / startingAccount) * 100;
+            
+            // Calculate YTD Protection ratio
+            const netRealizedYTD = totalRealizedDollars + totalPartialRealizedDollars;
+            const ytdLosses = Math.abs(Math.min(0, netRealizedYTD));
+            const ytdProtection = ytdLosses > 0 ? totalUnrealizedDollars / ytdLosses : null;
+            
+            // Calculate Recent Recovery (last N trades)
+            const RECOVERY_STATUS_LOOKBACK = getRecoveryLookback();
+            const lastNTrades = closedTrades.slice(-RECOVERY_STATUS_LOOKBACK);
+            let lastNLossesDollars = 0;
+            let lastNNetRealizedDollars = 0;
+            lastNTrades.forEach(trade => {
+                const pnlDollars = (trade.portfolioPnlPercent / 100) * accountSize;
+                lastNNetRealizedDollars += pnlDollars;
+                if (pnlDollars < 0) {
+                    lastNLossesDollars += Math.abs(pnlDollars);
+                }
+            });
+            const lastNLossesAfterPartials = Math.max(0, lastNLossesDollars - totalPartialRealizedDollars);
+            const recentRecovery = lastNNetRealizedDollars < 0 ? 
+                totalUnrealizedDollars / Math.abs(lastNNetRealizedDollars) : null;
+            
+            // Calculate Net R
+            const netR = totalUnrealizedR + totalNetRealizedR + totalPartialRealizedR;
+            
+            // Calculate Buffer Percentage
+            const bufferPct = currentYTD !== 0 ? (totalUnrealizedDollars / currentYTD) * 100 : 0;
+            
+            // Display account info
+            document.getElementById('accountSizeDisplay').textContent = '$' + accountSize.toLocaleString();
+            document.getElementById('startingAccountDisplay').textContent = '$' + startingAccount.toLocaleString();
+            
+            // Display YTD
+            const ytdColor = currentYTD >= 0 ? '#10b981' : '#ef4444';
+            document.getElementById('ytdDisplay').innerHTML = `<span style="color: ${ytdColor};">${currentYTD >= 0 ? '+' : ''}$${currentYTD.toLocaleString()} (${currentYTDPercent.toFixed(1)}%)</span>`;
+            const realizedPct = currentYTD !== 0 ? ((ytdRealizedDollars / currentYTD) * 100) : 0;
+            const unrealizedPct = currentYTD !== 0 ? ((totalUnrealizedDollars / currentYTD) * 100) : 0;
+            document.getElementById('ytdRealizedPct').textContent = realizedPct.toFixed(0) + '%';
+            document.getElementById('ytdUnrealizedPct').textContent = unrealizedPct.toFixed(0) + '%';
+            
+            // Display YTD Floor
+            const floorColor = ytdFloorDollars >= 0 ? '#10b981' : '#ef4444';
+            document.getElementById('ytdFloor').innerHTML = `<span style="color: ${floorColor};">${ytdFloorDollars >= 0 ? '+' : ''}$${ytdFloorDollars.toLocaleString()} (${ytdFloorPercent.toFixed(1)}%)</span>`;
+            
+            // Display YTD Protection
+            if (ytdProtection !== null) {
+                const protColor = ytdProtection > 3.0 ? '#ef4444' : ytdProtection > 2.0 ? '#f59e0b' : '#10b981';
+                document.getElementById('ytdProtection').innerHTML = `<span style="color: ${protColor};">${ytdProtection.toFixed(1)}x</span>`;
+            } else {
+                document.getElementById('ytdProtection').innerHTML = '<span style="color: #10b981;">Clear ✓</span>';
+            }
+            
+            // Display Recent Recovery
+            if (recentRecovery !== null) {
+                const recColor = recentRecovery > 1.5 ? '#f59e0b' : '#10b981';
+                document.getElementById('recentRecovery').innerHTML = `<span style="color: ${recColor};">${recentRecovery.toFixed(1)}x</span>`;
+            } else {
+                document.getElementById('recentRecovery').innerHTML = '<span style="color: #10b981;">Clear ✓</span>';
+            }
+            
+            // Display Net R
+            const netRColor = netR >= 0 ? '#10b981' : '#ef4444';
+            document.getElementById('netRCompact').innerHTML = `<span style="color: ${netRColor};">${netR.toFixed(2)}R</span>`;
+            
+            // Display Realized Cushion
+            const cushionColor = ytdRealizedDollars >= 0 ? '#10b981' : '#ef4444';
+            document.getElementById('realizedCushion').innerHTML = `<span style="color: ${cushionColor};">${ytdRealizedDollars >= 0 ? '+' : ''}$${ytdRealizedDollars.toLocaleString()}</span>`;
+            
+            // Display Buffer %
+            const bufferColor = bufferPct > 60 ? '#ef4444' : bufferPct > 40 ? '#f59e0b' : '#10b981';
+            document.getElementById('bufferPercent').innerHTML = `<span style="color: ${bufferColor};">${bufferPct.toFixed(0)}%</span>`;
+            
+            // Determine Safety Status
+            let safetyLevel = 'HEALTHY';
+            let safetyColor = '#10b981';
+            let safetyIcon = '✓';
+            let safetyBorder = '#10b981';
+            let recommendation = '';
+            
+            if (ytdProtection !== null && ytdProtection > 4.0 || ytdFloorDollars < startingAccount * -0.05) {
+                safetyLevel = 'CRITICAL';
+                safetyColor = '#ef4444';
+                safetyIcon = '!';
+                safetyBorder = '#ef4444';
+                recommendation = `🚨 URGENT: Harvest 30-50% of biggest winner immediately. YTD at severe risk.`;
+            } else if (ytdProtection !== null && ytdProtection > 2.5 || ytdFloorDollars < startingAccount * -0.02 || bufferPct > 70) {
+                safetyLevel = 'WARNING';
+                safetyColor = '#f59e0b';
+                safetyIcon = '⚠';
+                safetyBorder = '#f59e0b';
+                recommendation = `⚠️ Harvest 20-30% from top winners to reduce YTD dependency on unrealized gains.`;
+            } else if (ytdProtection !== null && ytdProtection > 1.5 || ytdFloorDollars < 0 || bufferPct > 50) {
+                safetyLevel = 'CAUTION';
+                safetyColor = '#fbbf24';
+                safetyIcon = '◐';
+                safetyBorder = '#fbbf24';
+                recommendation = `💡 Watch closely. Consider 10-20% harvest if YTD Protection rises above 2.5x.`;
+            }
+            
+            // Update safety dashboard styling
+            document.getElementById('safetyDashboard').style.borderLeftColor = safetyBorder;
+            document.getElementById('safetyStatusIcon').style.background = `linear-gradient(135deg, ${safetyColor} 0%, ${safetyColor} 100%)`;
+            document.getElementById('safetyStatusIcon').textContent = safetyIcon;
+            document.getElementById('safetyStatusText').textContent = safetyLevel;
+            document.getElementById('safetyStatusText').style.color = safetyColor;
+            
+            // Show/hide recommendation
+            const recEl = document.getElementById('safetyRecommendation');
+            if (recommendation) {
+                recEl.textContent = recommendation;
+                recEl.style.display = 'block';
+                recEl.style.background = safetyLevel === 'CRITICAL' ? '#fee2e2' : safetyLevel === 'WARNING' ? '#fef3c7' : '#fef9c3';
+                recEl.style.color = safetyLevel === 'CRITICAL' ? '#991b1b' : '#78350f';
+            } else {
+                recEl.style.display = 'none';
+            }
+            
+            // Update Harvest Calculator
+            updateHarvestCalculator(ytdProtection, ytdFloorDollars, ytdLosses, totalUnrealizedDollars);
+        }
+        
+        // Update Harvest Calculator
+        function updateHarvestCalculator(ytdProtection, ytdFloorDollars, ytdLosses, totalUnrealizedDollars) {
+            const calcEl = document.getElementById('harvestCalculator');
+            const contentEl = document.getElementById('harvestCalculatorContent');
+            
+            // Only show if YTD Protection > 2.0x or YTD Floor < 0
+            if ((ytdProtection !== null && ytdProtection > 2.0) || ytdFloorDollars < 0) {
+                calcEl.style.display = 'block';
+                
+                // Find top winners
+                const positionsWithProfit = [];
+                openPositions.forEach(pos => {
+                    const metrics = calculatePositionMetrics(pos);
+                    if (metrics.unrealizedPnL > 0) {
+                        positionsWithProfit.push({
+                            symbol: pos.symbol,
+                            unrealizedProfit: metrics.unrealizedPnL,
+                            shares: pos.shares,
+                            currentPrice: pos.currentPrice,
+                            entryPrice: pos.entryPrice,
+                            rMultiple: metrics.initialR
+                        });
+                    }
+                });
+                
+                positionsWithProfit.sort((a, b) => b.unrealizedProfit - a.unrealizedProfit);
+                
+                if (positionsWithProfit.length > 0) {
+                    const biggestWinner = positionsWithProfit[0];
+                    
+                    // Calculate 3 harvest options
+                    let html = `<div style="margin-bottom: 10px;"><strong>Your Situation:</strong></div>`;
+                    html += `<ul style="margin: 5px 0 10px 20px; font-size: 0.85em;">`;
+                    html += `<li>YTD Protection: ${ytdProtection !== null ? ytdProtection.toFixed(1) + 'x' : 'N/A'}</li>`;
+                    html += `<li>YTD Floor: $${ytdFloorDollars.toLocaleString()}</li>`;
+                    html += `<li>Total Unrealized: $${totalUnrealizedDollars.toLocaleString()}</li>`;
+                    html += `<li>Biggest Winner: ${biggestWinner.symbol} (+$${biggestWinner.unrealizedProfit.toLocaleString()}, ${biggestWinner.rMultiple.toFixed(1)}R)</li>`;
+                    html += `</ul>`;
+                    
+                    html += `<div style="margin-bottom: 8px;"><strong>Harvest Options:</strong></div>`;
+                    
+                    // Option 1: Make YTD Floor Positive
+                    if (ytdFloorDollars < 0) {
+                        const neededToFloorZero = Math.abs(ytdFloorDollars) + 100;
+                        const sharesToSell1 = Math.floor(neededToFloorZero / (biggestWinner.currentPrice - biggestWinner.entryPrice));
+                        const pctToSell1 = (sharesToSell1 / biggestWinner.shares) * 100;
+                        
+                        html += `<div style="padding: 8px; background: white; border-radius: 4px; margin-bottom: 6px;">`;
+                        html += `<div style="font-weight: 600; color: #059669;">Option 1: Make YTD Floor Positive</div>`;
+                        html += `<div style="font-size: 0.85em; margin-top: 4px;">`;
+                        html += `• Sell ${sharesToSell1} shares of ${biggestWinner.symbol} (${pctToSell1.toFixed(0)}%)<br>`;
+                        html += `• Locks in: $${neededToFloorZero.toLocaleString()}<br>`;
+                        html += `• Result: YTD Floor → $${(100).toLocaleString()} ✅`;
+                        html += `</div></div>`;
+                    }
+                    
+                    // Option 2: Get YTD Protection to 2.0x
+                    if (ytdProtection !== null && ytdProtection > 2.0) {
+                        const neededToSell2 = ytdLosses / 2;
+                        const sharesToSell2 = Math.floor(neededToSell2 / (biggestWinner.currentPrice - biggestWinner.entryPrice));
+                        const pctToSell2 = (sharesToSell2 / biggestWinner.shares) * 100;
+                        
+                        html += `<div style="padding: 8px; background: white; border-radius: 4px; margin-bottom: 6px;">`;
+                        html += `<div style="font-weight: 600; color: #059669;">Option 2: Lower YTD Protection to 2.0x</div>`;
+                        html += `<div style="font-size: 0.85em; margin-top: 4px;">`;
+                        html += `• Sell ${sharesToSell2} shares of ${biggestWinner.symbol} (${pctToSell2.toFixed(0)}%)<br>`;
+                        html += `• Locks in: $${neededToSell2.toLocaleString()}<br>`;
+                        html += `• Result: YTD Protection → 2.0x ✅`;
+                        html += `</div></div>`;
+                    }
+                    
+                    // Option 3: Conservative (sell 20-30%)
+                    const sharesToSell3 = Math.floor(biggestWinner.shares * 0.25);
+                    const dollarsLocked3 = sharesToSell3 * (biggestWinner.currentPrice - biggestWinner.entryPrice);
+                    
+                    html += `<div style="padding: 8px; background: white; border-radius: 4px;">`;
+                    html += `<div style="font-weight: 600; color: #059669;">Option 3: Conservative 25% Harvest</div>`;
+                    html += `<div style="font-size: 0.85em; margin-top: 4px;">`;
+                    html += `• Sell ${sharesToSell3} shares of ${biggestWinner.symbol} (25%)<br>`;
+                    html += `• Locks in: $${dollarsLocked3.toLocaleString()}<br>`;
+                    html += `• Keeps 75% of position running ✅`;
+                    html += `</div></div>`;
+                    
+                    contentEl.innerHTML = html;
+                } else {
+                    calcEl.style.display = 'none';
+                }
+            } else {
+                calcEl.style.display = 'none';
+            }
+        }
+        
+        // Toggle Harvest History
+        function toggleHarvestHistory() {
+            const content = document.getElementById('harvestHistoryContent');
+            const toggle = document.getElementById('harvestHistoryToggle');
+            if (content.style.display === 'none') {
+                content.style.display = 'block';
+                toggle.textContent = '▲';
+            } else {
+                content.style.display = 'none';
+                toggle.textContent = '▼';
+            }
+        }
+        
+        // Update Harvest History
+        function updateHarvestHistory() {
+            const statsEl = document.getElementById('harvestHistoryStats');
+            const listEl = document.getElementById('harvestHistoryList');
+            
+            // Calculate harvest performance from partial sales
+            let totalPartialSales = 0;
+            let totalPartialsLocked = 0;
+            const harvestList = [];
+            
+            openPositions.forEach(pos => {
+                if (pos.partialSells && pos.partialSells.length > 0) {
+                    pos.partialSells.forEach(sell => {
+                        totalPartialSales++;
+                        const profit = (sell.price - pos.entryPrice) * sell.shares;
+                        totalPartialsLocked += profit;
+                        
+                        // Calculate if current price is higher or lower
+                        const currentPriceDiff = pos.currentPrice - sell.price;
+                        const pctDiff = (currentPriceDiff / sell.price) * 100;
+                        
+                        harvestList.push({
+                            date: sell.date || 'Unknown',
+                            symbol: pos.symbol,
+                            shares: sell.shares,
+                            price: sell.price,
+                            locked: profit,
+                            currentPrice: pos.currentPrice,
+                            pctDiff: pctDiff
+                        });
+                    });
+                }
+            });
+            
+            // Sort by date (newest first)
+            harvestList.sort((a, b) => b.date.localeCompare(a.date));
+            
+            // Display stats
+            if (totalPartialSales > 0) {
+                const avgLocked = totalPartialsLocked / totalPartialSales;
+                statsEl.innerHTML = `<strong>This Period:</strong> ${totalPartialSales} partial sales • $${totalPartialsLocked.toLocaleString()} realized from partials`;
+            } else {
+                statsEl.innerHTML = `<em>No partial sales recorded yet.</em>`;
+            }
+            
+            // Display list
+            if (harvestList.length > 0) {
+                let html = '<div style="font-size: 0.85em;">';
+                harvestList.slice(0, 10).forEach(item => {
+                    const emoji = item.pctDiff > 0 ? '✅' : item.pctDiff < -5 ? '🎯' : '😐';
+                    html += `<div style="padding: 6px; border-bottom: 1px solid #e5e7eb;">`;
+                    html += `<strong>${item.date}:</strong> ${item.symbol} sold ${item.shares} @ $${item.price.toFixed(2)} → Locked $${item.locked.toLocaleString()} ${emoji}<br>`;
+                    html += `<span style="font-size: 0.9em; opacity: 0.8;">Current price: $${item.currentPrice.toFixed(2)} (${item.pctDiff >= 0 ? '+' : ''}${item.pctDiff.toFixed(1)}%)</span>`;
+                    html += `</div>`;
+                });
+                html += '</div>';
+                listEl.innerHTML = html;
+            } else {
+                listEl.innerHTML = '';
+            }
+        }
+
         // Update all displays
         function updateAllDisplays() {
+            updateSafetyDashboard();
             updateOpenPositionsTable();
             updatePortfolioStats();
             updateClosedTradeStats();
@@ -4125,6 +4546,7 @@
             updateEquityCurves();
             updateAccountStats();
             updateDailyEquityTable();
+            updateHarvestHistory();
         }
 
         // Position Sizing Calculator Functions
