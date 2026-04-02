@@ -690,7 +690,7 @@
                             <div style="font-size: 1.1em; font-weight: 700;" id="ytdProtection">--</div>
                         </div>
                         
-                        <div style="cursor: help;" title="Recent recovery from last N trades">
+                        <div style="cursor: help;" title="Short-term recovery metric: Shows if your open winners can cover losses from last N trades (configurable). YTD Protection = long-term (all trades since Jan 1), Recent Recovery = short-term (last N trades). >1.5x means you're leaning too hard on winners.">
                             <div style="font-size: 0.65em; opacity: 0.7;">Recent Recovery</div>
                             <div style="font-size: 1.1em; font-weight: 700;" id="recentRecovery">--</div>
                         </div>
@@ -710,8 +710,8 @@
                             <div style="font-size: 1.1em; font-weight: 700;" id="realizedCushion">$0</div>
                         </div>
                         
-                        <div style="cursor: help;" title="What % of your YTD is unrealized (at risk). >60% = vulnerable to drawdowns">
-                            <div style="font-size: 0.65em; opacity: 0.7;">Buffer %</div>
+                        <div style="cursor: help;" title="What % of all your P&L activity is still unrealized (at risk). Shows Unrealized / (Unrealized + Realized). >60% means most gains are still exposed to drawdowns.">
+                            <div style="font-size: 0.65em; opacity: 0.7;">Unrealized Risk %</div>
                             <div style="font-size: 1.1em; font-weight: 700;" id="bufferPercent">0%</div>
                         </div>
                     </div>
@@ -723,7 +723,7 @@
             
             <!-- Core Stats (Compact) -->
             <div class="card" style="padding: 8px; margin-bottom: 10px;">
-                <div style="display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px;">
+                <div style="display: grid; grid-template-columns: repeat(6, 1fr); gap: 6px;">
                     <div style="cursor: help; text-align: center;" title="Total capital deployed across all open positions as % of account">
                         <div style="font-size: 0.65em; opacity: 0.7;">Exposure</div>
                         <div style="font-size: 1em; font-weight: 600;" id="exposureCompact">0%</div>
@@ -740,9 +740,13 @@
                         <div style="font-size: 0.65em; opacity: 0.7;">Expectancy</div>
                         <div style="font-size: 1em; font-weight: 600;" id="expectancyCompact">0.00R</div>
                     </div>
-                    <div style="cursor: help; text-align: center;" title="My Roth YTD vs SPY YTD">
+                    <div style="cursor: help; text-align: center;" title="My Roth YTD performance. Gold outline if beating SPY.">
                         <div style="font-size: 0.65em; opacity: 0.7;">My Roth</div>
                         <div style="font-size: 1em; font-weight: 600;" id="myRothCompact">0.0%</div>
+                    </div>
+                    <div style="cursor: help; text-align: center;" title="Wife Roth YTD performance. Gold outline if beating SPY.">
+                        <div style="font-size: 0.65em; opacity: 0.7;">Wife Roth</div>
+                        <div style="font-size: 1em; font-weight: 600;" id="wifeRothCompact">0.0%</div>
                     </div>
                 </div>
             </div>
@@ -753,6 +757,7 @@
             <button class="tab active" onclick="switchTab('open-positions')">Open Positions</button>
             <button class="tab" onclick="switchTab('closed-trades')">Closed Trades</button>
             <button class="tab" onclick="switchTab('expectancy-calc')">Expectancy Calculator</button>
+            <button class="tab" onclick="switchTab('what-if-calc')">What If Calculator</button>
             <button class="tab" onclick="switchTab('stock1')"><span id="stock1Symbol">Stock 1</span></button>
             <button class="tab" onclick="switchTab('stock2')"><span id="stock2Symbol">Stock 2</span></button>
             <button class="tab" onclick="switchTab('stock3')"><span id="stock3Symbol">Stock 3</span></button>
@@ -1052,6 +1057,122 @@
                     </div>
                 </div>
                 <div id="stock4Profile"></div>
+            </div>
+        </div>
+
+        <!-- What If Calculator Tab -->
+        <div id="what-if-calc" class="tab-content">
+            <div class="card">
+                <h2 style="margin-bottom: 15px;">"What If Scenarios" - How Many Trades to Hit My Goals</h2>
+                <p style="margin-bottom: 20px; opacity: 0.8;">Based on current performance stats</p>
+                
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 30px;">
+                    <!-- Inputs Column -->
+                    <div>
+                        <h3 style="margin-bottom: 15px; color: #667eea;">Inputs (use your stats)</h3>
+                        
+                        <div class="form-group">
+                            <label>Starting Portfolio ($)</label>
+                            <input type="number" id="whatIfStarting" value="100000" oninput="calculateWhatIf()">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label>Position Size (% of portfolio)</label>
+                            <input type="number" id="whatIfPosSize" value="9" step="0.1" oninput="calculateWhatIf()">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label>Win Rate (%)</label>
+                            <input type="number" id="whatIfWinRate" value="90" step="1" oninput="calculateWhatIf()">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label>Average Gain (on position %)</label>
+                            <input type="number" id="whatIfAvgGain" value="6.8" step="0.1" oninput="calculateWhatIf()">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label>Average Loss (on position %)</label>
+                            <input type="number" id="whatIfAvgLoss" value="3.4" step="0.1" oninput="calculateWhatIf()">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label>Trades per Month (typical)</label>
+                            <input type="number" id="whatIfTradesPerMonth" value="10" oninput="calculateWhatIf()">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label>Goal (% of starting)</label>
+                            <input type="number" id="whatIfGoal" value="50" step="1" oninput="calculateWhatIf()">
+                        </div>
+                    </div>
+                    
+                    <!-- Results Column -->
+                    <div>
+                        <h3 style="margin-bottom: 15px; color: #10b981;">Results <span style="font-size: 0.7em; opacity: 0.7;">(live updates)</span></h3>
+                        
+                        <div style="background: #f0f9ff; padding: 15px; border-radius: 8px; margin-bottom: 15px;">
+                            <div style="font-weight: 600; margin-bottom: 8px;">Expectancy per Trade</div>
+                            <div style="font-size: 0.85em; opacity: 0.8; margin-bottom: 4px;">E = p×g - (1-p)×l</div>
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 8px;">
+                                <div>
+                                    <div style="font-size: 0.75em; opacity: 0.7;">Portfolio edge (1E)</div>
+                                    <div style="font-weight: 700; font-size: 1.2em; color: #059669;" id="whatIfEdge">0.52%</div>
+                                </div>
+                                <div>
+                                    <div style="font-size: 0.75em; opacity: 0.7;">Growth factor</div>
+                                    <div style="font-weight: 700; font-size: 1.2em;" id="whatIfGrowth">1.005202</div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div style="background: white; padding: 15px; border: 2px solid #e5e7eb; border-radius: 8px; margin-bottom: 15px;">
+                            <div style="font-weight: 600; margin-bottom: 8px;">Value of Position Size</div>
+                            <div style="font-weight: 700; font-size: 1.3em; color: #667eea;" id="whatIfPosValue">$9,000.00</div>
+                        </div>
+                        
+                        <div style="background: #fef3c7; padding: 15px; border-radius: 8px; margin-bottom: 15px;">
+                            <div style="font-weight: 600; margin-bottom: 8px;">$ per trade (expected)</div>
+                            <div style="font-weight: 700; font-size: 1.3em; color: #d97706;" id="whatIfPerTrade">$520.20</div>
+                        </div>
+                        
+                        <div style="background: #fee2e2; padding: 15px; border-radius: 8px; margin-bottom: 15px;">
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                                <div>
+                                    <div style="font-size: 0.75em; opacity: 0.7;">Trades needed</div>
+                                    <div style="font-weight: 700; font-size: 1.5em; color: #dc2626;" id="whatIfTradesNeeded">97</div>
+                                </div>
+                                <div>
+                                    <div style="font-size: 0.75em; opacity: 0.7;">Months (÷ trades ÷ trades/mo)</div>
+                                    <div style="font-weight: 700; font-size: 1.5em; color: #dc2626;" id="whatIfMonths">9.7</div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div style="background: #f3f4f6; padding: 10px; border-radius: 8px; font-size: 0.85em;">
+                            <div style="font-weight: 600; margin-bottom: 4px;">Goal recap:</div>
+                            <div id="whatIfRecap">$50,000.00 required (50.00% of starting) → Target: $150,000.00</div>
+                        </div>
+                        
+                        <div style="margin-top: 15px; padding: 10px; background: white; border: 1px solid #e5e7eb; border-radius: 8px;">
+                            <div style="font-weight: 600; margin-bottom: 8px; font-size: 0.9em;">Trade breakdown - per-trade amounts</div>
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-size: 0.8em;">
+                                <div>Avg $ gain on winning trades: <strong id="whatIfAvgWin">$612.00</strong></div>
+                                <div># winning trades: <strong id="whatIfNumWins">87</strong></div>
+                                <div>Avg $ loss on losing trades: <strong id="whatIfAvgLoss">$306.00</strong></div>
+                                <div># losing trades: <strong id="whatIfNumLosses">10</strong></div>
+                            </div>
+                        </div>
+                        
+                        <div style="margin-top: 10px; padding: 10px; background: white; border: 1px solid #e5e7eb; border-radius: 8px;">
+                            <div style="font-weight: 600; margin-bottom: 8px; font-size: 0.9em;">Trade breakdown - ratios</div>
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-size: 0.8em;">
+                                <div>Gain/Loss ratio (non-adjusted): <strong id="whatIfGLRatio">2.00</strong></div>
+                                <div>Gain/Loss ratio (adjusted): <strong id="whatIfGLRatioAdj">18.00</strong></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
 
@@ -2832,6 +2953,21 @@
                 }
             }
             document.getElementById('myRothCompact').innerHTML = myRothDisplay;
+            
+            // Update Wife Roth compact display
+            const wifeRoth = parseFloat(document.getElementById('wifeRoth').value) || 0;
+            const wifeRothJan1 = parseFloat(document.getElementById('wifeRothJan1').value) || 0;
+            const wifeRothYTD = wifeRothJan1 > 0 ? ((wifeRoth - wifeRothJan1) / wifeRothJan1) * 100 : 0;
+            let wifeRothDisplay = wifeRothYTD.toFixed(1) + '%';
+            
+            // Add gold outline if beating SPY
+            if (spyYTDText && spyYTDText !== '--') {
+                const spyYTD = parseFloat(spyYTDText.replace('%', ''));
+                if (!isNaN(spyYTD) && wifeRothYTD > spyYTD) {
+                    wifeRothDisplay = `<span style="border: 2px solid #fbbf24; padding: 2px 4px; border-radius: 3px; box-shadow: 0 0 6px rgba(251, 191, 36, 0.4);">${wifeRothYTD.toFixed(1)}%</span>`;
+                }
+            }
+            document.getElementById('wifeRothCompact').innerHTML = wifeRothDisplay;
         }
 
         // Calculate trade statistics
@@ -4272,8 +4408,9 @@
             // Calculate Net R
             const netR = totalUnrealizedR + totalNetRealizedR + totalPartialRealizedR;
             
-            // Calculate Buffer Percentage
-            const bufferPct = currentYTD !== 0 ? (totalUnrealizedDollars / currentYTD) * 100 : 0;
+            // Calculate Unrealized Risk % (new formula)
+            const totalPnL = Math.abs(totalUnrealizedDollars + ytdRealizedDollars);
+            const bufferPct = totalPnL > 0 ? (totalUnrealizedDollars / totalPnL) * 100 : 0;
             
             // Display account info
             document.getElementById('accountSizeDisplay').textContent = '$' + accountSize.toLocaleString();
@@ -4426,7 +4563,7 @@
                     
                     // Option 2: Get YTD Protection to 2.0x
                     if (ytdProtection !== null && ytdProtection > 2.0) {
-                        const neededToSell2 = ytdLosses / 2;
+                        const neededToSell2 = totalUnrealizedDollars - (2.0 * ytdLosses);
                         const sharesToSell2 = Math.floor(neededToSell2 / (biggestWinner.currentPrice - biggestWinner.entryPrice));
                         const pctToSell2 = (sharesToSell2 / biggestWinner.shares) * 100;
                         
@@ -4434,7 +4571,7 @@
                         html += `<div style="font-weight: 600; color: #059669;">Option 2: Lower YTD Protection to 2.0x</div>`;
                         html += `<div style="font-size: 0.85em; margin-top: 4px;">`;
                         html += `• Sell ${sharesToSell2} shares of ${biggestWinner.symbol} (${pctToSell2.toFixed(0)}%)<br>`;
-                        html += `• Locks in: $${neededToSell2.toLocaleString()}<br>`;
+                        html += `• Locks in: $${Math.round(neededToSell2).toLocaleString()}<br>`;
                         html += `• Result: YTD Protection → 2.0x ✅`;
                         html += `</div></div>`;
                     }
@@ -4547,6 +4684,67 @@
             updateAccountStats();
             updateDailyEquityTable();
             updateHarvestHistory();
+        }
+
+        // What If Calculator Function
+        function calculateWhatIf() {
+            const starting = parseFloat(document.getElementById('whatIfStarting').value) || 100000;
+            const posSizePct = parseFloat(document.getElementById('whatIfPosSize').value) || 9;
+            const winRate = parseFloat(document.getElementById('whatIfWinRate').value) || 90;
+            const avgGainPct = parseFloat(document.getElementById('whatIfAvgGain').value) || 6.8;
+            const avgLossPct = parseFloat(document.getElementById('whatIfAvgLoss').value) || 3.4;
+            const tradesPerMonth = parseFloat(document.getElementById('whatIfTradesPerMonth').value) || 10;
+            const goalPct = parseFloat(document.getElementById('whatIfGoal').value) || 50;
+            
+            // Calculate position value
+            const posValue = (posSizePct / 100) * starting;
+            
+            // Calculate expectancy per trade (as % of portfolio)
+            const winRateDec = winRate / 100;
+            const lossRate = 1 - winRateDec;
+            const expectancyPct = (winRateDec * avgGainPct) - (lossRate * avgLossPct);
+            const expectancyDollars = (expectancyPct / 100) * posValue;
+            
+            // Portfolio edge (expectancy as % of portfolio)
+            const portfolioEdge = (expectancyDollars / starting) * 100;
+            
+            // Growth factor
+            const growthFactor = 1 + (portfolioEdge / 100);
+            
+            // Goal calculations
+            const goalDollars = (goalPct / 100) * starting;
+            const targetDollars = starting + goalDollars;
+            
+            // Trades needed (linear approximation)
+            const tradesNeeded = goalDollars / expectancyDollars;
+            
+            // Months to goal
+            const monthsToGoal = tradesNeeded / tradesPerMonth;
+            
+            // Trade breakdown
+            const numWins = Math.round(tradesNeeded * winRateDec);
+            const numLosses = Math.round(tradesNeeded * lossRate);
+            const avgWinDollars = (avgGainPct / 100) * posValue;
+            const avgLossDollars = (avgLossPct / 100) * posValue;
+            
+            // Gain/Loss ratios
+            const glRatioNonAdj = avgGainPct / avgLossPct;
+            const glRatioAdj = (avgGainPct * winRate) / (avgLossPct * (100 - winRate));
+            
+            // Update all displays
+            document.getElementById('whatIfEdge').textContent = portfolioEdge.toFixed(2) + '%';
+            document.getElementById('whatIfGrowth').textContent = growthFactor.toFixed(6);
+            document.getElementById('whatIfPosValue').textContent = '$' + posValue.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
+            document.getElementById('whatIfPerTrade').textContent = '$' + expectancyDollars.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
+            document.getElementById('whatIfTradesNeeded').textContent = Math.round(tradesNeeded);
+            document.getElementById('whatIfMonths').textContent = monthsToGoal.toFixed(1);
+            document.getElementById('whatIfRecap').textContent = `$${goalDollars.toLocaleString()} required (${goalPct.toFixed(2)}% of starting) → Target: $${targetDollars.toLocaleString()}`;
+            document.getElementById('whatIfAvgWin').textContent = '$' + avgWinDollars.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
+            document.getElementById('whatIfNumWins').textContent = numWins;
+            document.getElementById('whatIfAvgLoss').textContent = '$' + avgLossDollars.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
+            document.getElementById('whatIfNumLosses').textContent = numLosses;
+            document.getElementById('whatIfGLRatio').textContent = glRatioNonAdj.toFixed(2);
+            document.getElementById('whatIfGLRatioAdj').textContent = glRatioAdj.toFixed(2);
         }
 
         // Position Sizing Calculator Functions
