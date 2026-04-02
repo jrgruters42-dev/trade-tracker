@@ -676,7 +676,7 @@
                             <div style="font-size: 0.65em; opacity: 0.7;">YTD</div>
                             <div style="font-size: 1.1em; font-weight: 700;" id="ytdDisplay">+$0 (0.0%)</div>
                             <div style="font-size: 0.6em; opacity: 0.7; margin-top: 2px;">
-                                <span id="ytdRealizedPct">0%</span> locked | <span id="ytdUnrealizedPct">0%</span> at risk
+                                <span id="ytdRealizedDollars">$0</span> locked | <span id="ytdUnrealizedDollars">$0</span> at risk
                             </div>
                         </div>
                         
@@ -685,12 +685,12 @@
                             <div style="font-size: 1.1em; font-weight: 700;" id="ytdFloor">$0 (0.0%)</div>
                         </div>
                         
-                        <div style="cursor: help;" title="How many times your unrealized profit could cover your YTD net losses. >3.0x = Harvest profits now">
+                        <div style="cursor: help;" title="LONG-TERM: How many times your unrealized profit could cover your YTD net losses (all trades since Jan 1). >3.0x = Harvest now. Compare with Recent Recovery (short-term, last N trades) to see if things are improving or getting worse.">
                             <div style="font-size: 0.65em; opacity: 0.7;">YTD Protection</div>
                             <div style="font-size: 1.1em; font-weight: 700;" id="ytdProtection">--</div>
                         </div>
                         
-                        <div style="cursor: help;" title="Short-term recovery metric: Shows if your open winners can cover losses from last N trades (configurable). YTD Protection = long-term (all trades since Jan 1), Recent Recovery = short-term (last N trades). >1.5x means you're leaning too hard on winners.">
+                        <div style="cursor: help;" title="SHORT-TERM: Shows if your open winners can cover losses from last N trades (default 15, adjustable). Compares RECENT trading vs YTD Protection (all trades). Rising = getting riskier. Falling = improving. >1.5x means you're leaning too hard on winners.">
                             <div style="font-size: 0.65em; opacity: 0.7;">Recent Recovery</div>
                             <div style="font-size: 1.1em; font-weight: 700;" id="recentRecovery">--</div>
                         </div>
@@ -772,16 +772,66 @@
             
             <!-- Harvest Calculator (shows when YTD Protection triggered) -->
             <div id="harvestCalculator" class="card" style="padding: 12px; margin-bottom: 12px; display: none; background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); border: 2px solid #f59e0b;">
-                <h2 style="font-size: 1em; margin-bottom: 10px; color: #92400e;">💰 Harvest Calculator</h2>
+                <h2 style="font-size: 1em; margin-bottom: 10px; color: #92400e; cursor: pointer;" onclick="toggleHarvestCalculatorContent()">
+                    💰 Harvest Calculator <span id="harvestCalcToggle">▼</span>
+                </h2>
                 <div id="harvestCalculatorContent" style="font-size: 0.9em; color: #78350f;"></div>
+            </div>
+
+            <!-- Pick My Own Harvest Simulator -->
+            <div id="pickMyOwnHarvest" class="card" style="padding: 12px; margin-bottom: 12px; display: none; background: linear-gradient(135deg, #e0f2fe 0%, #bae6fd 100%); border: 2px solid #0284c7;">
+                <h2 style="font-size: 1em; margin-bottom: 10px; color: #075985; cursor: pointer;" onclick="togglePickMyOwnContent()">
+                    🎮 Pick My Own Harvest Plan <span id="pickMyOwnToggle">▼</span>
+                </h2>
+                <div id="pickMyOwnContent">
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; font-size: 0.9em;">
+                        <!-- Input Column -->
+                        <div>
+                            <div class="form-group" style="margin-bottom: 12px;">
+                                <label style="font-weight: 600; color: #075985;">Select Position:</label>
+                                <select id="pickPositionSelect" onchange="updatePickMyOwnPreview()" style="width: 100%; padding: 6px;">
+                                    <option value="">-- Choose a position --</option>
+                                </select>
+                            </div>
+                            
+                            <div class="form-group" style="margin-bottom: 12px;">
+                                <label style="font-weight: 600; color: #075985;">Shares to Sell:</label>
+                                <input type="number" id="pickSharesToSell" min="0" oninput="updatePickMyOwnPreview()" style="width: 100%; padding: 6px;">
+                                <div style="font-size: 0.8em; color: #0369a1; margin-top: 4px;">
+                                    <span id="pickSharesMax">Max: 0 shares available</span> | 
+                                    <a href="#" onclick="document.getElementById('pickSharesToSell').value = Math.floor(parseFloat(document.getElementById('pickSharesToSell').max) * 0.25); updatePickMyOwnPreview(); return false;">25%</a> | 
+                                    <a href="#" onclick="document.getElementById('pickSharesToSell').value = Math.floor(parseFloat(document.getElementById('pickSharesToSell').max) * 0.50); updatePickMyOwnPreview(); return false;">50%</a> | 
+                                    <a href="#" onclick="document.getElementById('pickSharesToSell').value = Math.floor(parseFloat(document.getElementById('pickSharesToSell').max) * 0.75); updatePickMyOwnPreview(); return false;">75%</a>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Preview Column -->
+                        <div>
+                            <div style="font-weight: 600; margin-bottom: 8px; color: #075985;">📊 Preview (if you execute):</div>
+                            <div id="pickMyOwnPreview" style="background: white; padding: 10px; border-radius: 6px; font-size: 0.85em; color: #0c4a6e;">
+                                <em>Select a position and enter shares to see preview...</em>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div style="margin-top: 12px; text-align: center;">
+                        <button id="executePickHarvest" onclick="executePickMyOwnHarvest()" class="btn-success" disabled style="padding: 8px 20px;">Execute This Harvest</button>
+                        <button onclick="resetPickMyOwn()" class="btn-secondary" style="padding: 8px 20px; margin-left: 10px;">Reset</button>
+                    </div>
+                </div>
             </div>
 
             <!-- Regressive Stop Alert -->
             <div class="card" id="regressiveStopAlert" style="padding: 12px; margin-bottom: 12px; display: none; background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); border: 2px solid #f59e0b;">
-                <h2 style="font-size: 1em; margin-bottom: 10px; color: #92400e;">⚠️ Regressive Stop Required</h2>
-                <p style="font-size: 0.9em; margin-bottom: 10px; color: #78350f;">You are "Net Long hope" - move these stops to lock in profit!</p>
-                <div id="regressiveStopList" style="font-size: 0.9em;"></div>
-                <div id="recoveryProximity" style="font-size: 0.85em; margin-top: 10px; padding-top: 10px; border-top: 1px solid rgba(120, 53, 15, 0.2); color: #78350f;"></div>
+                <h2 style="font-size: 1em; margin-bottom: 10px; color: #92400e; cursor: pointer;" onclick="toggleRegressiveStopContent()">
+                    ⚠️ Regressive Stop Required <span id="regressiveStopToggle">▼</span>
+                </h2>
+                <div id="regressiveStopContent">
+                    <p style="font-size: 0.9em; margin-bottom: 10px; color: #78350f;">You are "Net Long hope" - move these stops to lock in profit!</p>
+                    <div id="regressiveStopList" style="font-size: 0.9em;"></div>
+                    <div id="recoveryProximity" style="font-size: 0.85em; margin-top: 10px; padding-top: 10px; border-top: 1px solid rgba(120, 53, 15, 0.2); color: #78350f;"></div>
+                </div>
             </div>
 
             <div class="card" style="padding: 12px; margin-bottom: 12px;">
@@ -4181,10 +4231,8 @@
             // Display YTD
             const ytdColor = currentYTD >= 0 ? '#10b981' : '#ef4444';
             document.getElementById('ytdDisplay').innerHTML = `<span style="color: ${ytdColor};">${currentYTD >= 0 ? '+' : ''}$${currentYTD.toLocaleString()} (${currentYTDPercent.toFixed(1)}%)</span>`;
-            const realizedPct = currentYTD !== 0 ? ((ytdRealizedDollars / currentYTD) * 100) : 0;
-            const unrealizedPct = currentYTD !== 0 ? ((totalUnrealizedDollars / currentYTD) * 100) : 0;
-            document.getElementById('ytdRealizedPct').textContent = realizedPct.toFixed(0) + '%';
-            document.getElementById('ytdUnrealizedPct').textContent = unrealizedPct.toFixed(0) + '%';
+            document.getElementById('ytdRealizedDollars').textContent = '$' + ytdRealizedDollars.toLocaleString(undefined, {minimumFractionDigits: 0, maximumFractionDigits: 0});
+            document.getElementById('ytdUnrealizedDollars').textContent = '$' + totalUnrealizedDollars.toLocaleString(undefined, {minimumFractionDigits: 0, maximumFractionDigits: 0});
             
             // Display YTD Floor
             const floorColor = ytdFloorDollars >= 0 ? '#10b981' : '#ef4444';
@@ -4372,6 +4420,45 @@
             }
         }
         
+        // Toggle Harvest Calculator content
+        function toggleHarvestCalculatorContent() {
+            const content = document.getElementById('harvestCalculatorContent');
+            const toggle = document.getElementById('harvestCalcToggle');
+            if (content.style.display === 'none') {
+                content.style.display = 'block';
+                toggle.textContent = '▲';
+            } else {
+                content.style.display = 'none';
+                toggle.textContent = '▼';
+            }
+        }
+        
+        // Toggle Regressive Stop content
+        function toggleRegressiveStopContent() {
+            const content = document.getElementById('regressiveStopContent');
+            const toggle = document.getElementById('regressiveStopToggle');
+            if (content.style.display === 'none') {
+                content.style.display = 'block';
+                toggle.textContent = '▲';
+            } else {
+                content.style.display = 'none';
+                toggle.textContent = '▼';
+            }
+        }
+        
+        // Toggle Pick My Own content
+        function togglePickMyOwnContent() {
+            const content = document.getElementById('pickMyOwnContent');
+            const toggle = document.getElementById('pickMyOwnToggle');
+            if (content.style.display === 'none') {
+                content.style.display = 'block';
+                toggle.textContent = '▲';
+            } else {
+                content.style.display = 'none';
+                toggle.textContent = '▼';
+            }
+        }
+        
         // Update Harvest History
         function updateHarvestHistory() {
             const statsEl = document.getElementById('harvestHistoryStats');
@@ -4434,6 +4521,226 @@
             }
         }
 
+        // Pick My Own Harvest Simulator Functions
+        function populatePickPositionDropdown() {
+            const select = document.getElementById('pickPositionSelect');
+            const pickSection = document.getElementById('pickMyOwnHarvest');
+            
+            // Clear existing options except first
+            select.innerHTML = '<option value="">-- Choose a position --</option>';
+            
+            // Group positions by symbol and number them
+            const symbolCounts = {};
+            const positionsWithProfit = [];
+            
+            openPositions.forEach((pos, index) => {
+                const metrics = calculatePositionMetrics(pos);
+                if (metrics.unrealizedPnL > 0) {
+                    // Count how many of this symbol we've seen
+                    if (!symbolCounts[pos.symbol]) {
+                        symbolCounts[pos.symbol] = 0;
+                    }
+                    symbolCounts[pos.symbol]++;
+                    
+                    positionsWithProfit.push({
+                        id: pos.id,
+                        symbol: pos.symbol,
+                        number: symbolCounts[pos.symbol],
+                        shares: pos.shares,
+                        currentPrice: pos.currentPrice,
+                        entryPrice: pos.entryPrice,
+                        unrealizedProfit: metrics.unrealizedPnL,
+                        rMultiple: metrics.initialR
+                    });
+                }
+            });
+            
+            // Show or hide Pick My Own section
+            if (positionsWithProfit.length > 0) {
+                pickSection.style.display = 'block';
+                
+                // Add options to dropdown
+                positionsWithProfit.forEach(pos => {
+                    const displayName = symbolCounts[pos.symbol] > 1 ? 
+                        `${pos.symbol} #${pos.number}` : pos.symbol;
+                    const profitDisplay = `+$${pos.unrealizedProfit.toLocaleString()} (${pos.rMultiple.toFixed(1)}R)`;
+                    const option = document.createElement('option');
+                    option.value = pos.id;
+                    option.textContent = `${displayName} - ${pos.shares} shares - ${profitDisplay}`;
+                    select.appendChild(option);
+                });
+            } else {
+                pickSection.style.display = 'none';
+            }
+        }
+        
+        function updatePickMyOwnPreview() {
+            const select = document.getElementById('pickPositionSelect');
+            const sharesToSell = parseInt(document.getElementById('pickSharesToSell').value) || 0;
+            const previewDiv = document.getElementById('pickMyOwnPreview');
+            const executeBtn = document.getElementById('executePickHarvest');
+            const maxSharesDiv = document.getElementById('pickSharesMax');
+            
+            if (!select.value) {
+                previewDiv.innerHTML = '<em>Select a position and enter shares to see preview...</em>';
+                executeBtn.disabled = true;
+                maxSharesDiv.textContent = 'Max: 0 shares available';
+                document.getElementById('pickSharesToSell').max = 0;
+                return;
+            }
+            
+            // Find selected position
+            const posId = parseInt(select.value);
+            const pos = openPositions.find(p => p.id === posId);
+            if (!pos) {
+                previewDiv.innerHTML = '<em>Position not found</em>';
+                executeBtn.disabled = true;
+                return;
+            }
+            
+            // Update max shares display
+            maxSharesDiv.textContent = `Max: ${pos.shares} shares available`;
+            document.getElementById('pickSharesToSell').max = pos.shares;
+            
+            if (sharesToSell <= 0 || sharesToSell > pos.shares) {
+                previewDiv.innerHTML = '<em style="color: #dc2626;">Enter a valid number of shares (1 to ' + pos.shares + ')</em>';
+                executeBtn.disabled = true;
+                return;
+            }
+            
+            // Calculate current metrics
+            const accountSize = getAccountSize();
+            const startingAccount = parseFloat(document.getElementById('startingAccount').value) || 250000;
+            
+            // Calculate current YTD metrics
+            let currentTotalRealized = 0;
+            closedTrades.forEach(trade => {
+                currentTotalRealized += (trade.portfolioPnlPercent / 100) * accountSize;
+            });
+            
+            let currentTotalUnrealized = 0;
+            let currentTotalPartialRealized = 0;
+            openPositions.forEach(p => {
+                const metrics = calculatePositionMetrics(p);
+                if (metrics.unrealizedPnL > 0) {
+                    currentTotalUnrealized += metrics.unrealizedPnL;
+                }
+                if (p.partialSells && p.partialSells.length > 0) {
+                    p.partialSells.forEach(sell => {
+                        currentTotalPartialRealized += (sell.price - p.entryPrice) * sell.shares;
+                    });
+                }
+            });
+            
+            const currentYTD = accountSize - startingAccount;
+            const currentNetRealized = currentTotalRealized + currentTotalPartialRealized;
+            const currentYTDFloor = currentYTD - currentTotalUnrealized;
+            const currentYTDLosses = Math.abs(Math.min(0, currentNetRealized));
+            const currentYTDProtection = currentYTDLosses > 0 ? currentTotalUnrealized / currentYTDLosses : null;
+            const currentTotalPnL = Math.abs(currentTotalUnrealized + currentNetRealized);
+            const currentUnrealizedRisk = currentTotalPnL > 0 ? (currentTotalUnrealized / currentTotalPnL) * 100 : 0;
+            
+            // Calculate profit from selling these shares
+            const profitFromSale = (pos.currentPrice - pos.entryPrice) * sharesToSell;
+            const pctOfPosition = (sharesToSell / pos.shares) * 100;
+            
+            // Calculate NEW metrics after sale
+            const newTotalRealized = currentNetRealized + profitFromSale;
+            const newTotalUnrealized = currentTotalUnrealized - profitFromSale;
+            const newYTDFloor = currentYTD - newTotalUnrealized;
+            const newYTDLosses = Math.abs(Math.min(0, newTotalRealized));
+            const newYTDProtection = newYTDLosses > 0 ? newTotalUnrealized / newYTDLosses : null;
+            const newTotalPnL = Math.abs(newTotalUnrealized + newTotalRealized);
+            const newUnrealizedRisk = newTotalPnL > 0 ? (newTotalUnrealized / newTotalPnL) * 100 : 0;
+            
+            // Build preview HTML
+            let html = `<div style="line-height: 1.6;">`;
+            html += `<div style="margin-bottom: 8px; font-weight: 600; color: #059669;">✅ Selling ${sharesToSell} shares (${pctOfPosition.toFixed(0)}%) of ${pos.symbol}</div>`;
+            html += `<div style="margin-bottom: 4px;">• <strong>$ Locked In:</strong> $${profitFromSale.toLocaleString(undefined, {minimumFractionDigits: 0, maximumFractionDigits: 0})}</div>`;
+            html += `<div style="margin-bottom: 4px;">• <strong>Shares Remaining:</strong> ${pos.shares - sharesToSell} (${(100 - pctOfPosition).toFixed(0)}%)</div>`;
+            html += `<hr style="margin: 8px 0; border: none; border-top: 1px solid #bae6fd;">`;
+            
+            // YTD Floor comparison
+            const floorChange = newYTDFloor - currentYTDFloor;
+            const floorEmoji = floorChange > 0 ? '✅' : '⚠️';
+            html += `<div style="margin-bottom: 4px;">• <strong>YTD Floor:</strong> $${currentYTDFloor.toLocaleString()} → $${newYTDFloor.toLocaleString()} ${floorEmoji}</div>`;
+            
+            // YTD Protection comparison
+            if (currentYTDProtection !== null && newYTDProtection !== null) {
+                const protChange = newYTDProtection - currentYTDProtection;
+                const protEmoji = protChange < 0 ? '✅' : '⚠️';
+                html += `<div style="margin-bottom: 4px;">• <strong>YTD Protection:</strong> ${currentYTDProtection.toFixed(1)}x → ${newYTDProtection.toFixed(1)}x ${protEmoji}</div>`;
+            } else if (currentYTDProtection !== null && newYTDProtection === null) {
+                html += `<div style="margin-bottom: 4px;">• <strong>YTD Protection:</strong> ${currentYTDProtection.toFixed(1)}x → Clear ✓ ✅</div>`;
+            } else if (currentYTDProtection === null) {
+                html += `<div style="margin-bottom: 4px;">• <strong>YTD Protection:</strong> Clear ✓ (already net positive)</div>`;
+            }
+            
+            // Unrealized Risk comparison
+            const riskChange = newUnrealizedRisk - currentUnrealizedRisk;
+            const riskEmoji = riskChange < 0 ? '✅' : '⚠️';
+            html += `<div style="margin-bottom: 4px;">• <strong>Unrealized Risk:</strong> ${currentUnrealizedRisk.toFixed(0)}% → ${newUnrealizedRisk.toFixed(0)}% ${riskEmoji}</div>`;
+            
+            html += `</div>`;
+            
+            previewDiv.innerHTML = html;
+            executeBtn.disabled = false;
+        }
+        
+        function executePickMyOwnHarvest() {
+            const select = document.getElementById('pickPositionSelect');
+            const sharesToSell = parseInt(document.getElementById('pickSharesToSell').value) || 0;
+            
+            if (!select.value || sharesToSell <= 0) {
+                alert('Please select a position and enter shares to sell');
+                return;
+            }
+            
+            const posId = parseInt(select.value);
+            const pos = openPositions.find(p => p.id === posId);
+            
+            if (!pos || sharesToSell > pos.shares) {
+                alert('Invalid selection or share amount');
+                return;
+            }
+            
+            // Confirm with user
+            const profitFromSale = (pos.currentPrice - pos.entryPrice) * sharesToSell;
+            const pctOfPosition = (sharesToSell / pos.shares) * 100;
+            
+            if (!confirm(`Execute this harvest?\n\n${pos.symbol}: Sell ${sharesToSell} shares (${pctOfPosition.toFixed(0)}%)\nLock in: $${profitFromSale.toLocaleString()}\nRemaining: ${pos.shares - sharesToSell} shares`)) {
+                return;
+            }
+            
+            // Record the partial sell
+            if (!pos.partialSells) pos.partialSells = [];
+            pos.partialSells.push({
+                shares: sharesToSell,
+                price: pos.currentPrice,
+                date: new Date().toISOString().split('T')[0]
+            });
+            
+            // Reduce shares
+            pos.shares -= sharesToSell;
+            
+            // Save and update
+            saveToFirebase();
+            saveDailySnapshot();
+            updateAllDisplays();
+            
+            // Reset the form
+            resetPickMyOwn();
+            
+            alert(`✅ Harvest executed!\n\nSold ${sharesToSell} shares of ${pos.symbol}\nLocked in: $${profitFromSale.toLocaleString()}`);
+        }
+        
+        function resetPickMyOwn() {
+            document.getElementById('pickPositionSelect').value = '';
+            document.getElementById('pickSharesToSell').value = '';
+            document.getElementById('pickMyOwnPreview').innerHTML = '<em>Select a position and enter shares to see preview...</em>';
+            document.getElementById('executePickHarvest').disabled = true;
+        }
+
         // Update all displays
         function updateAllDisplays() {
             updateSafetyDashboard();
@@ -4446,6 +4753,7 @@
             updateAccountStats();
             updateDailyEquityTable();
             updateHarvestHistory();
+            populatePickPositionDropdown();
         }
 
         // What If Calculator Function
