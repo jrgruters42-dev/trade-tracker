@@ -2437,103 +2437,10 @@
             const wifeRothYTD = wifeRothJan1 > 0 ? ((wifeRoth - wifeRothJan1) / wifeRothJan1) * 100 : 0;
             
             // Note: SPY YTD is updated when you click "Update All Prices"
-            
-            // Update Portfolio Summary display elements
-            const closedPnlElement = document.getElementById('closedPnlPercent');
-            if (closedPnlElement) {
-                closedPnlElement.textContent = closedPnlPercent.toFixed(2) + '%';
-                
-                // Color code Closed P&L
-                if (closedPnlPercent > 0) {
-                    closedPnlElement.parentElement.style.background = 'linear-gradient(135deg, #10b981 0%, #059669 100%)';
-                } else if (closedPnlPercent < 0) {
-                    closedPnlElement.parentElement.style.background = 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)';
-                } else {
-                    closedPnlElement.parentElement.style.background = 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)';
-                }
-            }
-            
-            // Update YTD displays
-            const tradingYTDElement = document.getElementById('tradingYTD');
-            const myRothYTDElement = document.getElementById('myRothYTD');
-            const wifeRothYTDElement = document.getElementById('wifeRothYTD');
-            
-            if (tradingYTDElement) tradingYTDElement.textContent = tradingYTD.toFixed(2) + '%';
-            if (myRothYTDElement) myRothYTDElement.textContent = myRothYTD.toFixed(2) + '%';
-            if (wifeRothYTDElement) wifeRothYTDElement.textContent = wifeRothYTD.toFixed(2) + '%';
-            
-            // Color code Trading YTD
-            if (tradingYTDElement) {
-                if (tradingYTD > 0) {
-                    tradingYTDElement.parentElement.style.background = 'linear-gradient(135deg, #10b981 0%, #059669 100%)';
-                } else if (tradingYTD < 0) {
-                    tradingYTDElement.parentElement.style.background = 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)';
-                } else {
-                    tradingYTDElement.parentElement.style.background = 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)';
-                }
-                
-                // Add gold outline if beating SPY
-                const spyYTDText = document.getElementById('spyYTD').textContent;
-                if (spyYTDText && spyYTDText !== '--') {
-                    const spyYTD = parseFloat(spyYTDText.replace('%', ''));
-                    if (!isNaN(spyYTD) && tradingYTD > spyYTD) {
-                        tradingYTDElement.parentElement.style.border = '3px solid #fbbf24'; // Gold border
-                        tradingYTDElement.parentElement.style.boxShadow = '0 0 10px rgba(251, 191, 36, 0.5)'; // Gold glow
-                    } else {
-                        tradingYTDElement.parentElement.style.border = 'none';
-                        tradingYTDElement.parentElement.style.boxShadow = 'none';
-                    }
-                }
-            }
-            
-            // Color code My Roth YTD
-            if (myRothYTDElement) {
-                if (myRothYTD > 0) {
-                    myRothYTDElement.parentElement.style.background = 'linear-gradient(135deg, #10b981 0%, #059669 100%)';
-                } else if (myRothYTD < 0) {
-                    myRothYTDElement.parentElement.style.background = 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)';
-                } else {
-                    myRothYTDElement.parentElement.style.background = 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)';
-                }
-                
-                // Add gold outline if beating SPY
-                const spyYTDText = document.getElementById('spyYTD').textContent;
-                if (spyYTDText && spyYTDText !== '--') {
-                    const spyYTD = parseFloat(spyYTDText.replace('%', ''));
-                    if (!isNaN(spyYTD) && myRothYTD > spyYTD) {
-                        myRothYTDElement.parentElement.style.border = '3px solid #fbbf24'; // Gold border
-                        myRothYTDElement.parentElement.style.boxShadow = '0 0 10px rgba(251, 191, 36, 0.5)'; // Gold glow
-                    } else {
-                        myRothYTDElement.parentElement.style.border = 'none';
-                        myRothYTDElement.parentElement.style.boxShadow = 'none';
-                    }
-                }
-            }
-            
-            // Color code Wife Roth YTD
-            if (wifeRothYTDElement) {
-                if (wifeRothYTD > 0) {
-                    wifeRothYTDElement.parentElement.style.background = 'linear-gradient(135deg, #10b981 0%, #059669 100%)';
-                } else if (wifeRothYTD < 0) {
-                    wifeRothYTDElement.parentElement.style.background = 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)';
-                } else {
-                    wifeRothYTDElement.parentElement.style.background = 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)';
-                }
-                
-                // Add gold outline if beating SPY
-                const spyYTDText = document.getElementById('spyYTD').textContent;
-                if (spyYTDText && spyYTDText !== '--') {
-                    const spyYTD = parseFloat(spyYTDText.replace('%', ''));
-                    if (!isNaN(spyYTD) && wifeRothYTD > spyYTD) {
-                        wifeRothYTDElement.parentElement.style.border = '3px solid #fbbf24'; // Gold border
-                        wifeRothYTDElement.parentElement.style.boxShadow = '0 0 10px rgba(251, 191, 36, 0.5)'; // Gold glow
-                    } else {
-                        wifeRothYTDElement.parentElement.style.border = 'none';
-                        wifeRothYTDElement.parentElement.style.boxShadow = 'none';
-                    }
-                }
-            }
+            // Old stat boxes removed - now using Safety Dashboard and compact stats
         }
+
+        // Update Portfolio Stats
         function updatePortfolioStats() {
             const accountSize = getAccountSize();
             
@@ -2550,92 +2457,13 @@
                 totalPortfolioDrawdown += metrics.portfolioDrawdown;
             });
             
-            // Update values
-            document.getElementById('portfolioExposure').textContent = totalExposure.toFixed(2) + '%';
-            document.getElementById('openPnlPercent').textContent = totalOpenPnl.toFixed(2) + '%';
-            document.getElementById('totalPortfolioRisk').textContent = totalPortfolioRisk.toFixed(2) + '%';
-            document.getElementById('totalPortfolioDrawdown').textContent = totalPortfolioDrawdown.toFixed(2) + '%';
+            // Update values (old stat boxes removed, using compact stats instead)
+            // Portfolio stats now updated via compact display at end of function
             
-            // Calculate closed trade stats for summary
-            if (closedTrades.length > 0) {
-                const stats = calculateTradeStats(closedTrades);
-                document.getElementById('avgWLRatio').textContent = stats.wlRatio.toFixed(2);
-                document.getElementById('avgRMultiple').textContent = stats.avgR.toFixed(2) + 'R';
-                
-                // Color code Avg W/L Ratio (>= 2 is green, < 2 is red)
-                const avgWLElement = document.getElementById('avgWLRatio');
-                if (stats.wlRatio >= 2) {
-                    avgWLElement.parentElement.style.background = 'linear-gradient(135deg, #10b981 0%, #059669 100%)';
-                } else {
-                    avgWLElement.parentElement.style.background = 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)';
-                }
-                
-                // Color code Avg R Multiple (>= 3 is green, < 3 is red)
-                const avgRElement = document.getElementById('avgRMultiple');
-                if (stats.avgR >= 3) {
-                    avgRElement.parentElement.style.background = 'linear-gradient(135deg, #10b981 0%, #059669 100%)';
-                } else {
-                    avgRElement.parentElement.style.background = 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)';
-                }
-            } else {
-                document.getElementById('avgWLRatio').textContent = '0.00';
-                document.getElementById('avgRMultiple').textContent = '0.00R';
-                document.getElementById('avgWLRatio').parentElement.style.background = 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)';
-                document.getElementById('avgRMultiple').parentElement.style.background = 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)';
-            }
+            // Calculate closed trade stats for summary (stats removed from old boxes, now in compact stats)
             
-            // Color code Exposure (neutral)
-            const exposureElement = document.getElementById('portfolioExposure');
-            exposureElement.parentElement.style.background = 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)';
-            
-            // Color code Total Portfolio Risk (>= 3% red, 2-3% yellow, < 2% green)
-            const riskElement = document.getElementById('totalPortfolioRisk');
-            if (totalPortfolioRisk >= 3) {
-                riskElement.parentElement.style.background = 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)';
-            } else if (totalPortfolioRisk >= 2) {
-                riskElement.parentElement.style.background = 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)';
-            } else {
-                riskElement.parentElement.style.background = 'linear-gradient(135deg, #10b981 0%, #059669 100%)';
-            }
-            
-            // Color code Total Drawdown (>= 5% red, < 5% green)
-            const drawdownElement = document.getElementById('totalPortfolioDrawdown');
-            if (totalPortfolioDrawdown >= 5) {
-                drawdownElement.parentElement.style.background = 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)';
-            } else {
-                drawdownElement.parentElement.style.background = 'linear-gradient(135deg, #10b981 0%, #059669 100%)';
-            }
-
-            // Color code Open P&L
-            const pnlElement = document.getElementById('openPnlPercent');
-            if (totalOpenPnl > 0) {
-                pnlElement.parentElement.style.background = 'linear-gradient(135deg, #10b981 0%, #059669 100%)';
-            } else if (totalOpenPnl < 0) {
-                pnlElement.parentElement.style.background = 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)';
-            } else {
-                pnlElement.parentElement.style.background = 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)';
-            }
-            
-            // Calculate Cash Available (Account Size - Total Exposure in dollars)
-            const exposureDollars = (totalExposure / 100) * accountSize;
-            const cashAvailable = accountSize - exposureDollars;
-            const cashEl = document.getElementById('cashAvailable');
-            if (cashEl) {
-                cashEl.textContent = '$' + cashAvailable.toLocaleString(undefined, {minimumFractionDigits: 0, maximumFractionDigits: 0});
-            }
-            
-            // Calculate If All Stop Out (current account value if all positions hit their stops)
-            let totalStopOutLoss = 0;
-            openPositions.forEach(pos => {
-                const metrics = calculatePositionMetrics(pos);
-                const riskDollars = metrics.riskDollars || ((metrics.adjustedPrice - pos.currentStop) * pos.shares);
-                totalStopOutLoss += riskDollars;
-            });
-            const accountIfStopOut = accountSize - totalStopOutLoss;
-            const stopOutEl = document.getElementById('ifAllStopOut');
-            if (stopOutEl) {
-                stopOutEl.textContent = '$' + accountIfStopOut.toLocaleString(undefined, {minimumFractionDigits: 0, maximumFractionDigits: 0});
-            }
+            // Regressive Stop Alert and Recovery Status calculations
+            // (Old stat box color coding removed - using compact stats now)
             
             // Calculate Expectancy: (Win Rate × Average Win R) - (Loss Rate × Average Loss R)
             if (closedTrades.length > 0) {
@@ -4988,6 +4816,11 @@
                         updateSPYPrice();
                     }
                 }, 2000);
+                
+                // Initialize What If Calculator with default values
+                setTimeout(() => {
+                    calculateWhatIf();
+                }, 500);
             }
         };
     </script>
