@@ -685,8 +685,8 @@
                             <div style="font-size: 1.1em; font-weight: 700;" id="ytdFloor">$0 (0.0%)</div>
                         </div>
                         
-                        <div style="cursor: help;" id="ytdProtectionContainer" title="LONG-TERM: How many times your unrealized profit could cover your YTD net losses (all trades since Jan 1). >3.0x = Harvest now. Compare with Recent Recovery (short-term, last N trades) to see if things are improving or getting worse.">
-                            <div style="font-size: 0.65em; opacity: 0.7;" id="ytdProtectionLabel">YTD Protection</div>
+                        <div style="cursor: help;" title="LONG-TERM: How many times your unrealized profit could cover your YTD net losses (all trades since Jan 1). >3.0x = Harvest now. Compare with Recent Recovery (short-term, last N trades) to see if things are improving or getting worse.">
+                            <div style="font-size: 0.65em; opacity: 0.7;">YTD Protection</div>
                             <div style="font-size: 1.1em; font-weight: 700;" id="ytdProtection">--</div>
                         </div>
                         
@@ -4329,30 +4329,11 @@
             const floorColor = ytdFloorDollars >= 0 ? '#10b981' : '#ef4444';
             document.getElementById('ytdFloor').innerHTML = `<span style="color: ${floorColor};">${ytdFloorDollars >= 0 ? '+' : ''}$${ytdFloorDollars.toLocaleString()} (${ytdFloorPercent.toFixed(1)}%)</span>`;
             
-            // Display YTD Protection or Path to Breakeven
-            const ytdProtectionLabel = document.getElementById('ytdProtectionLabel');
-            const ytdProtectionContainer = document.getElementById('ytdProtectionContainer');
-            
+            // Display YTD Protection
             if (ytdProtection !== null) {
-                // Net Realized is negative - show Path to Breakeven instead
-                ytdProtectionLabel.textContent = 'Realized profits are negative, Path to Breakeven:';
-                ytdProtectionContainer.title = 'Realized profits are negative. Shows how much more you need to recover to reach $0 net realized. Lower is better! Once you hit $0, this will change to YTD Protection.';
-                
-                // Calculate progress
-                const totalToRecover = ytdLosses;
-                const alreadyRecovered = totalToRecover - Math.abs(netRealizedYTD);
-                const progressPct = totalToRecover > 0 ? (alreadyRecovered / totalToRecover) * 100 : 0;
-                
-                document.getElementById('ytdProtection').innerHTML = `
-                    <div style="font-size: 0.9em; line-height: 1.4;">
-                        <div style="color: #0369a1; font-size: 0.95em; font-weight: 700;">Remaining: $${Math.abs(netRealizedYTD).toLocaleString()}</div>
-                        <div style="color: #059669; font-size: 0.85em;">Progress: ${progressPct.toFixed(1)}%</div>
-                    </div>
-                `;
+                const protColor = ytdProtection > 3.0 ? '#ef4444' : ytdProtection > 2.0 ? '#f59e0b' : '#10b981';
+                document.getElementById('ytdProtection').innerHTML = `<span style="color: ${protColor};">${ytdProtection.toFixed(1)}x</span>`;
             } else {
-                // Net Realized is positive - show normal YTD Protection
-                ytdProtectionLabel.textContent = 'YTD Protection';
-                ytdProtectionContainer.title = 'LONG-TERM: How many times your unrealized profit could cover your YTD net losses (all trades since Jan 1). >3.0x = Harvest now. Compare with Recent Recovery (short-term, last N trades) to see if things are improving or getting worse.';
                 document.getElementById('ytdProtection').innerHTML = '<span style="color: #10b981;">Clear ✓</span>';
             }
             
