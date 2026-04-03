@@ -5503,10 +5503,153 @@
             html += `</tbody></table></div>
             <div style="margin-top:10px; padding:8px; background:#f8fafc; border-radius:6px; font-size:0.78em; color:#6b7280;">
                 📌 <strong>Target distribution</strong> assumes 40% win rate. Vertical black lines = target %. Colored bars = actual. 
-                Focus on getting losses to < -1R avg, growing the 5-10R bucket, and keeping homeruns alive with trailing stops.
+                Focus on getting losses to &lt;-1R avg, growing the 2-10R bucket, and keeping homeruns alive with trailing stops.
+            </div>
+
+            <!-- Target Expectancy Calculator -->
+            <div style="margin-top:20px; padding:18px; background:linear-gradient(135deg,#eff6ff 0%,#dbeafe 100%); border-radius:10px; border:2px solid #3b82f6;">
+                <h3 style="margin:0 0 4px 0; color:#1e40af; font-size:1em;">🧮 "If I Hit My Targets — What Would I Make?"</h3>
+                <p style="margin:0 0 14px 0; font-size:0.8em; color:#3730a3;">Adjust avg R per bucket and trades/month to model your upside. Pre-filled with your target distribution.</p>
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:20px;">
+                    <div>
+                        <div style="font-weight:700; font-size:0.85em; color:#1e40af; margin-bottom:8px;">Avg R per Bucket</div>
+                        <div style="display:grid; gap:7px;">
+                            <div style="display:grid; grid-template-columns:1fr auto; align-items:center; gap:8px; padding:6px 10px; background:white; border-radius:6px; border-left:4px solid #dc2626;">
+                                <div><div style="font-size:0.82em; font-weight:600; color:#dc2626;">Loss/Scratch — 60% of trades</div><div style="font-size:0.72em; color:#888;">avg loss per loser</div></div>
+                                <div style="display:flex; align-items:center; gap:4px;"><input type="number" id="distAvgLoss" value="-1.0" step="0.1" max="0" style="width:70px; padding:4px 6px; font-size:0.9em; border:2px solid #fca5a5; border-radius:4px; text-align:center;" oninput="calcTargetExpectancy()"><span style="font-size:0.8em; color:#888;">R</span></div>
+                            </div>
+                            <div style="display:grid; grid-template-columns:1fr auto; align-items:center; gap:8px; padding:6px 10px; background:white; border-radius:6px; border-left:4px solid #fbbf24;">
+                                <div><div style="font-size:0.82em; font-weight:600; color:#d97706;">Small Win — 15% of trades</div><div style="font-size:0.72em; color:#888;">0–2R range</div></div>
+                                <div style="display:flex; align-items:center; gap:4px;"><input type="number" id="distAvgSmall" value="1.5" step="0.1" min="0" max="2" style="width:70px; padding:4px 6px; font-size:0.9em; border:2px solid #fde68a; border-radius:4px; text-align:center;" oninput="calcTargetExpectancy()"><span style="font-size:0.8em; color:#888;">R</span></div>
+                            </div>
+                            <div style="display:grid; grid-template-columns:1fr auto; align-items:center; gap:8px; padding:6px 10px; background:white; border-radius:6px; border-left:4px solid #10b981;">
+                                <div><div style="font-size:0.82em; font-weight:600; color:#065f46;">Solid Win — 15% of trades</div><div style="font-size:0.72em; color:#888;">2–10R range</div></div>
+                                <div style="display:flex; align-items:center; gap:4px;"><input type="number" id="distAvgSolid" value="5.0" step="0.5" min="2" max="10" style="width:70px; padding:4px 6px; font-size:0.9em; border:2px solid #6ee7b7; border-radius:4px; text-align:center;" oninput="calcTargetExpectancy()"><span style="font-size:0.8em; color:#888;">R</span></div>
+                            </div>
+                            <div style="display:grid; grid-template-columns:1fr auto; align-items:center; gap:8px; padding:6px 10px; background:white; border-radius:6px; border-left:4px solid #3b82f6;">
+                                <div><div style="font-size:0.82em; font-weight:600; color:#1e40af;">Strong Win — 5% of trades</div><div style="font-size:0.72em; color:#888;">10–20R range</div></div>
+                                <div style="display:flex; align-items:center; gap:4px;"><input type="number" id="distAvgStrong" value="14.0" step="1" min="10" max="20" style="width:70px; padding:4px 6px; font-size:0.9em; border:2px solid #93c5fd; border-radius:4px; text-align:center;" oninput="calcTargetExpectancy()"><span style="font-size:0.8em; color:#888;">R</span></div>
+                            </div>
+                            <div style="display:grid; grid-template-columns:1fr auto; align-items:center; gap:8px; padding:6px 10px; background:white; border-radius:6px; border-left:4px solid #7c3aed;">
+                                <div><div style="font-size:0.82em; font-weight:600; color:#4c1d95;">Homerun — 5% of trades</div><div style="font-size:0.72em; color:#888;">20R+ range</div></div>
+                                <div style="display:flex; align-items:center; gap:4px;"><input type="number" id="distAvgHomerun" value="35.0" step="5" min="20" style="width:70px; padding:4px 6px; font-size:0.9em; border:2px solid #c4b5fd; border-radius:4px; text-align:center;" oninput="calcTargetExpectancy()"><span style="font-size:0.8em; color:#888;">R</span></div>
+                            </div>
+                        </div>
+                        <div style="margin-top:10px; display:grid; grid-template-columns:1fr 1fr; gap:8px;">
+                            <div style="padding:8px; background:white; border-radius:6px; border:1px solid #dbeafe;">
+                                <div style="font-size:0.75em; color:#666; margin-bottom:3px;">Trades / Month</div>
+                                <input type="number" id="distTradesMonth" value="10" step="1" min="1" style="width:100%; padding:5px; font-size:1em; border:2px solid #bfdbfe; border-radius:4px; text-align:center; font-weight:700;" oninput="calcTargetExpectancy()">
+                            </div>
+                            <div style="padding:8px; background:white; border-radius:6px; border:1px solid #dbeafe;">
+                                <div style="font-size:0.75em; color:#666; margin-bottom:3px;">Risk % / Trade</div>
+                                <input type="number" id="distRiskPct" value="0.5" step="0.125" min="0.1" style="width:100%; padding:5px; font-size:1em; border:2px solid #bfdbfe; border-radius:4px; text-align:center; font-weight:700;" oninput="calcTargetExpectancy()">
+                            </div>
+                        </div>
+                    </div>
+                    <div id="distExpectancyResults"></div>
+                </div>
             </div>`;
 
             container.innerHTML = html;
+            // Run the calculator once the DOM is ready
+            setTimeout(calcTargetExpectancy, 50);
+        }
+
+        function calcTargetExpectancy() {
+            const results = document.getElementById('distExpectancyResults');
+            if (!results) return;
+
+            const avgLoss    = parseFloat(document.getElementById('distAvgLoss')?.value)     || -1.0;
+            const avgSmall   = parseFloat(document.getElementById('distAvgSmall')?.value)    || 1.5;
+            const avgSolid   = parseFloat(document.getElementById('distAvgSolid')?.value)    || 5.0;
+            const avgStrong  = parseFloat(document.getElementById('distAvgStrong')?.value)   || 14.0;
+            const avgHomerun = parseFloat(document.getElementById('distAvgHomerun')?.value)  || 35.0;
+            const tradesMonth = parseFloat(document.getElementById('distTradesMonth')?.value) || 10;
+            const riskPct     = parseFloat(document.getElementById('distRiskPct')?.value)     || 0.5;
+
+            // Target weights
+            const wLoss = 0.60, wSmall = 0.15, wSolid = 0.15, wStrong = 0.05, wHomerun = 0.05;
+
+            // Expectancy per trade
+            const expectancy = (wLoss * avgLoss) + (wSmall * avgSmall) + (wSolid * avgSolid) + (wStrong * avgStrong) + (wHomerun * avgHomerun);
+
+            // Gain per trade as % of portfolio
+            const gainPerTrade = expectancy * riskPct; // %
+
+            // Monthly & annual
+            const monthlyGain = gainPerTrade * tradesMonth;
+            const annualGain  = monthlyGain * 12;
+
+            // Compounded annual (compound monthly)
+            const compoundedAnnual = (Math.pow(1 + monthlyGain / 100, 12) - 1) * 100;
+
+            // Show breakdown
+            const expColor = expectancy > 0 ? '#1e40af' : '#dc2626';
+
+            // Projection table at different risk levels
+            const riskLevels = [0.125, 0.25, 0.5, 0.75, 1.0];
+
+            results.innerHTML = `
+                <!-- Expectancy breakdown -->
+                <div style="padding:14px; background:white; border-radius:8px; border:2px solid #3b82f6; margin-bottom:10px;">
+                    <div style="font-size:0.78em; color:#6b7280; margin-bottom:4px; text-transform:uppercase; letter-spacing:0.5px;">Expectancy per Trade</div>
+                    <div style="font-size:2.4em; font-weight:800; color:${expColor};">${expectancy.toFixed(2)}R</div>
+                    <div style="font-size:0.75em; color:#888; margin-top:4px; line-height:1.6;">
+                        = (60%×${avgLoss}R) + (15%×${avgSmall}R) + (15%×${avgSolid}R) + (5%×${avgStrong}R) + (5%×${avgHomerun}R)
+                    </div>
+                </div>
+
+                <!-- At current risk setting -->
+                <div style="padding:12px; background:white; border-radius:8px; border:1px solid #bfdbfe; margin-bottom:10px;">
+                    <div style="font-size:0.78em; color:#6b7280; margin-bottom:6px; font-weight:600;">At ${riskPct}% Risk — ${tradesMonth} trades/month</div>
+                    <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px; text-align:center;">
+                        <div>
+                            <div style="font-size:0.7em; color:#888;">Per Trade</div>
+                            <div style="font-size:1.2em; font-weight:700; color:#1d4ed8;">${gainPerTrade.toFixed(3)}%</div>
+                        </div>
+                        <div>
+                            <div style="font-size:0.7em; color:#888;">Monthly</div>
+                            <div style="font-size:1.2em; font-weight:700; color:#059669;">${monthlyGain.toFixed(1)}%</div>
+                        </div>
+                        <div>
+                            <div style="font-size:0.7em; color:#888;">Annual (simple)</div>
+                            <div style="font-size:1.2em; font-weight:700; color:#7c3aed;">${annualGain.toFixed(1)}%</div>
+                        </div>
+                    </div>
+                    <div style="margin-top:8px; padding-top:8px; border-top:1px solid #e5e7eb; text-align:center;">
+                        <div style="font-size:0.7em; color:#888;">Compounded Annual</div>
+                        <div style="font-size:1.6em; font-weight:800; color:#059669;">${compoundedAnnual.toFixed(1)}%</div>
+                    </div>
+                </div>
+
+                <!-- Risk ladder -->
+                <div style="padding:12px; background:white; border-radius:8px; border:1px solid #bfdbfe;">
+                    <div style="font-size:0.78em; color:#6b7280; margin-bottom:8px; font-weight:600;">Annual Gain at Different Risk Levels (${tradesMonth} trades/mo, compounded)</div>
+                    <table style="width:100%; font-size:0.82em; border-collapse:collapse;">
+                        <thead><tr style="background:#eff6ff;">
+                            <th style="padding:5px 8px; text-align:left; color:#374151;">Risk %</th>
+                            <th style="padding:5px 8px; text-align:right; color:#374151;">Monthly</th>
+                            <th style="padding:5px 8px; text-align:right; color:#374151;">Annual Simple</th>
+                            <th style="padding:5px 8px; text-align:right; color:#374151;">Annual Compounded</th>
+                        </tr></thead>
+                        <tbody>
+                        ${riskLevels.map(r => {
+                            const mo = expectancy * r * tradesMonth;
+                            const ann = mo * 12;
+                            const comp = (Math.pow(1 + mo/100, 12) - 1) * 100;
+                            const isCurrent = Math.abs(r - riskPct) < 0.001;
+                            const rowStyle = isCurrent ? 'background:#dbeafe; font-weight:700;' : '';
+                            return `<tr style="${rowStyle}">
+                                <td style="padding:5px 8px;">${r}% ${isCurrent ? '← current' : ''}</td>
+                                <td style="padding:5px 8px; text-align:right; color:#059669;">${mo.toFixed(2)}%</td>
+                                <td style="padding:5px 8px; text-align:right; color:#374151;">${ann.toFixed(1)}%</td>
+                                <td style="padding:5px 8px; text-align:right; color:#7c3aed; font-weight:700;">${comp.toFixed(1)}%</td>
+                            </tr>`;
+                        }).join('')}
+                        </tbody>
+                    </table>
+                </div>
+            `;
         }
         
         // Update Strategy Rules Tab
