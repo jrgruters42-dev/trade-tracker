@@ -756,17 +756,17 @@
                         <div style="font-size: 0.65em; opacity: 0.7;">Win Rate</div>
                         <div style="font-size: 1em; font-weight: 600;" id="winRateCompact">0%</div>
                     </div>
-                    <div style="cursor: help; text-align: center;" title="Average gain % on winning trades">
-                        <div style="font-size: 0.65em; opacity: 0.7;">Avg Gain</div>
-                        <div style="font-size: 1em; font-weight: 600;" id="avgGainCompact">0%</div>
+                    <div style="cursor: help; text-align: center;" title="Average R-multiple on winning trades">
+                        <div style="font-size: 0.65em; opacity: 0.7;">Avg Win</div>
+                        <div style="font-size: 1em; font-weight: 600; color: #059669;" id="avgGainCompact">0R</div>
                     </div>
-                    <div style="cursor: help; text-align: center;" title="Average loss % on losing trades">
+                    <div style="cursor: help; text-align: center;" title="Average R-multiple on losing trades">
                         <div style="font-size: 0.65em; opacity: 0.7;">Avg Loss</div>
-                        <div style="font-size: 1em; font-weight: 600;" id="avgLossCompact">0%</div>
+                        <div style="font-size: 1em; font-weight: 600; color: #dc2626;" id="avgLossCompact">0R</div>
                     </div>
-                    <div style="cursor: help; text-align: center;" title="Expected % return per trade: (Win Rate × Avg Gain) - (Loss Rate × Avg Loss)">
-                        <div style="font-size: 0.65em; opacity: 0.7;">Expectancy %</div>
-                        <div style="font-size: 1em; font-weight: 600;" id="expectancyPctCompact">0%</div>
+                    <div style="cursor: help; text-align: center;" title="Expected R-multiple per trade: (Win Rate × Avg Win R) - (Loss Rate × Avg Loss R)">
+                        <div style="font-size: 0.65em; opacity: 0.7;">Expectancy</div>
+                        <div style="font-size: 1em; font-weight: 600;" id="expectancyPctCompact">0R</div>
                     </div>
                 </div>
             </div>
@@ -1160,17 +1160,17 @@
         <!-- What If Calculator Tab -->
         <div id="what-if-calc" class="tab-content">
             <div class="card">
-                <h2 style="margin-bottom: 15px;">"What If Scenarios" - How Many Trades to Hit My Goals</h2>
-                <p style="margin-bottom: 20px; opacity: 0.8;">Based on current performance stats</p>
+                <h2 style="margin-bottom: 15px;">"What If Scenarios" - Distribution-Based Expectancy (R-Multiples)</h2>
+                <p style="margin-bottom: 20px; opacity: 0.8;">Model your actual win/loss distribution to get accurate projections. Test different strategies!</p>
                 
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 30px;">
                     <!-- Inputs Column -->
                     <div>
-                        <h3 style="margin-bottom: 15px; color: #667eea;">Inputs (use your stats)</h3>
+                        <h3 style="margin-bottom: 15px; color: #667eea;">Inputs</h3>
                         
                         <div class="form-group">
                             <label>Starting Portfolio ($)</label>
-                            <input type="number" id="whatIfStarting" value="100000" oninput="calculateWhatIf()">
+                            <input type="number" id="whatIfStarting" value="248000" oninput="calculateWhatIf()">
                         </div>
                         
                         <div class="form-group">
@@ -1179,28 +1179,76 @@
                         </div>
                         
                         <div class="form-group">
-                            <label>Average Stop Distance (%)</label>
-                            <input type="number" id="whatIfAvgStop" value="3.5" step="0.1" oninput="calculateWhatIf()">
-                            <div style="font-size: 0.75em; opacity: 0.7; margin-top: 4px;">Typical stop from entry (e.g., 3.5% = stops usually 3.5% below entry)</div>
-                        </div>
-                        
-                        <div class="form-group">
                             <label>Win Rate (%)</label>
-                            <input type="number" id="whatIfWinRate" value="90" step="1" oninput="calculateWhatIf()">
+                            <input type="number" id="whatIfWinRate" value="35" step="1" oninput="calculateWhatIf()">
+                        </div>
+                        
+                        <!-- WIN DISTRIBUTION -->
+                        <div style="background: #f0f9ff; padding: 12px; border-radius: 6px; margin-bottom: 15px;">
+                            <div style="font-weight: 600; margin-bottom: 10px; color: #0369a1;">Win Distribution (must = 100%)</div>
+                            
+                            <div class="form-group" style="margin-bottom: 10px;">
+                                <label style="font-size: 0.9em;">Small Win (1-2R) %</label>
+                                <input type="number" id="whatIfSmallWin" value="30" step="5" min="0" max="100" oninput="calculateWhatIf(); updateWinDistributionBars()">
+                                <div style="font-size: 0.75em; color: #666; margin-top: 2px;">Quick base hits, early exits</div>
+                            </div>
+                            
+                            <div class="form-group" style="margin-bottom: 10px;">
+                                <label style="font-size: 0.9em;">Medium Win (3-5R) %</label>
+                                <input type="number" id="whatIfMediumWin" value="30" step="5" min="0" max="100" oninput="calculateWhatIf(); updateWinDistributionBars()">
+                                <div style="font-size: 0.75em; color: #666; margin-top: 2px;">Solid trend followers</div>
+                            </div>
+                            
+                            <div class="form-group" style="margin-bottom: 10px;">
+                                <label style="font-size: 0.9em;">Large Win (6-10R) %</label>
+                                <input type="number" id="whatIfLargeWin" value="35" step="5" min="0" max="100" oninput="calculateWhatIf(); updateWinDistributionBars()">
+                                <div style="font-size: 0.75em; color: #666; margin-top: 2px;">Extended strong moves</div>
+                            </div>
+                            
+                            <div class="form-group" style="margin-bottom: 8px;">
+                                <label style="font-size: 0.9em;">Home Run (15-30R) %</label>
+                                <input type="number" id="whatIfHomeRun" value="5" step="5" min="0" max="100" oninput="calculateWhatIf(); updateWinDistributionBars()">
+                                <div style="font-size: 0.75em; color: #666; margin-top: 2px;">Monster winners</div>
+                            </div>
+                            
+                            <div id="winDistributionBars" style="margin-top: 10px; font-size: 0.85em;">
+                                <div style="font-weight: 600; margin-bottom: 4px;">Visual (each ■ = 10%):</div>
+                                <div id="winBarsDisplay"></div>
+                            </div>
+                            
+                            <div style="margin-top: 8px; font-weight: 600; color: #0369a1;">
+                                Total: <span id="winDistTotal">100</span>% <span id="winDistCheck"></span>
+                            </div>
+                        </div>
+                        
+                        <!-- LOSS DISTRIBUTION -->
+                        <div style="background: #fee2e2; padding: 12px; border-radius: 6px; margin-bottom: 15px;">
+                            <div style="font-weight: 600; margin-bottom: 10px; color: #dc2626;">Loss Distribution (must = 100%)</div>
+                            
+                            <div class="form-group" style="margin-bottom: 10px;">
+                                <label style="font-size: 0.9em;">Normal Loss (-1R) %</label>
+                                <input type="number" id="whatIfNormalLoss" value="95" step="5" min="0" max="100" oninput="calculateWhatIf(); updateLossDistributionBars()">
+                                <div style="font-size: 0.75em; color: #666; margin-top: 2px;">Clean stop-outs</div>
+                            </div>
+                            
+                            <div class="form-group" style="margin-bottom: 8px;">
+                                <label style="font-size: 0.9em;">Bad Loss (-2R) %</label>
+                                <input type="number" id="whatIfBadLoss" value="5" step="5" min="0" max="100" oninput="calculateWhatIf(); updateLossDistributionBars()">
+                                <div style="font-size: 0.75em; color: #666; margin-top: 2px;">Gap downs, disasters</div>
+                            </div>
+                            
+                            <div id="lossDistributionBars" style="margin-top: 10px; font-size: 0.85em;">
+                                <div style="font-weight: 600; margin-bottom: 4px;">Visual (each ■ = 10%):</div>
+                                <div id="lossBarsDisplay"></div>
+                            </div>
+                            
+                            <div style="margin-top: 8px; font-weight: 600; color: #dc2626;">
+                                Total: <span id="lossDistTotal">100</span>% <span id="lossDistCheck"></span>
+                            </div>
                         </div>
                         
                         <div class="form-group">
-                            <label>Average Gain (on position %)</label>
-                            <input type="number" id="whatIfAvgGain" value="6.8" step="0.1" oninput="calculateWhatIf()">
-                        </div>
-                        
-                        <div class="form-group">
-                            <label>Average Loss (on position %)</label>
-                            <input type="number" id="whatIfAvgLoss" value="3.4" step="0.1" oninput="calculateWhatIf()">
-                        </div>
-                        
-                        <div class="form-group">
-                            <label>Trades per Month (typical)</label>
+                            <label>Trades per Month</label>
                             <input type="number" id="whatIfTradesPerMonth" value="10" oninput="calculateWhatIf()">
                         </div>
                         
@@ -1215,65 +1263,47 @@
                         <h3 style="margin-bottom: 15px; color: #10b981;">Results <span style="font-size: 0.7em; opacity: 0.7;">(live updates)</span></h3>
                         
                         <div style="background: #f0f9ff; padding: 15px; border-radius: 8px; margin-bottom: 15px;">
-                            <div style="font-weight: 600; margin-bottom: 8px;">Expectancy per Trade</div>
-                            <div style="font-size: 0.85em; opacity: 0.8; margin-bottom: 4px;">E = p×g - (1-p)×l</div>
+                            <div style="font-weight: 600; margin-bottom: 8px;">Weighted Expectancy</div>
                             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 8px;">
                                 <div>
-                                    <div style="font-size: 0.75em; opacity: 0.7;">Portfolio edge (1E)</div>
-                                    <div style="font-weight: 700; font-size: 1.2em; color: #059669;" id="whatIfEdge">0.52%</div>
+                                    <div style="font-size: 0.75em; opacity: 0.7;">Avg Win R</div>
+                                    <div style="font-weight: 700; font-size: 1.2em; color: #059669;" id="whatIfAvgWinR">0.00R</div>
                                 </div>
                                 <div>
-                                    <div style="font-size: 0.75em; opacity: 0.7;">Growth factor</div>
-                                    <div style="font-weight: 700; font-size: 1.2em;" id="whatIfGrowth">1.005202</div>
+                                    <div style="font-size: 0.75em; opacity: 0.7;">Avg Loss R</div>
+                                    <div style="font-weight: 700; font-size: 1.2em; color: #dc2626;" id="whatIfAvgLossR">0.00R</div>
+                                </div>
+                            </div>
+                            <div style="margin-top: 10px; padding-top: 10px; border-top: 1px solid #bae6fd;">
+                                <div style="font-size: 0.75em; opacity: 0.7;">Expectancy per Trade</div>
+                                <div style="font-weight: 700; font-size: 1.4em; color: #0369a1;" id="whatIfExpectancyR">0.00R</div>
+                                <div style="font-size: 0.85em; opacity: 0.8; margin-top: 4px;">
+                                    <span id="whatIfExpectancyPct">0.00%</span> of portfolio per trade
                                 </div>
                             </div>
                         </div>
                         
-                        <div style="background: white; padding: 15px; border: 2px solid #e5e7eb; border-radius: 8px; margin-bottom: 15px;">
-                            <div style="font-weight: 600; margin-bottom: 8px;">Calculated Position Size</div>
-                            <div style="font-size: 0.75em; opacity: 0.7; margin-bottom: 4px;">Risk % ÷ Stop % = Position %</div>
-                            <div style="font-weight: 700; font-size: 1.3em; color: #667eea;" id="whatIfPosValue">$9,000.00 (9.0%)</div>
-                        </div>
-                        
                         <div style="background: #fef3c7; padding: 15px; border-radius: 8px; margin-bottom: 15px;">
                             <div style="font-weight: 600; margin-bottom: 8px;">$ per trade (expected)</div>
-                            <div style="font-weight: 700; font-size: 1.3em; color: #d97706;" id="whatIfPerTrade">$520.20</div>
+                            <div style="font-weight: 700; font-size: 1.3em; color: #d97706;" id="whatIfPerTrade">$0.00</div>
                         </div>
                         
                         <div style="background: #fee2e2; padding: 15px; border-radius: 8px; margin-bottom: 15px;">
                             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
                                 <div>
                                     <div style="font-size: 0.75em; opacity: 0.7;">Trades needed</div>
-                                    <div style="font-weight: 700; font-size: 1.5em; color: #dc2626;" id="whatIfTradesNeeded">97</div>
+                                    <div style="font-weight: 700; font-size: 1.5em; color: #dc2626;" id="whatIfTradesNeeded">0</div>
                                 </div>
                                 <div>
-                                    <div style="font-size: 0.75em; opacity: 0.7;">Months (÷ trades ÷ trades/mo)</div>
-                                    <div style="font-weight: 700; font-size: 1.5em; color: #dc2626;" id="whatIfMonths">9.7</div>
+                                    <div style="font-size: 0.75em; opacity: 0.7;">Months to Goal</div>
+                                    <div style="font-weight: 700; font-size: 1.5em; color: #dc2626;" id="whatIfMonths">0.0</div>
                                 </div>
                             </div>
                         </div>
                         
                         <div style="background: #f3f4f6; padding: 10px; border-radius: 8px; font-size: 0.85em;">
                             <div style="font-weight: 600; margin-bottom: 4px;">Goal recap:</div>
-                            <div id="whatIfRecap">$50,000.00 required (50.00% of starting) → Target: $150,000.00</div>
-                        </div>
-                        
-                        <div style="margin-top: 15px; padding: 10px; background: white; border: 1px solid #e5e7eb; border-radius: 8px;">
-                            <div style="font-weight: 600; margin-bottom: 8px; font-size: 0.9em;">Trade breakdown - per-trade amounts</div>
-                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-size: 0.8em;">
-                                <div>Avg $ gain on winning trades: <strong id="whatIfAvgWin">$612.00</strong></div>
-                                <div># winning trades: <strong id="whatIfNumWins">87</strong></div>
-                                <div>Avg $ loss on losing trades: <strong id="whatIfAvgLoss">$306.00</strong></div>
-                                <div># losing trades: <strong id="whatIfNumLosses">10</strong></div>
-                            </div>
-                        </div>
-                        
-                        <div style="margin-top: 10px; padding: 10px; background: white; border: 1px solid #e5e7eb; border-radius: 8px;">
-                            <div style="font-weight: 600; margin-bottom: 8px; font-size: 0.9em;">Trade breakdown - ratios</div>
-                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-size: 0.8em;">
-                                <div>Gain/Loss ratio (non-adjusted): <strong id="whatIfGLRatio">2.00</strong></div>
-                                <div>Gain/Loss ratio (adjusted): <strong id="whatIfGLRatioAdj">18.00</strong></div>
-                            </div>
+                            <div id="whatIfRecap">$0 required</div>
                         </div>
                     </div>
                 </div>
@@ -3061,38 +3091,38 @@
             if (closedTrades.length > 0) {
                 let winCount = 0;
                 let lossCount = 0;
-                let totalGainPct = 0;
-                let totalLossPct = 0;
+                let totalGainR = 0;
+                let totalLossR = 0;
                 
                 closedTrades.forEach(trade => {
-                    if (trade.portfolioPnlPercent > 0) {
+                    if (trade.rMultiple > 0) {
                         winCount++;
-                        totalGainPct += trade.portfolioPnlPercent;
-                    } else if (trade.portfolioPnlPercent < 0) {
+                        totalGainR += trade.rMultiple;
+                    } else if (trade.rMultiple < 0) {
                         lossCount++;
-                        totalLossPct += Math.abs(trade.portfolioPnlPercent);
+                        totalLossR += Math.abs(trade.rMultiple);
                     }
                 });
                 
                 const totalTrades = winCount + lossCount;
                 const winRate = totalTrades > 0 ? (winCount / totalTrades) * 100 : 0;
-                const avgGainPct = winCount > 0 ? totalGainPct / winCount : 0;
-                const avgLossPct = lossCount > 0 ? totalLossPct / lossCount : 0;
+                const avgGainR = winCount > 0 ? totalGainR / winCount : 0;
+                const avgLossR = lossCount > 0 ? totalLossR / lossCount : 0;
                 const lossRate = totalTrades > 0 ? (lossCount / totalTrades) * 100 : 0;
-                const expectancyPct = (winRate / 100) * avgGainPct - (lossRate / 100) * avgLossPct;
+                const expectancyR = (winRate / 100) * avgGainR - (lossRate / 100) * avgLossR;
                 
                 document.getElementById('winRateCompact').textContent = winRate.toFixed(1) + '%';
-                document.getElementById('avgGainCompact').textContent = avgGainPct.toFixed(1) + '%';
-                document.getElementById('avgLossCompact').textContent = avgLossPct.toFixed(1) + '%';
+                document.getElementById('avgGainCompact').textContent = avgGainR.toFixed(2) + 'R';
+                document.getElementById('avgLossCompact').textContent = '-' + avgLossR.toFixed(2) + 'R';
                 
                 // Color code expectancy
-                const expectancyColor = expectancyPct > 0 ? '#10b981' : expectancyPct < 0 ? '#ef4444' : '#6b7280';
-                document.getElementById('expectancyPctCompact').innerHTML = `<span style="color: ${expectancyColor};">${expectancyPct.toFixed(2)}%</span>`;
+                const expectancyColor = expectancyR > 0 ? '#10b981' : expectancyR < 0 ? '#ef4444' : '#6b7280';
+                document.getElementById('expectancyPctCompact').innerHTML = `<span style="color: ${expectancyColor};">${expectancyR.toFixed(2)}R</span>`;
             } else {
                 document.getElementById('winRateCompact').textContent = '0%';
-                document.getElementById('avgGainCompact').textContent = '0%';
-                document.getElementById('avgLossCompact').textContent = '0%';
-                document.getElementById('expectancyPctCompact').textContent = '0%';
+                document.getElementById('avgGainCompact').textContent = '0R';
+                document.getElementById('avgLossCompact').textContent = '0R';
+                document.getElementById('expectancyPctCompact').textContent = '0R';
             }
         }
 
@@ -5307,70 +5337,119 @@
             return html;
         }
 
-        // What If Calculator Function
+        // What If Calculator Function - Distribution Based
         function calculateWhatIf() {
-            const starting = parseFloat(document.getElementById('whatIfStarting').value) || 100000;
+            const starting = parseFloat(document.getElementById('whatIfStarting').value) || 248000;
             const riskPct = parseFloat(document.getElementById('whatIfRiskPct').value) || 0.5;
-            const avgStopPct = parseFloat(document.getElementById('whatIfAvgStop').value) || 3.5;
-            const winRate = parseFloat(document.getElementById('whatIfWinRate').value) || 90;
-            const avgGainPct = parseFloat(document.getElementById('whatIfAvgGain').value) || 6.8;
-            const avgLossPct = parseFloat(document.getElementById('whatIfAvgLoss').value) || 3.4;
+            const winRate = parseFloat(document.getElementById('whatIfWinRate').value) || 35;
             const tradesPerMonth = parseFloat(document.getElementById('whatIfTradesPerMonth').value) || 10;
             const goalPct = parseFloat(document.getElementById('whatIfGoal').value) || 50;
             
-            // Calculate implied position size from risk-based sizing
-            // Position Size % = Risk % / Stop %
-            const posSizePct = avgStopPct > 0 ? riskPct / avgStopPct * 100 : 0;
+            // Get win distribution percentages
+            const smallWinPct = parseFloat(document.getElementById('whatIfSmallWin').value) || 30;
+            const mediumWinPct = parseFloat(document.getElementById('whatIfMediumWin').value) || 30;
+            const largeWinPct = parseFloat(document.getElementById('whatIfLargeWin').value) || 35;
+            const homeRunPct = parseFloat(document.getElementById('whatIfHomeRun').value) || 5;
             
-            // Calculate position value
-            const posValue = (posSizePct / 100) * starting;
+            // Get loss distribution percentages
+            const normalLossPct = parseFloat(document.getElementById('whatIfNormalLoss').value) || 95;
+            const badLossPct = parseFloat(document.getElementById('whatIfBadLoss').value) || 5;
             
-            // Calculate expectancy per trade (as % of portfolio)
+            // Calculate weighted average R-multiples
+            // Win R-multiples: Small=1.5R, Medium=4R, Large=8R, Home Run=22R
+            const avgWinR = (smallWinPct/100 * 1.5) + (mediumWinPct/100 * 4) + (largeWinPct/100 * 8) + (homeRunPct/100 * 22);
+            
+            // Loss R-multiples: Normal=-1R, Bad=-2R
+            const avgLossR = (normalLossPct/100 * -1) + (badLossPct/100 * -2);
+            
+            // Calculate expectancy in R-multiples
             const winRateDec = winRate / 100;
             const lossRate = 1 - winRateDec;
-            const expectancyPct = (winRateDec * avgGainPct) - (lossRate * avgLossPct);
-            const expectancyDollars = (expectancyPct / 100) * posValue;
+            const expectancyR = (winRateDec * avgWinR) + (lossRate * avgLossR);
             
-            // Portfolio edge (expectancy as % of portfolio)
-            const portfolioEdge = (expectancyDollars / starting) * 100;
+            // Convert R to portfolio %
+            // Expectancy as % of portfolio = Expectancy R × Risk %
+            const expectancyPct = expectancyR * riskPct;
             
-            // Growth factor
-            const growthFactor = 1 + (portfolioEdge / 100);
+            // Calculate $ per trade
+            const riskDollars = (riskPct / 100) * starting;
+            const expectancyDollars = expectancyR * riskDollars;
             
             // Goal calculations
             const goalDollars = (goalPct / 100) * starting;
             const targetDollars = starting + goalDollars;
             
             // Trades needed (linear approximation)
-            const tradesNeeded = goalDollars / expectancyDollars;
+            const tradesNeeded = expectancyDollars > 0 ? goalDollars / expectancyDollars : 0;
             
             // Months to goal
-            const monthsToGoal = tradesNeeded / tradesPerMonth;
-            
-            // Trade breakdown
-            const numWins = Math.round(tradesNeeded * winRateDec);
-            const numLosses = Math.round(tradesNeeded * lossRate);
-            const avgWinDollars = (avgGainPct / 100) * posValue;
-            const avgLossDollars = (avgLossPct / 100) * posValue;
-            
-            // Gain/Loss ratios
-            const glRatioNonAdj = avgGainPct / avgLossPct;
-            const glRatioAdj = (avgGainPct * winRate) / (avgLossPct * (100 - winRate));
+            const monthsToGoal = tradesPerMonth > 0 ? tradesNeeded / tradesPerMonth : 0;
             
             // Update all displays
-            document.getElementById('whatIfEdge').textContent = portfolioEdge.toFixed(2) + '%';
-            document.getElementById('whatIfGrowth').textContent = growthFactor.toFixed(6);
-            document.getElementById('whatIfPosValue').textContent = '$' + posValue.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}) + ' (' + posSizePct.toFixed(1) + '%)';
+            document.getElementById('whatIfAvgWinR').textContent = avgWinR.toFixed(2) + 'R';
+            document.getElementById('whatIfAvgLossR').textContent = avgLossR.toFixed(2) + 'R';
+            document.getElementById('whatIfExpectancyR').textContent = expectancyR.toFixed(2) + 'R';
+            document.getElementById('whatIfExpectancyPct').textContent = expectancyPct.toFixed(2) + '%';
             document.getElementById('whatIfPerTrade').textContent = '$' + expectancyDollars.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
             document.getElementById('whatIfTradesNeeded').textContent = Math.round(tradesNeeded);
             document.getElementById('whatIfMonths').textContent = monthsToGoal.toFixed(1);
-            document.getElementById('whatIfRecap').textContent = `$${goalDollars.toLocaleString()} required (${goalPct.toFixed(2)}% of starting) → Target: $${targetDollars.toLocaleString()}`;
-            document.getElementById('whatIfAvgWin').textContent = '$' + avgWinDollars.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
-            document.getElementById('whatIfNumWins').textContent = numWins;
-            document.getElementById('whatIfAvgLoss').textContent = '$' + avgLossDollars.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
-            document.getElementById('whatIfNumLosses').textContent = numLosses;
-            document.getElementById('whatIfGLRatio').textContent = glRatioNonAdj.toFixed(2);
-            document.getElementById('whatIfGLRatioAdj').textContent = glRatioAdj.toFixed(2);
+            document.getElementById('whatIfRecap').textContent = `$${goalDollars.toLocaleString()} required (${goalPct.toFixed(0)}% of starting) → Target: $${targetDollars.toLocaleString()}`;
+        }
+        
+        // Update Win Distribution Bars
+        function updateWinDistributionBars() {
+            const smallWinPct = parseFloat(document.getElementById('whatIfSmallWin').value) || 0;
+            const mediumWinPct = parseFloat(document.getElementById('whatIfMediumWin').value) || 0;
+            const largeWinPct = parseFloat(document.getElementById('whatIfLargeWin').value) || 0;
+            const homeRunPct = parseFloat(document.getElementById('whatIfHomeRun').value) || 0;
+            
+            const total = smallWinPct + mediumWinPct + largeWinPct + homeRunPct;
+            
+            // Create visual bars
+            const smallBars = '■'.repeat(Math.round(smallWinPct / 10));
+            const mediumBars = '■'.repeat(Math.round(mediumWinPct / 10));
+            const largeBars = '■'.repeat(Math.round(largeWinPct / 10));
+            const homeRunBars = '■'.repeat(Math.round(homeRunPct / 10));
+            
+            let html = '';
+            html += `<div style="color: #059669;">Small (1-2R): ${smallBars}</div>`;
+            html += `<div style="color: #0284c7;">Medium (3-5R): ${mediumBars}</div>`;
+            html += `<div style="color: #7c3aed;">Large (6-10R): ${largeBars}</div>`;
+            html += `<div style="color: #dc2626;">Home Run (15-30R): ${homeRunBars}</div>`;
+            
+            document.getElementById('winBarsDisplay').innerHTML = html;
+            document.getElementById('winDistTotal').textContent = total.toFixed(0);
+            
+            if (Math.abs(total - 100) < 0.1) {
+                document.getElementById('winDistCheck').innerHTML = '<span style="color: #10b981;">✓</span>';
+            } else {
+                document.getElementById('winDistCheck').innerHTML = '<span style="color: #ef4444;">Must = 100%</span>';
+            }
+        }
+        
+        // Update Loss Distribution Bars
+        function updateLossDistributionBars() {
+            const normalLossPct = parseFloat(document.getElementById('whatIfNormalLoss').value) || 0;
+            const badLossPct = parseFloat(document.getElementById('whatIfBadLoss').value) || 0;
+            
+            const total = normalLossPct + badLossPct;
+            
+            // Create visual bars
+            const normalBars = '■'.repeat(Math.round(normalLossPct / 10));
+            const badBars = '■'.repeat(Math.round(badLossPct / 10));
+            
+            let html = '';
+            html += `<div style="color: #f59e0b;">Normal (-1R): ${normalBars}</div>`;
+            html += `<div style="color: #dc2626;">Bad (-2R): ${badBars}</div>`;
+            
+            document.getElementById('lossBarsDisplay').innerHTML = html;
+            document.getElementById('lossDistTotal').textContent = total.toFixed(0);
+            
+            if (Math.abs(total - 100) < 0.1) {
+                document.getElementById('lossDistCheck').innerHTML = '<span style="color: #10b981;">✓</span>';
+            } else {
+                document.getElementById('lossDistCheck').innerHTML = '<span style="color: #ef4444;">Must = 100%</span>';
+            }
         }
 
         // Position Sizing Calculator Functions
@@ -5618,6 +5697,8 @@
                 // Initialize What If Calculator with default values
                 setTimeout(() => {
                     calculateWhatIf();
+                    updateWinDistributionBars();
+                    updateLossDistributionBars();
                 }, 500);
             }
         };
