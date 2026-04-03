@@ -792,7 +792,7 @@
             
             <!-- Harvest Calculator (shows when YTD Protection triggered) -->
             <div id="harvestCalculator" class="card" style="padding: 12px; margin-bottom: 12px; display: none; background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); border: 2px solid #f59e0b;">
-                <h2 style="font-size: 1em; margin-bottom: 10px; color: #92400e; cursor: pointer;" onclick="toggleHarvestCalculatorContent()">
+                <h2 style="font-size: 1em; margin-bottom: 10px; color: #92400e; cursor: pointer;" onclick="toggleHarvestCalculatorContent()" title="AUTOMATIC PROTECTION: Shows 3 pre-calculated harvest options when your YTD is at risk (YTD Protection > 2.0x or YTD Floor negative). Quick-click solutions to lock in profits and protect your year. Use this when you need fast action.">
                     💰 Harvest Calculator <span id="harvestCalcToggle">▼</span>
                 </h2>
                 <div id="harvestCalculatorContent" style="font-size: 0.9em; color: #78350f;"></div>
@@ -800,7 +800,7 @@
 
             <!-- Pick My Own Harvest Simulator -->
             <div id="pickMyOwnHarvest" class="card" style="padding: 12px; margin-bottom: 12px; display: none; background: linear-gradient(135deg, #e0f2fe 0%, #bae6fd 100%); border: 2px solid #0284c7;">
-                <h2 style="font-size: 1em; margin-bottom: 10px; color: #075985; cursor: pointer;" onclick="togglePickMyOwnContent()">
+                <h2 style="font-size: 1em; margin-bottom: 10px; color: #075985; cursor: pointer;" onclick="togglePickMyOwnContent()" title="CUSTOM PLANNING: Interactive simulator to plan your own harvest strategy. Select 1-2 positions, choose share amounts, and see live preview of how it impacts your YTD Floor, Path to Breakeven, and risk metrics. Use this when you want precise control and want to experiment with different scenarios before executing.">
                     🎮 Pick My Own Harvest Plan <span id="pickMyOwnToggle">▼</span>
                 </h2>
                 <div id="pickMyOwnContent">
@@ -870,7 +870,7 @@
 
             <!-- Regressive Stop Alert -->
             <div class="card" id="regressiveStopAlert" style="padding: 12px; margin-bottom: 12px; display: none; background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); border: 2px solid #f59e0b;">
-                <h2 style="font-size: 1em; margin-bottom: 10px; color: #92400e; cursor: pointer;" onclick="toggleRegressiveStopContent()">
+                <h2 style="font-size: 1em; margin-bottom: 10px; color: #92400e; cursor: pointer;" onclick="toggleRegressiveStopContent()" title="POSITION MANAGEMENT: Alerts when a position's stop is below your entry (breakeven). Shows two paths: PATH 1 = Cut the small loss now to free up capital, or PATH 2 = Hold and wait for recovery but accept opportunity cost. Different purpose from harvesting - this is about managing struggling positions, not protecting profits.">
                     ⚠️ Regressive Stop Required <span id="regressiveStopToggle">▼</span>
                 </h2>
                 <div id="regressiveStopContent">
@@ -2741,11 +2741,14 @@
                 
                 // Only show alert if there are losses to cover
                 if (remainingLossesToCover > 0) {
-                    // Find all positions with unrealized profit
+                    // Find all positions with unrealized profit AND stops at/above entry
+                    // (Don't suggest raising stops that are intentionally below entry)
                     const positionsWithProfit = [];
                     openPositions.forEach(pos => {
                         const metrics = calculatePositionMetrics(pos);
-                        if (metrics.unrealizedPnL > 0) {
+                        // Only include if: (1) has profit AND (2) stop is already at or above entry
+                        // This respects intentional stop placement below entry (e.g., -1R tolerance)
+                        if (metrics.unrealizedPnL > 0 && pos.currentStop >= pos.entryPrice) {
                             const profitPerDollarMove = pos.shares; // $ profit per $1 stop raise
                             const dollarsToRaise = (remainingLossesToCover + 1) / pos.shares;
                             
@@ -2817,9 +2820,10 @@
                             const recoveryProximityEl = document.getElementById('recoveryProximity');
                             if (recoveryProximityEl) {
                                 // Calculate how much profit is locked in at current stops
+                                // Only count stops at or above entry (respect intentional stops below entry)
                                 let lockedInAtStops = 0;
                                 openPositions.forEach(pos => {
-                                    if (pos.currentStop > pos.entryPrice) {
+                                    if (pos.currentStop >= pos.entryPrice) {
                                         const profitPerShare = pos.currentStop - pos.entryPrice;
                                         lockedInAtStops += profitPerShare * pos.shares;
                                     }
