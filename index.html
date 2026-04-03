@@ -881,6 +881,24 @@
                 </div>
             </div>
 
+            <!-- Pullback from Peak Alert -->
+            <div id="pullbackFromPeakPanel" class="card" style="padding: 12px; margin-bottom: 12px; display: none; background: linear-gradient(135deg, #fdf4ff 0%, #fae8ff 100%); border: 2px solid #a855f7;">
+                <h2 style="font-size: 1em; margin-bottom: 10px; color: #7e22ce; cursor: pointer;" onclick="togglePullbackContent()" title="Shows how much each open winner has pulled back from its peak R. Use this to decide WHEN to harvest more from a fading winner.">
+                    📉 Pullback from Peak <span id="pullbackToggle">▼</span>
+                </h2>
+                <div id="pullbackContent">
+                    <div id="pullbackList" style="font-size: 0.9em;"></div>
+                </div>
+            </div>
+
+            <!-- Loss Buffer Counter -->
+            <div id="lossBufferPanel" class="card" style="padding: 12px; margin-bottom: 12px; background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%); border: 2px solid #16a34a;">
+                <h2 style="font-size: 1em; margin-bottom: 8px; color: #15803d;" title="How many more -1R losses your locked profits can absorb before you're back to breakeven on the year.">
+                    🛡️ Loss Buffer
+                </h2>
+                <div id="lossBufferContent" style="font-size: 0.9em; color: #14532d;"></div>
+            </div>
+
             <div class="card" style="padding: 12px; margin-bottom: 12px;">
                 <h2 style="font-size: 1em; margin-bottom: 10px;">Add New Position</h2>
                 <form id="addPositionForm" style="display: grid; grid-template-columns: 1fr auto; gap: 10px; align-items: end;">
@@ -961,6 +979,13 @@
                 <div class="table-scroll" id="monthlyStatsTable">
                     <div class="empty-state">No closed trades</div>
                 </div>
+            </div>
+
+            <!-- R Distribution Histogram -->
+            <div class="card" style="margin-top: 20px;">
+                <h2 style="margin-bottom: 5px;">🎯 R Distribution: Actual vs Target</h2>
+                <p style="font-size: 0.85em; color: #666; margin-bottom: 15px;">Are your real results matching your target distribution? Your goal: 40% win rate, losses at -1R, handful of 2R, equal mix 5-10R, rare 40-50R homeruns.</p>
+                <div id="rDistributionChart"></div>
             </div>
         </div>
 
@@ -2338,7 +2363,8 @@
                 initialShares: shares,
                 initialWeight: parseFloat(document.getElementById('initialWeight').value),
                 entryDate: getTodayLocal(),
-                partialSells: []
+                partialSells: [],
+                peakR: 0
             };
 
             openPositions.push(position);
@@ -5160,6 +5186,329 @@
             updateHarvestHistory();
             populatePickPositionDropdown();
             updateStrategyRules();
+            updatePullbackFromPeak();
+            updateLossBuffer();
+            updateRDistribution();
+        }
+
+        // ─────────────────────────────────────────────────────────
+        // FEATURE 1: Pullback from Peak Tracker
+        // ─────────────────────────────────────────────────────────
+        function togglePullbackContent() {
+            const content = document.getElementById('pullbackContent');
+            const toggle = document.getElementById('pullbackToggle');
+            if (content.style.display === 'none') {
+                content.style.display = 'block';
+                toggle.textContent = '▼';
+            } else {
+                content.style.display = 'none';
+                toggle.textContent = '▶';
+            }
+        }
+
+        function updatePullbackFromPeak() {
+            const panel = document.getElementById('pullbackFromPeakPanel');
+            const list = document.getElementById('pullbackList');
+            if (!panel || !list) return;
+
+            // Only show positions that are in profit (have positive R)
+            const winners = [];
+            let peakUpdated = false;
+
+            openPositions.forEach(pos => {
+                const metrics = calculatePositionMetrics(pos);
+                const currentR = metrics.initialR;
+
+                // Update peak R if current is higher
+                if (currentR > (pos.peakR || 0)) {
+                    pos.peakR = currentR;
+                    peakUpdated = true;
+                }
+
+                // Only show positions that have ever been above 1R
+                if ((pos.peakR || 0) >= 1.0) {
+                    winners.push({ pos, metrics, currentR, peakR: pos.peakR || 0 });
+                }
+            });
+
+            // Save if any peaks were updated
+            if (peakUpdated) saveToFirebase();
+
+            if (winners.length === 0) {
+                panel.style.display = 'none';
+                return;
+            }
+
+            panel.style.display = 'block';
+
+            // Sort by pullback amount (most pulled back first)
+            winners.sort((a, b) => (b.peakR - b.currentR) - (a.peakR - a.currentR));
+
+            let html = `<table style="width:100%; font-size:0.88em;">
+                <thead><tr style="background:#f3e8ff;">
+                    <th style="padding:6px 8px; text-align:left;">Symbol</th>
+                    <th style="padding:6px 8px; text-align:right;">Peak R</th>
+                    <th style="padding:6px 8px; text-align:right;">Current R</th>
+                    <th style="padding:6px 8px; text-align:right;">Pullback</th>
+                    <th style="padding:6px 8px; text-align:right;">% of Peak</th>
+                    <th style="padding:6px 8px; text-align:left;">Status</th>
+                </tr></thead><tbody>`;
+
+            winners.forEach(({ pos, currentR, peakR }) => {
+                const pullback = peakR - currentR;
+                const pctOfPeak = peakR > 0 ? (currentR / peakR) * 100 : 100;
+                const pctGiven = 100 - pctOfPeak;
+
+                // Status thresholds
+                let status, statusStyle, rowStyle;
+                if (pctGiven >= 50) {
+                    status = '🔴 CRITICAL — Given back 50%+ of peak';
+                    statusStyle = 'color:#dc2626; font-weight:700;';
+                    rowStyle = 'background:#fef2f2;';
+                } else if (pctGiven >= 33) {
+                    status = '🟠 WARNING — Consider harvest';
+                    statusStyle = 'color:#d97706; font-weight:700;';
+                    rowStyle = 'background:#fffbeb;';
+                } else if (pctGiven >= 20) {
+                    status = '🟡 Watch — Fading slightly';
+                    statusStyle = 'color:#ca8a04;';
+                    rowStyle = 'background:#fefce8;';
+                } else {
+                    status = '🟢 Holding well';
+                    statusStyle = 'color:#16a34a;';
+                    rowStyle = '';
+                }
+
+                const pullbackColor = pullback > 0 ? '#dc2626' : '#16a34a';
+
+                html += `<tr style="${rowStyle}">
+                    <td style="padding:5px 8px; font-weight:700;">${pos.symbol}</td>
+                    <td style="padding:5px 8px; text-align:right; color:#7e22ce; font-weight:700;">${peakR.toFixed(2)}R</td>
+                    <td style="padding:5px 8px; text-align:right; font-weight:700;">${currentR.toFixed(2)}R</td>
+                    <td style="padding:5px 8px; text-align:right; color:${pullbackColor}; font-weight:700;">${pullback > 0 ? '-' : '+'}${Math.abs(pullback).toFixed(2)}R</td>
+                    <td style="padding:5px 8px; text-align:right;">
+                        <div style="background:#e9d5ff; border-radius:4px; height:12px; width:100%; position:relative; overflow:hidden;">
+                            <div style="background:#a855f7; height:100%; width:${Math.min(100,pctOfPeak).toFixed(0)}%; transition:width 0.3s;"></div>
+                        </div>
+                        <div style="font-size:0.8em; text-align:right; margin-top:2px;">${pctOfPeak.toFixed(0)}% remaining</div>
+                    </td>
+                    <td style="padding:5px 8px; ${statusStyle}">${status}</td>
+                </tr>`;
+            });
+
+            html += `</tbody></table>
+            <div style="margin-top:8px; padding:8px; background:rgba(168,85,247,0.1); border-radius:4px; font-size:0.82em; color:#6b21a8;">
+                💡 <strong>Rule:</strong> If a winner gives back 33%+ of peak → consider harvesting 25-50%. If 50%+ → harvest now or tighten stop aggressively.
+            </div>`;
+
+            list.innerHTML = html;
+        }
+
+        // ─────────────────────────────────────────────────────────
+        // FEATURE 2: Loss Buffer Counter
+        // ─────────────────────────────────────────────────────────
+        function updateLossBuffer() {
+            const panel = document.getElementById('lossBufferContent');
+            if (!panel) return;
+
+            const accountSize = getAccountSize();
+            const startingAccount = parseFloat(document.getElementById('startingAccount').value) || accountSize;
+
+            // Total locked profits = realized from closed trades + realized from open position partials
+            let realizedFromClosed = 0;
+            closedTrades.forEach(trade => {
+                const pnl = (trade.portfolioPnlPercent / 100) * accountSize;
+                if (pnl > 0) realizedFromClosed += pnl;
+            });
+
+            let realizedFromPartials = 0;
+            openPositions.forEach(pos => {
+                if (pos.partialSells && pos.partialSells.length > 0) {
+                    pos.partialSells.forEach(sell => {
+                        const profit = (sell.price - pos.entryPrice) * sell.shares;
+                        if (profit > 0) realizedFromPartials += profit;
+                    });
+                }
+            });
+
+            // Total losses locked in from closed trades
+            let totalRealizedLosses = 0;
+            closedTrades.forEach(trade => {
+                const pnl = (trade.portfolioPnlPercent / 100) * accountSize;
+                if (pnl < 0) totalRealizedLosses += Math.abs(pnl);
+            });
+
+            // Net locked profit cushion = locked wins - locked losses
+            const netCushion = realizedFromClosed + realizedFromPartials - totalRealizedLosses;
+
+            // Average loss per -1R trade in dollars
+            const lossTrades = closedTrades.filter(t => t.rMultiple < 0);
+            let avgLossDollars = 0;
+            if (lossTrades.length > 0) {
+                const totalLossDollars = lossTrades.reduce((sum, t) => sum + Math.abs((t.portfolioPnlPercent / 100) * accountSize), 0);
+                avgLossDollars = totalLossDollars / lossTrades.length;
+            } else {
+                // Estimate from current risk setting
+                const riskPct = openPositions.length > 0 ? (openPositions[0].initialWeight || 0.5) : 0.5;
+                avgLossDollars = (riskPct / 100) * accountSize;
+            }
+
+            // How many -1R losses can be absorbed?
+            const lossesAbsorbable = avgLossDollars > 0 ? Math.floor(netCushion / avgLossDollars) : 0;
+
+            // Unrealized cushion from open winners
+            let unrealizedWinners = 0;
+            openPositions.forEach(pos => {
+                const metrics = calculatePositionMetrics(pos);
+                if (metrics.unrealizedPnL > 0) unrealizedWinners += metrics.unrealizedPnL;
+            });
+            const totalAbsorbable = avgLossDollars > 0 ? Math.floor((netCushion + unrealizedWinners) / avgLossDollars) : 0;
+
+            // Status
+            let status, statusColor, statusBg;
+            if (lossesAbsorbable >= 5) {
+                status = '✅ SAFE'; statusColor = '#15803d'; statusBg = '#dcfce7';
+            } else if (lossesAbsorbable >= 2) {
+                status = '⚠️ CAUTION'; statusColor = '#d97706'; statusBg = '#fef9c3';
+            } else if (lossesAbsorbable >= 0) {
+                status = '🔴 PROTECT NOW'; statusColor = '#dc2626'; statusBg = '#fee2e2';
+            } else {
+                status = '🚨 OVERDRAWN'; statusColor = '#7f1d1d'; statusBg = '#fca5a5';
+            }
+
+            panel.innerHTML = `
+                <div style="display:grid; grid-template-columns: repeat(3,1fr); gap:10px; margin-bottom:10px;">
+                    <div style="padding:10px; background:white; border-radius:6px; text-align:center; border:1px solid #bbf7d0;">
+                        <div style="font-size:0.75em; color:#666;">Net Locked Profit</div>
+                        <div style="font-size:1.4em; font-weight:700; color:${netCushion >= 0 ? '#16a34a' : '#dc2626'};">$${netCushion.toLocaleString(undefined,{minimumFractionDigits:0,maximumFractionDigits:0})}</div>
+                        <div style="font-size:0.7em; color:#888;">Realized wins minus realized losses</div>
+                    </div>
+                    <div style="padding:10px; background:white; border-radius:6px; text-align:center; border:1px solid #bbf7d0;">
+                        <div style="font-size:0.75em; color:#666;">Losses Absorbable (Locked)</div>
+                        <div style="font-size:1.4em; font-weight:700; color:${statusColor};">${lossesAbsorbable >= 0 ? lossesAbsorbable : 0} trades</div>
+                        <div style="font-size:0.7em; color:#888;">@ ~$${avgLossDollars.toLocaleString(undefined,{minimumFractionDigits:0,maximumFractionDigits:0})} avg loss</div>
+                    </div>
+                    <div style="padding:10px; background:white; border-radius:6px; text-align:center; border:1px solid #bbf7d0;">
+                        <div style="font-size:0.75em; color:#666;">Absorbable incl. Unrealized</div>
+                        <div style="font-size:1.4em; font-weight:700; color:#0369a1;">${totalAbsorbable} trades</div>
+                        <div style="font-size:0.7em; color:#888;">If open winners hold</div>
+                    </div>
+                </div>
+                <div style="padding:8px 12px; background:${statusBg}; border-radius:6px; font-weight:700; color:${statusColor}; font-size:0.95em;">
+                    ${status} — You can absorb <strong>${Math.max(0,lossesAbsorbable)} more -1R losses</strong> from locked profits alone.
+                    ${lossesAbsorbable < 3 && unrealizedWinners > 0 ? `<br><span style="font-weight:400; font-size:0.9em;">⚡ Harvest some open winners now to rebuild your buffer.</span>` : ''}
+                </div>
+            `;
+        }
+
+        // ─────────────────────────────────────────────────────────
+        // FEATURE 3: R Distribution Histogram
+        // ─────────────────────────────────────────────────────────
+        function updateRDistribution() {
+            const container = document.getElementById('rDistributionChart');
+            if (!container) return;
+
+            if (closedTrades.length === 0) {
+                container.innerHTML = '<div class="empty-state">No closed trades yet</div>';
+                return;
+            }
+
+            // Bucket definitions: [label, min, max, targetPct, color]
+            const buckets = [
+                { label: 'Loss (< -0.5R)',  min: -Infinity, max: -0.5, target: 60, color: '#dc2626', textColor: 'white' },
+                { label: 'Scratch (-0.5–0R)', min: -0.5, max: 0,  target: 0,  color: '#f87171', textColor: 'white' },
+                { label: 'Small (0–2R)',    min: 0,        max: 2,   target: 10, color: '#fbbf24', textColor: '#78350f' },
+                { label: 'Solid (2–5R)',    min: 2,        max: 5,   target: 15, color: '#34d399', textColor: '#065f46' },
+                { label: 'Strong (5–10R)',  min: 5,        max: 10,  target: 10, color: '#10b981', textColor: 'white' },
+                { label: 'Big (10–20R)',    min: 10,       max: 20,  target: 4,  color: '#3b82f6', textColor: 'white' },
+                { label: 'Homerun (20R+)', min: 20,       max: Infinity, target: 1, color: '#7c3aed', textColor: 'white' },
+            ];
+
+            // Count actual trades per bucket
+            buckets.forEach(b => { b.count = 0; b.totalR = 0; });
+            closedTrades.forEach(trade => {
+                const r = trade.rMultiple;
+                const bucket = buckets.find(b => r >= b.min && r < b.max);
+                if (bucket) { bucket.count++; bucket.totalR += r; }
+            });
+
+            const total = closedTrades.length;
+            const wins = closedTrades.filter(t => t.rMultiple > 0).length;
+            const actualWinRate = total > 0 ? (wins / total * 100) : 0;
+
+            // Max pct for bar scaling
+            const maxActualPct = Math.max(...buckets.map(b => (b.count / total) * 100), 60);
+
+            let html = `
+            <div style="margin-bottom:15px; display:grid; grid-template-columns:repeat(3,1fr); gap:10px; font-size:0.88em;">
+                <div style="padding:8px 12px; background:#f0fdf4; border-radius:6px; border:1px solid #bbf7d0;">
+                    <div style="color:#666; font-size:0.8em;">Actual Win Rate</div>
+                    <div style="font-size:1.3em; font-weight:700; color:${actualWinRate >= 40 ? '#16a34a' : '#dc2626'};">${actualWinRate.toFixed(1)}%</div>
+                    <div style="color:#888; font-size:0.75em;">Target: 40%+</div>
+                </div>
+                <div style="padding:8px 12px; background:#eff6ff; border-radius:6px; border:1px solid #bfdbfe;">
+                    <div style="color:#666; font-size:0.8em;">Total Closed Trades</div>
+                    <div style="font-size:1.3em; font-weight:700; color:#1d4ed8;">${total}</div>
+                </div>
+                <div style="padding:8px 12px; background:#fdf4ff; border-radius:6px; border:1px solid #e9d5ff;">
+                    <div style="color:#666; font-size:0.8em;">Avg Winner R</div>
+                    <div style="font-size:1.3em; font-weight:700; color:#7e22ce;">${wins > 0 ? (closedTrades.filter(t=>t.rMultiple>0).reduce((s,t)=>s+t.rMultiple,0)/wins).toFixed(2) : '0.00'}R</div>
+                </div>
+            </div>
+            <div style="overflow-x:auto;">
+            <table style="width:100%; font-size:0.88em; border-collapse:separate; border-spacing:0 4px;">
+                <thead>
+                    <tr style="font-size:0.8em; color:#666;">
+                        <th style="text-align:left; padding:4px 8px; font-weight:600;">Bucket</th>
+                        <th style="text-align:right; padding:4px 8px; font-weight:600;">Count</th>
+                        <th style="text-align:right; padding:4px 8px; font-weight:600;">Actual %</th>
+                        <th style="text-align:right; padding:4px 8px; font-weight:600;">Target %</th>
+                        <th style="padding:4px 8px; font-weight:600; width:40%;">Distribution</th>
+                        <th style="text-align:right; padding:4px 8px; font-weight:600;">Avg R</th>
+                        <th style="text-align:center; padding:4px 8px; font-weight:600;">vs Target</th>
+                    </tr>
+                </thead>
+                <tbody>`;
+
+            buckets.forEach(b => {
+                const actualPct = total > 0 ? (b.count / total) * 100 : 0;
+                const barWidth = (actualPct / maxActualPct) * 100;
+                const targetBarWidth = (b.target / maxActualPct) * 100;
+                const avgR = b.count > 0 ? (b.totalR / b.count).toFixed(2) : '--';
+                const diff = actualPct - b.target;
+                let vsTarget = '--';
+                let vsColor = '#6b7280';
+                if (b.target > 0) {
+                    vsTarget = diff > 0 ? `+${diff.toFixed(1)}%` : `${diff.toFixed(1)}%`;
+                    vsColor = Math.abs(diff) <= 5 ? '#16a34a' : (diff > 0 ? '#d97706' : '#dc2626');
+                }
+
+                html += `
+                <tr style="background:#f9fafb; border-radius:6px;">
+                    <td style="padding:7px 8px; font-weight:600; white-space:nowrap;">${b.label}</td>
+                    <td style="padding:7px 8px; text-align:right; font-weight:700;">${b.count}</td>
+                    <td style="padding:7px 8px; text-align:right; font-weight:700;">${actualPct.toFixed(1)}%</td>
+                    <td style="padding:7px 8px; text-align:right; color:#6b7280;">${b.target > 0 ? b.target+'%' : '--'}</td>
+                    <td style="padding:7px 8px;">
+                        <div style="position:relative; height:18px; background:#e5e7eb; border-radius:4px; overflow:visible;">
+                            <!-- Target line -->
+                            ${b.target > 0 ? `<div style="position:absolute; left:${targetBarWidth.toFixed(1)}%; top:-3px; width:2px; height:24px; background:#374151; z-index:2;" title="Target: ${b.target}%"></div>` : ''}
+                            <!-- Actual bar -->
+                            <div style="height:100%; width:${barWidth.toFixed(1)}%; background:${b.color}; border-radius:4px; transition:width 0.3s;"></div>
+                        </div>
+                    </td>
+                    <td style="padding:7px 8px; text-align:right; color:#374151;">${avgR}R</td>
+                    <td style="padding:7px 8px; text-align:center; font-weight:700; color:${vsColor};">${vsTarget}</td>
+                </tr>`;
+            });
+
+            html += `</tbody></table></div>
+            <div style="margin-top:10px; padding:8px; background:#f8fafc; border-radius:6px; font-size:0.78em; color:#6b7280;">
+                📌 <strong>Target distribution</strong> assumes 40% win rate. Vertical black lines = target %. Colored bars = actual. 
+                Focus on getting losses to < -1R avg, growing the 5-10R bucket, and keeping homeruns alive with trailing stops.
+            </div>`;
+
+            container.innerHTML = html;
         }
         
         // Update Strategy Rules Tab
