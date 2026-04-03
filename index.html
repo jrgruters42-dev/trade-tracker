@@ -2744,16 +2744,40 @@
                     // Find all positions with unrealized profit AND stops at/above entry
                     // (Don't suggest raising stops that are intentionally below entry)
                     const positionsWithProfit = [];
+                    
+                    // Count positions by symbol for numbering
+                    const symbolCounts = {};
+                    openPositions.forEach(pos => {
+                        if (!symbolCounts[pos.symbol]) {
+                            symbolCounts[pos.symbol] = 0;
+                        }
+                        symbolCounts[pos.symbol]++;
+                    });
+                    
+                    // Track which number we're on for each symbol
+                    const symbolNumbers = {};
+                    
                     openPositions.forEach(pos => {
                         const metrics = calculatePositionMetrics(pos);
                         // Only include if: (1) has profit AND (2) stop is already at or above entry
                         // This respects intentional stop placement below entry (e.g., -1R tolerance)
                         if (metrics.unrealizedPnL > 0 && pos.currentStop >= pos.entryPrice) {
+                            // Increment counter for this symbol
+                            if (!symbolNumbers[pos.symbol]) {
+                                symbolNumbers[pos.symbol] = 0;
+                            }
+                            symbolNumbers[pos.symbol]++;
+                            
                             const profitPerDollarMove = pos.shares; // $ profit per $1 stop raise
                             const dollarsToRaise = (remainingLossesToCover + 1) / pos.shares;
                             
+                            // Create display name with number if multiple of same symbol
+                            const displayName = symbolCounts[pos.symbol] > 1 ? 
+                                `${pos.symbol} #${symbolNumbers[pos.symbol]}` : pos.symbol;
+                            
                             positionsWithProfit.push({
                                 symbol: pos.symbol,
+                                displayName: displayName,
                                 shares: pos.shares,
                                 currentPrice: pos.currentPrice,
                                 currentStop: pos.currentStop,
@@ -2786,7 +2810,7 @@
                             // Option 1: Single position (if available)
                             if (canCoverWithOne) {
                                 const pos = positionsWithProfit[0];
-                                html += `<li><strong>Single position:</strong> ${pos.symbol} - Move stop from $${pos.currentStop.toFixed(2)} → $${pos.singlePositionStop.toFixed(2)} to lock in $${(remainingLossesToCover + 1).toFixed(0)}</li>`;
+                                html += `<li><strong>Single position:</strong> ${pos.displayName} - Move stop from $${pos.currentStop.toFixed(2)} → $${pos.singlePositionStop.toFixed(2)} to lock in $${(remainingLossesToCover + 1).toFixed(0)}</li>`;
                             }
                             
                             // Option 2: Spread across 2 positions (if available)
@@ -2797,7 +2821,7 @@
                                 const stop1 = pos1.entryPrice + (profitNeededEach / pos1.shares);
                                 const stop2 = pos2.entryPrice + (profitNeededEach / pos2.shares);
                                 
-                                html += `<li><strong>Spread across 2:</strong> ${pos1.symbol} → $${stop1.toFixed(2)} + ${pos2.symbol} → $${stop2.toFixed(2)} (lock in $${profitNeededEach.toFixed(0)} each)</li>`;
+                                html += `<li><strong>Spread across 2:</strong> ${pos1.displayName} → $${stop1.toFixed(2)} + ${pos2.displayName} → $${stop2.toFixed(2)} (lock in $${profitNeededEach.toFixed(0)} each)</li>`;
                             }
                             
                             // Option 3: Spread across 3 positions (if available)
@@ -2810,7 +2834,7 @@
                                 const stop2 = pos2.entryPrice + (profitNeededEach / pos2.shares);
                                 const stop3 = pos3.entryPrice + (profitNeededEach / pos3.shares);
                                 
-                                html += `<li><strong>Spread across 3:</strong> ${pos1.symbol} → $${stop1.toFixed(2)}, ${pos2.symbol} → $${stop2.toFixed(2)}, ${pos3.symbol} → $${stop3.toFixed(2)} (lock in $${profitNeededEach.toFixed(0)} each)</li>`;
+                                html += `<li><strong>Spread across 3:</strong> ${pos1.displayName} → $${stop1.toFixed(2)}, ${pos2.displayName} → $${stop2.toFixed(2)}, ${pos3.displayName} → $${stop3.toFixed(2)} (lock in $${profitNeededEach.toFixed(0)} each)</li>`;
                             }
                             
                             html += '</ul>';
