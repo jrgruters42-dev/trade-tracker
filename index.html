@@ -980,13 +980,6 @@
                     <div class="empty-state">No closed trades</div>
                 </div>
             </div>
-
-            <!-- R Distribution Histogram -->
-            <div class="card" style="margin-top: 20px;">
-                <h2 style="margin-bottom: 5px;">🎯 R Distribution: Actual vs Target</h2>
-                <p style="font-size: 0.85em; color: #666; margin-bottom: 15px;">Are your real results matching your target distribution? Your goal: 40% win rate, losses at -1R, handful of 2R, equal mix 5-10R, rare 40-50R homeruns.</p>
-                <div id="rDistributionChart"></div>
-            </div>
         </div>
 
         <!-- Expectancy Calculator Tab -->\n        <div id="expectancy-calc" class="tab-content">
@@ -1331,6 +1324,78 @@
                             <div id="whatIfRecap">$0 required</div>
                         </div>
                     </div>
+                </div>
+            </div>
+
+            <!-- ── R Distribution: Actual vs Target ── -->
+            <div class="card" style="margin-top:20px;">
+                <h2 style="margin-bottom:5px;">🎯 R Distribution: Actual vs Target</h2>
+                <p style="font-size:0.85em; color:#666; margin-bottom:15px;">Are your real results matching your plan? Compare actual closed-trade distribution against your targets.</p>
+                <!-- Summary stats — updated by JS -->
+                <div id="rDistSummaryStats" style="margin-bottom:15px;"></div>
+                <!-- Histogram table — updated by JS -->
+                <div id="rDistHistogramTable"></div>
+                <div style="margin-top:10px; padding:8px; background:#f8fafc; border-radius:6px; font-size:0.78em; color:#6b7280;">
+                    📌 Vertical black lines = your target %. Colored bars = actual. Add closed trades to see this fill in.
+                </div>
+            </div>
+
+            <!-- ── If I Hit My Targets Calculator ── -->
+            <div class="card" style="margin-top:20px; background:linear-gradient(135deg,#eff6ff 0%,#dbeafe 100%); border:2px solid #3b82f6;">
+                <h2 style="margin-bottom:4px; color:#1e40af;">🧮 "If I Hit My Targets — What Would I Make?"</h2>
+                <p style="margin-bottom:16px; font-size:0.85em; color:#3730a3;">Adjust % of trades and avg R per bucket, plus trades/month and risk %. Results update live.</p>
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:20px;">
+                    <!-- LEFT: Inputs -->
+                    <div>
+                        <div style="font-weight:700; font-size:0.85em; color:#1e40af; margin-bottom:8px;">
+                            % of Trades &amp; Avg R per Bucket
+                            <span id="distTotalPctBadge" style="font-size:0.8em; margin-left:8px; padding:2px 8px; border-radius:10px; background:#dcfce7; color:#16a34a;">= 100% ✓</span>
+                        </div>
+                        <div style="display:grid; gap:7px;">
+                            <!-- Loss/Scratch -->
+                            <div style="display:grid; grid-template-columns:1fr auto auto; align-items:center; gap:8px; padding:6px 10px; background:white; border-radius:6px; border-left:4px solid #dc2626;">
+                                <div><div style="font-size:0.82em; font-weight:600; color:#dc2626;">Loss / Scratch</div><div style="font-size:0.72em; color:#888;">avg loss per loser</div></div>
+                                <div style="display:flex; align-items:center; gap:3px;"><input type="number" id="distPctLoss" value="60" step="1" min="0" max="100" style="width:52px; padding:4px 6px; font-size:0.9em; border:2px solid #fca5a5; border-radius:4px; text-align:center;" oninput="calcTargetExpectancy()"><span style="font-size:0.8em; color:#888;">%</span></div>
+                                <div style="display:flex; align-items:center; gap:3px;"><input type="number" id="distAvgLoss" value="-1.0" step="0.1" max="0" style="width:62px; padding:4px 6px; font-size:0.9em; border:2px solid #fca5a5; border-radius:4px; text-align:center;" oninput="calcTargetExpectancy()"><span style="font-size:0.8em; color:#888;">R</span></div>
+                            </div>
+                            <!-- Small Win -->
+                            <div style="display:grid; grid-template-columns:1fr auto auto; align-items:center; gap:8px; padding:6px 10px; background:white; border-radius:6px; border-left:4px solid #fbbf24;">
+                                <div><div style="font-size:0.82em; font-weight:600; color:#d97706;">Small Win (0–2R)</div><div style="font-size:0.72em; color:#888;">partial exits, quick wins</div></div>
+                                <div style="display:flex; align-items:center; gap:3px;"><input type="number" id="distPctSmall" value="15" step="1" min="0" max="100" style="width:52px; padding:4px 6px; font-size:0.9em; border:2px solid #fde68a; border-radius:4px; text-align:center;" oninput="calcTargetExpectancy()"><span style="font-size:0.8em; color:#888;">%</span></div>
+                                <div style="display:flex; align-items:center; gap:3px;"><input type="number" id="distAvgSmall" value="1.5" step="0.1" min="0" max="2" style="width:62px; padding:4px 6px; font-size:0.9em; border:2px solid #fde68a; border-radius:4px; text-align:center;" oninput="calcTargetExpectancy()"><span style="font-size:0.8em; color:#888;">R</span></div>
+                            </div>
+                            <!-- Solid Win -->
+                            <div style="display:grid; grid-template-columns:1fr auto auto; align-items:center; gap:8px; padding:6px 10px; background:white; border-radius:6px; border-left:4px solid #10b981;">
+                                <div><div style="font-size:0.82em; font-weight:600; color:#065f46;">Solid Win (2–10R)</div><div style="font-size:0.72em; color:#888;">trend followers</div></div>
+                                <div style="display:flex; align-items:center; gap:3px;"><input type="number" id="distPctSolid" value="15" step="1" min="0" max="100" style="width:52px; padding:4px 6px; font-size:0.9em; border:2px solid #6ee7b7; border-radius:4px; text-align:center;" oninput="calcTargetExpectancy()"><span style="font-size:0.8em; color:#888;">%</span></div>
+                                <div style="display:flex; align-items:center; gap:3px;"><input type="number" id="distAvgSolid" value="5.0" step="0.5" min="2" max="10" style="width:62px; padding:4px 6px; font-size:0.9em; border:2px solid #6ee7b7; border-radius:4px; text-align:center;" oninput="calcTargetExpectancy()"><span style="font-size:0.8em; color:#888;">R</span></div>
+                            </div>
+                            <!-- Strong Win -->
+                            <div style="display:grid; grid-template-columns:1fr auto auto; align-items:center; gap:8px; padding:6px 10px; background:white; border-radius:6px; border-left:4px solid #3b82f6;">
+                                <div><div style="font-size:0.82em; font-weight:600; color:#1e40af;">Strong Win (10–20R)</div><div style="font-size:0.72em; color:#888;">extended moves</div></div>
+                                <div style="display:flex; align-items:center; gap:3px;"><input type="number" id="distPctStrong" value="5" step="1" min="0" max="100" style="width:52px; padding:4px 6px; font-size:0.9em; border:2px solid #93c5fd; border-radius:4px; text-align:center;" oninput="calcTargetExpectancy()"><span style="font-size:0.8em; color:#888;">%</span></div>
+                                <div style="display:flex; align-items:center; gap:3px;"><input type="number" id="distAvgStrong" value="14.0" step="1" min="10" max="20" style="width:62px; padding:4px 6px; font-size:0.9em; border:2px solid #93c5fd; border-radius:4px; text-align:center;" oninput="calcTargetExpectancy()"><span style="font-size:0.8em; color:#888;">R</span></div>
+                            </div>
+                            <!-- Homerun -->
+                            <div style="display:grid; grid-template-columns:1fr auto auto; align-items:center; gap:8px; padding:6px 10px; background:white; border-radius:6px; border-left:4px solid #7c3aed;">
+                                <div><div style="font-size:0.82em; font-weight:600; color:#4c1d95;">Homerun (20R+)</div><div style="font-size:0.72em; color:#888;">monster winners</div></div>
+                                <div style="display:flex; align-items:center; gap:3px;"><input type="number" id="distPctHomerun" value="5" step="1" min="0" max="100" style="width:52px; padding:4px 6px; font-size:0.9em; border:2px solid #c4b5fd; border-radius:4px; text-align:center;" oninput="calcTargetExpectancy()"><span style="font-size:0.8em; color:#888;">%</span></div>
+                                <div style="display:flex; align-items:center; gap:3px;"><input type="number" id="distAvgHomerun" value="35.0" step="5" min="20" style="width:62px; padding:4px 6px; font-size:0.9em; border:2px solid #c4b5fd; border-radius:4px; text-align:center;" oninput="calcTargetExpectancy()"><span style="font-size:0.8em; color:#888;">R</span></div>
+                            </div>
+                        </div>
+                        <div style="margin-top:10px; display:grid; grid-template-columns:1fr 1fr; gap:8px;">
+                            <div style="padding:8px; background:white; border-radius:6px; border:1px solid #dbeafe;">
+                                <div style="font-size:0.75em; color:#666; margin-bottom:3px;">Trades / Month</div>
+                                <input type="number" id="distTradesMonth" value="10" step="1" min="1" style="width:100%; padding:5px; font-size:1em; border:2px solid #bfdbfe; border-radius:4px; text-align:center; font-weight:700;" oninput="calcTargetExpectancy()">
+                            </div>
+                            <div style="padding:8px; background:white; border-radius:6px; border:1px solid #dbeafe;">
+                                <div style="font-size:0.75em; color:#666; margin-bottom:3px;">Risk % / Trade</div>
+                                <input type="number" id="distRiskPct" value="0.5" step="0.125" min="0.1" style="width:100%; padding:5px; font-size:1em; border:2px solid #bfdbfe; border-radius:4px; text-align:center; font-weight:700;" oninput="calcTargetExpectancy()">
+                            </div>
+                        </div>
+                    </div>
+                    <!-- RIGHT: Results — updated by JS only -->
+                    <div id="distExpectancyResults"></div>
                 </div>
             </div>
         </div>
@@ -5402,27 +5467,34 @@
         }
 
         // ─────────────────────────────────────────────────────────
-        // FEATURE 3: R Distribution Histogram
+        // FEATURE 3: R Distribution — updates dynamic divs only, never touches inputs
         // ─────────────────────────────────────────────────────────
         function updateRDistribution() {
-            const container = document.getElementById('rDistributionChart');
-            if (!container) return;
+            const summaryEl = document.getElementById('rDistSummaryStats');
+            const tableEl   = document.getElementById('rDistHistogramTable');
+            if (!summaryEl || !tableEl) return;
 
             if (closedTrades.length === 0) {
-                container.innerHTML = '<div class="empty-state">No closed trades yet</div>';
+                summaryEl.innerHTML = '';
+                tableEl.innerHTML = '<div class="empty-state">No closed trades yet — add some to see your distribution.</div>';
                 return;
             }
 
-            // Bucket definitions: [label, min, max, targetPct, color]
+            // Read target %s from the static inputs (safe — we never overwrite those)
+            const pctLoss    = parseFloat(document.getElementById('distPctLoss')?.value)    || 60;
+            const pctSmall   = parseFloat(document.getElementById('distPctSmall')?.value)   || 15;
+            const pctSolid   = parseFloat(document.getElementById('distPctSolid')?.value)   || 15;
+            const pctStrong  = parseFloat(document.getElementById('distPctStrong')?.value)  || 5;
+            const pctHomerun = parseFloat(document.getElementById('distPctHomerun')?.value) || 5;
+
             const buckets = [
-                { label: 'Loss / Scratch (≤0R)', min: -Infinity, max: 0,        target: 60, color: '#dc2626', textColor: 'white' },
-                { label: 'Small Win (0–2R)',      min: 0,         max: 2,        target: 15, color: '#fbbf24', textColor: '#78350f' },
-                { label: 'Solid Win (2–10R)',     min: 2,         max: 10,       target: 15, color: '#10b981', textColor: 'white' },
-                { label: 'Strong Win (10–20R)',   min: 10,        max: 20,       target: 5,  color: '#3b82f6', textColor: 'white' },
-                { label: 'Homerun (20R+)',        min: 20,        max: Infinity, target: 5,  color: '#7c3aed', textColor: 'white' },
+                { label: 'Loss / Scratch (≤0R)', min: -Infinity, max: 0,        target: pctLoss,    color: '#dc2626' },
+                { label: 'Small Win (0–2R)',      min: 0,         max: 2,        target: pctSmall,   color: '#fbbf24' },
+                { label: 'Solid Win (2–10R)',     min: 2,         max: 10,       target: pctSolid,   color: '#10b981' },
+                { label: 'Strong Win (10–20R)',   min: 10,        max: 20,       target: pctStrong,  color: '#3b82f6' },
+                { label: 'Homerun (20R+)',        min: 20,        max: Infinity, target: pctHomerun, color: '#7c3aed' },
             ];
 
-            // Count actual trades per bucket
             buckets.forEach(b => { b.count = 0; b.totalR = 0; });
             closedTrades.forEach(trade => {
                 const r = trade.rMultiple;
@@ -5431,32 +5503,33 @@
             });
 
             const total = closedTrades.length;
-            const wins = closedTrades.filter(t => t.rMultiple > 0).length;
+            const wins  = closedTrades.filter(t => t.rMultiple > 0).length;
             const actualWinRate = total > 0 ? (wins / total * 100) : 0;
+            const avgWinnerR = wins > 0
+                ? (closedTrades.filter(t => t.rMultiple > 0).reduce((s,t) => s + t.rMultiple, 0) / wins).toFixed(2)
+                : '0.00';
 
-            // Max pct for bar scaling
-            const maxActualPct = Math.max(...buckets.map(b => (b.count / total) * 100), 60);
+            summaryEl.innerHTML = `
+                <div style="display:grid; grid-template-columns:repeat(3,1fr); gap:10px; font-size:0.88em; margin-bottom:15px;">
+                    <div style="padding:8px 12px; background:#f0fdf4; border-radius:6px; border:1px solid #bbf7d0;">
+                        <div style="color:#666; font-size:0.8em;">Actual Win Rate</div>
+                        <div style="font-size:1.3em; font-weight:700; color:${actualWinRate >= 40 ? '#16a34a' : '#dc2626'};">${actualWinRate.toFixed(1)}%</div>
+                        <div style="color:#888; font-size:0.75em;">Target: 40%+</div>
+                    </div>
+                    <div style="padding:8px 12px; background:#eff6ff; border-radius:6px; border:1px solid #bfdbfe;">
+                        <div style="color:#666; font-size:0.8em;">Total Closed Trades</div>
+                        <div style="font-size:1.3em; font-weight:700; color:#1d4ed8;">${total}</div>
+                    </div>
+                    <div style="padding:8px 12px; background:#fdf4ff; border-radius:6px; border:1px solid #e9d5ff;">
+                        <div style="color:#666; font-size:0.8em;">Avg Winner R</div>
+                        <div style="font-size:1.3em; font-weight:700; color:#7e22ce;">${avgWinnerR}R</div>
+                    </div>
+                </div>`;
 
-            let html = `
-            <div style="margin-bottom:15px; display:grid; grid-template-columns:repeat(3,1fr); gap:10px; font-size:0.88em;">
-                <div style="padding:8px 12px; background:#f0fdf4; border-radius:6px; border:1px solid #bbf7d0;">
-                    <div style="color:#666; font-size:0.8em;">Actual Win Rate</div>
-                    <div style="font-size:1.3em; font-weight:700; color:${actualWinRate >= 40 ? '#16a34a' : '#dc2626'};">${actualWinRate.toFixed(1)}%</div>
-                    <div style="color:#888; font-size:0.75em;">Target: 40%+</div>
-                </div>
-                <div style="padding:8px 12px; background:#eff6ff; border-radius:6px; border:1px solid #bfdbfe;">
-                    <div style="color:#666; font-size:0.8em;">Total Closed Trades</div>
-                    <div style="font-size:1.3em; font-weight:700; color:#1d4ed8;">${total}</div>
-                </div>
-                <div style="padding:8px 12px; background:#fdf4ff; border-radius:6px; border:1px solid #e9d5ff;">
-                    <div style="color:#666; font-size:0.8em;">Avg Winner R</div>
-                    <div style="font-size:1.3em; font-weight:700; color:#7e22ce;">${wins > 0 ? (closedTrades.filter(t=>t.rMultiple>0).reduce((s,t)=>s+t.rMultiple,0)/wins).toFixed(2) : '0.00'}R</div>
-                </div>
-            </div>
-            <div style="overflow-x:auto;">
-            <table style="width:100%; font-size:0.88em; border-collapse:separate; border-spacing:0 4px;">
-                <thead>
-                    <tr style="font-size:0.8em; color:#666;">
+            const maxPct = Math.max(...buckets.map(b => (b.count / total) * 100), 60);
+            let html = `<div style="overflow-x:auto;">
+                <table style="width:100%; font-size:0.88em; border-collapse:separate; border-spacing:0 4px;">
+                    <thead><tr style="font-size:0.8em; color:#666;">
                         <th style="text-align:left; padding:4px 8px; font-weight:600;">Bucket</th>
                         <th style="text-align:right; padding:4px 8px; font-weight:600;">Count</th>
                         <th style="text-align:right; padding:4px 8px; font-weight:600;">Actual %</th>
@@ -5464,102 +5537,36 @@
                         <th style="padding:4px 8px; font-weight:600; width:40%;">Distribution</th>
                         <th style="text-align:right; padding:4px 8px; font-weight:600;">Avg R</th>
                         <th style="text-align:center; padding:4px 8px; font-weight:600;">vs Target</th>
-                    </tr>
-                </thead>
-                <tbody>`;
+                    </tr></thead><tbody>`;
 
             buckets.forEach(b => {
-                const actualPct = total > 0 ? (b.count / total) * 100 : 0;
-                const barWidth = (actualPct / maxActualPct) * 100;
-                const targetBarWidth = (b.target / maxActualPct) * 100;
-                const avgR = b.count > 0 ? (b.totalR / b.count).toFixed(2) : '--';
-                const diff = actualPct - b.target;
-                let vsTarget = '--';
-                let vsColor = '#6b7280';
-                if (b.target > 0) {
-                    vsTarget = diff > 0 ? `+${diff.toFixed(1)}%` : `${diff.toFixed(1)}%`;
-                    vsColor = Math.abs(diff) <= 5 ? '#16a34a' : (diff > 0 ? '#d97706' : '#dc2626');
-                }
+                const actualPct  = total > 0 ? (b.count / total) * 100 : 0;
+                const barWidth   = (actualPct / maxPct) * 100;
+                const targetBarW = (b.target / maxPct) * 100;
+                const avgR       = b.count > 0 ? (b.totalR / b.count).toFixed(2) + 'R' : '--';
+                const diff       = actualPct - b.target;
+                const vsTarget   = b.target > 0 ? (diff > 0 ? `+${diff.toFixed(1)}%` : `${diff.toFixed(1)}%`) : '--';
+                const vsColor    = b.target > 0 ? (Math.abs(diff) <= 5 ? '#16a34a' : (diff > 0 ? '#d97706' : '#dc2626')) : '#6b7280';
 
-                html += `
-                <tr style="background:#f9fafb; border-radius:6px;">
+                html += `<tr style="background:#f9fafb;">
                     <td style="padding:7px 8px; font-weight:600; white-space:nowrap;">${b.label}</td>
                     <td style="padding:7px 8px; text-align:right; font-weight:700;">${b.count}</td>
                     <td style="padding:7px 8px; text-align:right; font-weight:700;">${actualPct.toFixed(1)}%</td>
-                    <td style="padding:7px 8px; text-align:right; color:#6b7280;">${b.target > 0 ? b.target+'%' : '--'}</td>
+                    <td style="padding:7px 8px; text-align:right; color:#6b7280;">${b.target}%</td>
                     <td style="padding:7px 8px;">
                         <div style="position:relative; height:18px; background:#e5e7eb; border-radius:4px; overflow:visible;">
-                            <!-- Target line -->
-                            ${b.target > 0 ? `<div style="position:absolute; left:${targetBarWidth.toFixed(1)}%; top:-3px; width:2px; height:24px; background:#374151; z-index:2;" title="Target: ${b.target}%"></div>` : ''}
-                            <!-- Actual bar -->
+                            <div style="position:absolute; left:${targetBarW.toFixed(1)}%; top:-3px; width:2px; height:24px; background:#374151; z-index:2;" title="Target: ${b.target}%"></div>
                             <div style="height:100%; width:${barWidth.toFixed(1)}%; background:${b.color}; border-radius:4px; transition:width 0.3s;"></div>
                         </div>
                     </td>
-                    <td style="padding:7px 8px; text-align:right; color:#374151;">${avgR}R</td>
+                    <td style="padding:7px 8px; text-align:right; color:#374151;">${avgR}</td>
                     <td style="padding:7px 8px; text-align:center; font-weight:700; color:${vsColor};">${vsTarget}</td>
                 </tr>`;
             });
 
-            html += `</tbody></table></div>
-            <div style="margin-top:10px; padding:8px; background:#f8fafc; border-radius:6px; font-size:0.78em; color:#6b7280;">
-                📌 <strong>Target distribution</strong> assumes 40% win rate. Vertical black lines = target %. Colored bars = actual. 
-                Focus on getting losses to &lt;-1R avg, growing the 2-10R bucket, and keeping homeruns alive with trailing stops.
-            </div>
-
-            <!-- Target Expectancy Calculator -->
-            <div style="margin-top:20px; padding:18px; background:linear-gradient(135deg,#eff6ff 0%,#dbeafe 100%); border-radius:10px; border:2px solid #3b82f6;">
-                <h3 style="margin:0 0 4px 0; color:#1e40af; font-size:1em;">🧮 "If I Hit My Targets — What Would I Make?"</h3>
-                <p style="margin:0 0 14px 0; font-size:0.8em; color:#3730a3;">Adjust avg R per bucket and trades/month to model your upside. Pre-filled with your target distribution.</p>
-                <div style="display:grid; grid-template-columns:1fr 1fr; gap:20px;">
-                    <div>
-                        <div style="font-weight:700; font-size:0.85em; color:#1e40af; margin-bottom:8px;">Avg R &amp; % per Bucket <span id="distTotalPctBadge" style="font-size:0.8em; margin-left:8px; padding:2px 8px; border-radius:10px; background:#dcfce7; color:#16a34a;">= 100% ✓</span></div>
-                        <div style="display:grid; gap:7px;">
-                            <div style="display:grid; grid-template-columns:1fr auto auto; align-items:center; gap:8px; padding:6px 10px; background:white; border-radius:6px; border-left:4px solid #dc2626;">
-                                <div><div style="font-size:0.82em; font-weight:600; color:#dc2626;">Loss/Scratch</div><div style="font-size:0.72em; color:#888;">avg loss per loser</div></div>
-                                <div style="display:flex; align-items:center; gap:4px;"><input type="number" id="distPctLoss" value="60" step="1" min="0" max="100" style="width:55px; padding:4px 6px; font-size:0.9em; border:2px solid #fca5a5; border-radius:4px; text-align:center;" oninput="calcTargetExpectancy()"><span style="font-size:0.8em; color:#888;">%</span></div>
-                                <div style="display:flex; align-items:center; gap:4px;"><input type="number" id="distAvgLoss" value="-1.0" step="0.1" max="0" style="width:65px; padding:4px 6px; font-size:0.9em; border:2px solid #fca5a5; border-radius:4px; text-align:center;" oninput="calcTargetExpectancy()"><span style="font-size:0.8em; color:#888;">R</span></div>
-                            </div>
-                            <div style="display:grid; grid-template-columns:1fr auto auto; align-items:center; gap:8px; padding:6px 10px; background:white; border-radius:6px; border-left:4px solid #fbbf24;">
-                                <div><div style="font-size:0.82em; font-weight:600; color:#d97706;">Small Win (0–2R)</div><div style="font-size:0.72em; color:#888;">partial exits, quick wins</div></div>
-                                <div style="display:flex; align-items:center; gap:4px;"><input type="number" id="distPctSmall" value="15" step="1" min="0" max="100" style="width:55px; padding:4px 6px; font-size:0.9em; border:2px solid #fde68a; border-radius:4px; text-align:center;" oninput="calcTargetExpectancy()"><span style="font-size:0.8em; color:#888;">%</span></div>
-                                <div style="display:flex; align-items:center; gap:4px;"><input type="number" id="distAvgSmall" value="1.5" step="0.1" min="0" max="2" style="width:65px; padding:4px 6px; font-size:0.9em; border:2px solid #fde68a; border-radius:4px; text-align:center;" oninput="calcTargetExpectancy()"><span style="font-size:0.8em; color:#888;">R</span></div>
-                            </div>
-                            <div style="display:grid; grid-template-columns:1fr auto auto; align-items:center; gap:8px; padding:6px 10px; background:white; border-radius:6px; border-left:4px solid #10b981;">
-                                <div><div style="font-size:0.82em; font-weight:600; color:#065f46;">Solid Win (2–10R)</div><div style="font-size:0.72em; color:#888;">trend followers</div></div>
-                                <div style="display:flex; align-items:center; gap:4px;"><input type="number" id="distPctSolid" value="15" step="1" min="0" max="100" style="width:55px; padding:4px 6px; font-size:0.9em; border:2px solid #6ee7b7; border-radius:4px; text-align:center;" oninput="calcTargetExpectancy()"><span style="font-size:0.8em; color:#888;">%</span></div>
-                                <div style="display:flex; align-items:center; gap:4px;"><input type="number" id="distAvgSolid" value="5.0" step="0.5" min="2" max="10" style="width:65px; padding:4px 6px; font-size:0.9em; border:2px solid #6ee7b7; border-radius:4px; text-align:center;" oninput="calcTargetExpectancy()"><span style="font-size:0.8em; color:#888;">R</span></div>
-                            </div>
-                            <div style="display:grid; grid-template-columns:1fr auto auto; align-items:center; gap:8px; padding:6px 10px; background:white; border-radius:6px; border-left:4px solid #3b82f6;">
-                                <div><div style="font-size:0.82em; font-weight:600; color:#1e40af;">Strong Win (10–20R)</div><div style="font-size:0.72em; color:#888;">extended moves</div></div>
-                                <div style="display:flex; align-items:center; gap:4px;"><input type="number" id="distPctStrong" value="5" step="1" min="0" max="100" style="width:55px; padding:4px 6px; font-size:0.9em; border:2px solid #93c5fd; border-radius:4px; text-align:center;" oninput="calcTargetExpectancy()"><span style="font-size:0.8em; color:#888;">%</span></div>
-                                <div style="display:flex; align-items:center; gap:4px;"><input type="number" id="distAvgStrong" value="14.0" step="1" min="10" max="20" style="width:65px; padding:4px 6px; font-size:0.9em; border:2px solid #93c5fd; border-radius:4px; text-align:center;" oninput="calcTargetExpectancy()"><span style="font-size:0.8em; color:#888;">R</span></div>
-                            </div>
-                            <div style="display:grid; grid-template-columns:1fr auto auto; align-items:center; gap:8px; padding:6px 10px; background:white; border-radius:6px; border-left:4px solid #7c3aed;">
-                                <div><div style="font-size:0.82em; font-weight:600; color:#4c1d95;">Homerun (20R+)</div><div style="font-size:0.72em; color:#888;">monster winners</div></div>
-                                <div style="display:flex; align-items:center; gap:4px;"><input type="number" id="distPctHomerun" value="5" step="1" min="0" max="100" style="width:55px; padding:4px 6px; font-size:0.9em; border:2px solid #c4b5fd; border-radius:4px; text-align:center;" oninput="calcTargetExpectancy()"><span style="font-size:0.8em; color:#888;">%</span></div>
-                                <div style="display:flex; align-items:center; gap:4px;"><input type="number" id="distAvgHomerun" value="35.0" step="5" min="20" style="width:65px; padding:4px 6px; font-size:0.9em; border:2px solid #c4b5fd; border-radius:4px; text-align:center;" oninput="calcTargetExpectancy()"><span style="font-size:0.8em; color:#888;">R</span></div>
-                            </div>
-                        </div>
-                        <div style="margin-top:10px; display:grid; grid-template-columns:1fr 1fr; gap:8px;">
-                            <div style="padding:8px; background:white; border-radius:6px; border:1px solid #dbeafe;">
-                                <div style="font-size:0.75em; color:#666; margin-bottom:3px;">Trades / Month</div>
-                                <input type="number" id="distTradesMonth" value="10" step="1" min="1" style="width:100%; padding:5px; font-size:1em; border:2px solid #bfdbfe; border-radius:4px; text-align:center; font-weight:700;" oninput="calcTargetExpectancy()">
-                            </div>
-                            <div style="padding:8px; background:white; border-radius:6px; border:1px solid #dbeafe;">
-                                <div style="font-size:0.75em; color:#666; margin-bottom:3px;">Risk % / Trade</div>
-                                <input type="number" id="distRiskPct" value="0.5" step="0.125" min="0.1" style="width:100%; padding:5px; font-size:1em; border:2px solid #bfdbfe; border-radius:4px; text-align:center; font-weight:700;" oninput="calcTargetExpectancy()">
-                            </div>
-                        </div>
-                    </div>
-                    <div id="distExpectancyResults"></div>
-                </div>
-            </div>`;
-
-            container.innerHTML = html;
-            // Run the calculator once the DOM is ready
-            setTimeout(calcTargetExpectancy, 50);
+            html += `</tbody></table></div>`;
+            tableEl.innerHTML = html;
         }
-
         function calcTargetExpectancy() {
             const results = document.getElementById('distExpectancyResults');
             if (!results) return;
@@ -6214,6 +6221,7 @@
                     calculateWhatIf();
                     updateWinDistributionBars();
                     updateLossDistributionBars();
+                    calcTargetExpectancy();
                 }, 500);
             }
         };
