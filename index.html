@@ -685,8 +685,8 @@
                             <div style="font-size: 1.1em; font-weight: 700;" id="ytdFloor">$0 (0.0%)</div>
                         </div>
                         
-                        <div style="cursor: help;" title="LONG-TERM: How many times your unrealized profit could cover your YTD net losses (all trades since Jan 1). >3.0x = Harvest now. Compare with Recent Recovery (short-term, last N trades) to see if things are improving or getting worse.">
-                            <div style="font-size: 0.65em; opacity: 0.7;">YTD Protection</div>
+                        <div style="cursor: help;" id="ytdProtectionContainer" title="LONG-TERM: How many times your unrealized profit could cover your YTD net losses (all trades since Jan 1). >3.0x = Harvest now. Compare with Recent Recovery (short-term, last N trades) to see if things are improving or getting worse.">
+                            <div style="font-size: 0.65em; opacity: 0.7;" id="ytdProtectionLabel">YTD Protection</div>
                             <div style="font-size: 1.1em; font-weight: 700;" id="ytdProtection">--</div>
                         </div>
                         
@@ -749,6 +749,26 @@
                         <div style="font-size: 1em; font-weight: 600;" id="wifeRothCompact">0.0%</div>
                     </div>
                 </div>
+                
+                <!-- Performance Stats Row -->
+                <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin-top: 6px; padding-top: 6px; border-top: 1px solid #e5e7eb;">
+                    <div style="cursor: help; text-align: center;" title="Percentage of trades that were winners">
+                        <div style="font-size: 0.65em; opacity: 0.7;">Win Rate</div>
+                        <div style="font-size: 1em; font-weight: 600;" id="winRateCompact">0%</div>
+                    </div>
+                    <div style="cursor: help; text-align: center;" title="Average gain % on winning trades">
+                        <div style="font-size: 0.65em; opacity: 0.7;">Avg Gain</div>
+                        <div style="font-size: 1em; font-weight: 600;" id="avgGainCompact">0%</div>
+                    </div>
+                    <div style="cursor: help; text-align: center;" title="Average loss % on losing trades">
+                        <div style="font-size: 0.65em; opacity: 0.7;">Avg Loss</div>
+                        <div style="font-size: 1em; font-weight: 600;" id="avgLossCompact">0%</div>
+                    </div>
+                    <div style="cursor: help; text-align: center;" title="Expected % return per trade: (Win Rate × Avg Gain) - (Loss Rate × Avg Loss)">
+                        <div style="font-size: 0.65em; opacity: 0.7;">Expectancy %</div>
+                        <div style="font-size: 1em; font-weight: 600;" id="expectancyPctCompact">0%</div>
+                    </div>
+                </div>
             </div>
         </div>
 
@@ -787,30 +807,56 @@
                     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; font-size: 0.9em;">
                         <!-- Input Column -->
                         <div>
-                            <div class="form-group" style="margin-bottom: 12px;">
-                                <label style="font-weight: 600; color: #075985;">Select Position:</label>
-                                <select id="pickPositionSelect" onchange="updatePickMyOwnPreview()" style="width: 100%; padding: 6px;">
-                                    <option value="">-- Choose a position --</option>
-                                </select>
+                            <!-- Position 1 -->
+                            <div style="padding: 8px; background: rgba(255,255,255,0.5); border-radius: 4px; margin-bottom: 12px;">
+                                <div style="font-weight: 600; color: #075985; margin-bottom: 6px;">Position 1:</div>
+                                <div class="form-group" style="margin-bottom: 8px;">
+                                    <label style="font-weight: 600; color: #075985; font-size: 0.9em;">Select Position:</label>
+                                    <select id="pickPositionSelect1" onchange="updatePickMyOwnPreview()" style="width: 100%; padding: 6px;">
+                                        <option value="">-- Choose a position --</option>
+                                    </select>
+                                </div>
+                                
+                                <div class="form-group" style="margin-bottom: 0;">
+                                    <label style="font-weight: 600; color: #075985; font-size: 0.9em;">Shares to Sell:</label>
+                                    <input type="number" id="pickSharesToSell1" min="0" oninput="updatePickMyOwnPreview()" style="width: 100%; padding: 6px;">
+                                    <div style="font-size: 0.8em; color: #0369a1; margin-top: 4px;">
+                                        <span id="pickSharesMax1">Max: 0</span> | 
+                                        <a href="#" onclick="setPickShares(1, 0.25); return false;">25%</a> | 
+                                        <a href="#" onclick="setPickShares(1, 0.50); return false;">50%</a> | 
+                                        <a href="#" onclick="setPickShares(1, 0.75); return false;">75%</a>
+                                    </div>
+                                </div>
                             </div>
                             
-                            <div class="form-group" style="margin-bottom: 12px;">
-                                <label style="font-weight: 600; color: #075985;">Shares to Sell:</label>
-                                <input type="number" id="pickSharesToSell" min="0" oninput="updatePickMyOwnPreview()" style="width: 100%; padding: 6px;">
-                                <div style="font-size: 0.8em; color: #0369a1; margin-top: 4px;">
-                                    <span id="pickSharesMax">Max: 0 shares available</span> | 
-                                    <a href="#" onclick="document.getElementById('pickSharesToSell').value = Math.floor(parseFloat(document.getElementById('pickSharesToSell').max) * 0.25); updatePickMyOwnPreview(); return false;">25%</a> | 
-                                    <a href="#" onclick="document.getElementById('pickSharesToSell').value = Math.floor(parseFloat(document.getElementById('pickSharesToSell').max) * 0.50); updatePickMyOwnPreview(); return false;">50%</a> | 
-                                    <a href="#" onclick="document.getElementById('pickSharesToSell').value = Math.floor(parseFloat(document.getElementById('pickSharesToSell').max) * 0.75); updatePickMyOwnPreview(); return false;">75%</a>
+                            <!-- Position 2 -->
+                            <div style="padding: 8px; background: rgba(255,255,255,0.5); border-radius: 4px;">
+                                <div style="font-weight: 600; color: #075985; margin-bottom: 6px;">Position 2 (optional):</div>
+                                <div class="form-group" style="margin-bottom: 8px;">
+                                    <label style="font-weight: 600; color: #075985; font-size: 0.9em;">Select Position:</label>
+                                    <select id="pickPositionSelect2" onchange="updatePickMyOwnPreview()" style="width: 100%; padding: 6px;">
+                                        <option value="">-- Choose a position --</option>
+                                    </select>
+                                </div>
+                                
+                                <div class="form-group" style="margin-bottom: 0;">
+                                    <label style="font-weight: 600; color: #075985; font-size: 0.9em;">Shares to Sell:</label>
+                                    <input type="number" id="pickSharesToSell2" min="0" oninput="updatePickMyOwnPreview()" style="width: 100%; padding: 6px;">
+                                    <div style="font-size: 0.8em; color: #0369a1; margin-top: 4px;">
+                                        <span id="pickSharesMax2">Max: 0</span> | 
+                                        <a href="#" onclick="setPickShares(2, 0.25); return false;">25%</a> | 
+                                        <a href="#" onclick="setPickShares(2, 0.50); return false;">50%</a> | 
+                                        <a href="#" onclick="setPickShares(2, 0.75); return false;">75%</a>
+                                    </div>
                                 </div>
                             </div>
                         </div>
                         
                         <!-- Preview Column -->
                         <div>
-                            <div style="font-weight: 600; margin-bottom: 8px; color: #075985;">📊 Preview (if you execute):</div>
+                            <div style="font-weight: 600; margin-bottom: 8px; color: #075985;">📊 Combined Preview:</div>
                             <div id="pickMyOwnPreview" style="background: white; padding: 10px; border-radius: 6px; font-size: 0.85em; color: #0c4a6e;">
-                                <em>Select a position and enter shares to see preview...</em>
+                                <em>Select at least one position and enter shares to see preview...</em>
                             </div>
                         </div>
                     </div>
@@ -1127,8 +1173,14 @@
                         </div>
                         
                         <div class="form-group">
-                            <label>Position Size (% of portfolio)</label>
-                            <input type="number" id="whatIfPosSize" value="9" step="0.1" oninput="calculateWhatIf()">
+                            <label>Risk Per Trade (% of portfolio)</label>
+                            <input type="number" id="whatIfRiskPct" value="0.5" step="0.05" oninput="calculateWhatIf()">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label>Average Stop Distance (%)</label>
+                            <input type="number" id="whatIfAvgStop" value="3.5" step="0.1" oninput="calculateWhatIf()">
+                            <div style="font-size: 0.75em; opacity: 0.7; margin-top: 4px;">Typical stop from entry (e.g., 3.5% = stops usually 3.5% below entry)</div>
                         </div>
                         
                         <div class="form-group">
@@ -1177,8 +1229,9 @@
                         </div>
                         
                         <div style="background: white; padding: 15px; border: 2px solid #e5e7eb; border-radius: 8px; margin-bottom: 15px;">
-                            <div style="font-weight: 600; margin-bottom: 8px;">Value of Position Size</div>
-                            <div style="font-weight: 700; font-size: 1.3em; color: #667eea;" id="whatIfPosValue">$9,000.00</div>
+                            <div style="font-weight: 600; margin-bottom: 8px;">Calculated Position Size</div>
+                            <div style="font-size: 0.75em; opacity: 0.7; margin-bottom: 4px;">Risk % ÷ Stop % = Position %</div>
+                            <div style="font-weight: 700; font-size: 1.3em; color: #667eea;" id="whatIfPosValue">$9,000.00 (9.0%)</div>
                         </div>
                         
                         <div style="background: #fef3c7; padding: 15px; border-radius: 8px; margin-bottom: 15px;">
@@ -2846,6 +2899,44 @@
                 }
             }
             document.getElementById('wifeRothCompact').innerHTML = wifeRothDisplay;
+            
+            // Update Performance Stats (Win Rate, Avg Gain, Avg Loss, Expectancy %)
+            if (closedTrades.length > 0) {
+                let winCount = 0;
+                let lossCount = 0;
+                let totalGainPct = 0;
+                let totalLossPct = 0;
+                
+                closedTrades.forEach(trade => {
+                    if (trade.portfolioPnlPercent > 0) {
+                        winCount++;
+                        totalGainPct += trade.portfolioPnlPercent;
+                    } else if (trade.portfolioPnlPercent < 0) {
+                        lossCount++;
+                        totalLossPct += Math.abs(trade.portfolioPnlPercent);
+                    }
+                });
+                
+                const totalTrades = winCount + lossCount;
+                const winRate = totalTrades > 0 ? (winCount / totalTrades) * 100 : 0;
+                const avgGainPct = winCount > 0 ? totalGainPct / winCount : 0;
+                const avgLossPct = lossCount > 0 ? totalLossPct / lossCount : 0;
+                const lossRate = totalTrades > 0 ? (lossCount / totalTrades) * 100 : 0;
+                const expectancyPct = (winRate / 100) * avgGainPct - (lossRate / 100) * avgLossPct;
+                
+                document.getElementById('winRateCompact').textContent = winRate.toFixed(1) + '%';
+                document.getElementById('avgGainCompact').textContent = avgGainPct.toFixed(1) + '%';
+                document.getElementById('avgLossCompact').textContent = avgLossPct.toFixed(1) + '%';
+                
+                // Color code expectancy
+                const expectancyColor = expectancyPct > 0 ? '#10b981' : expectancyPct < 0 ? '#ef4444' : '#6b7280';
+                document.getElementById('expectancyPctCompact').innerHTML = `<span style="color: ${expectancyColor};">${expectancyPct.toFixed(2)}%</span>`;
+            } else {
+                document.getElementById('winRateCompact').textContent = '0%';
+                document.getElementById('avgGainCompact').textContent = '0%';
+                document.getElementById('avgLossCompact').textContent = '0%';
+                document.getElementById('expectancyPctCompact').textContent = '0%';
+            }
         }
 
         // Calculate trade statistics
@@ -4238,11 +4329,30 @@
             const floorColor = ytdFloorDollars >= 0 ? '#10b981' : '#ef4444';
             document.getElementById('ytdFloor').innerHTML = `<span style="color: ${floorColor};">${ytdFloorDollars >= 0 ? '+' : ''}$${ytdFloorDollars.toLocaleString()} (${ytdFloorPercent.toFixed(1)}%)</span>`;
             
-            // Display YTD Protection
+            // Display YTD Protection or Path to Breakeven
+            const ytdProtectionLabel = document.getElementById('ytdProtectionLabel');
+            const ytdProtectionContainer = document.getElementById('ytdProtectionContainer');
+            
             if (ytdProtection !== null) {
-                const protColor = ytdProtection > 3.0 ? '#ef4444' : ytdProtection > 2.0 ? '#f59e0b' : '#10b981';
-                document.getElementById('ytdProtection').innerHTML = `<span style="color: ${protColor};">${ytdProtection.toFixed(1)}x</span>`;
+                // Net Realized is negative - show Path to Breakeven instead
+                ytdProtectionLabel.textContent = 'Realized profits are negative, Path to Breakeven:';
+                ytdProtectionContainer.title = 'Realized profits are negative. Shows how much more you need to recover to reach $0 net realized. Lower is better! Once you hit $0, this will change to YTD Protection.';
+                
+                // Calculate progress
+                const totalToRecover = ytdLosses;
+                const alreadyRecovered = totalToRecover - Math.abs(netRealizedYTD);
+                const progressPct = totalToRecover > 0 ? (alreadyRecovered / totalToRecover) * 100 : 0;
+                
+                document.getElementById('ytdProtection').innerHTML = `
+                    <div style="font-size: 0.9em; line-height: 1.4;">
+                        <div style="color: #0369a1; font-size: 0.95em; font-weight: 700;">Remaining: $${Math.abs(netRealizedYTD).toLocaleString()}</div>
+                        <div style="color: #059669; font-size: 0.85em;">Progress: ${progressPct.toFixed(1)}%</div>
+                    </div>
+                `;
             } else {
+                // Net Realized is positive - show normal YTD Protection
+                ytdProtectionLabel.textContent = 'YTD Protection';
+                ytdProtectionContainer.title = 'LONG-TERM: How many times your unrealized profit could cover your YTD net losses (all trades since Jan 1). >3.0x = Harvest now. Compare with Recent Recovery (short-term, last N trades) to see if things are improving or getting worse.';
                 document.getElementById('ytdProtection').innerHTML = '<span style="color: #10b981;">Clear ✓</span>';
             }
             
@@ -4523,11 +4633,13 @@
 
         // Pick My Own Harvest Simulator Functions
         function populatePickPositionDropdown() {
-            const select = document.getElementById('pickPositionSelect');
+            const select1 = document.getElementById('pickPositionSelect1');
+            const select2 = document.getElementById('pickPositionSelect2');
             const pickSection = document.getElementById('pickMyOwnHarvest');
             
             // Clear existing options except first
-            select.innerHTML = '<option value="">-- Choose a position --</option>';
+            select1.innerHTML = '<option value="">-- Choose a position --</option>';
+            select2.innerHTML = '<option value="">-- Choose a position --</option>';
             
             // Group positions by symbol and number them
             const symbolCounts = {};
@@ -4559,51 +4671,122 @@
             if (positionsWithProfit.length > 0) {
                 pickSection.style.display = 'block';
                 
-                // Add options to dropdown
+                // Add options to both dropdowns
                 positionsWithProfit.forEach(pos => {
                     const displayName = symbolCounts[pos.symbol] > 1 ? 
                         `${pos.symbol} #${pos.number}` : pos.symbol;
                     const profitDisplay = `+$${pos.unrealizedProfit.toLocaleString()} (${pos.rMultiple.toFixed(1)}R)`;
-                    const option = document.createElement('option');
-                    option.value = pos.id;
-                    option.textContent = `${displayName} - ${pos.shares} shares - ${profitDisplay}`;
-                    select.appendChild(option);
+                    
+                    const option1 = document.createElement('option');
+                    option1.value = pos.id;
+                    option1.textContent = `${displayName} - ${pos.shares} shares - ${profitDisplay}`;
+                    select1.appendChild(option1);
+                    
+                    const option2 = document.createElement('option');
+                    option2.value = pos.id;
+                    option2.textContent = `${displayName} - ${pos.shares} shares - ${profitDisplay}`;
+                    select2.appendChild(option2);
                 });
             } else {
                 pickSection.style.display = 'none';
             }
         }
         
+        // Helper function for percentage quick links
+        function setPickShares(posNum, pct) {
+            const select = document.getElementById(`pickPositionSelect${posNum}`);
+            const sharesInput = document.getElementById(`pickSharesToSell${posNum}`);
+            const maxShares = parseInt(sharesInput.max) || 0;
+            
+            if (maxShares > 0) {
+                sharesInput.value = Math.floor(maxShares * pct);
+                updatePickMyOwnPreview();
+            }
+        }
+        
         function updatePickMyOwnPreview() {
-            const select = document.getElementById('pickPositionSelect');
-            const sharesToSell = parseInt(document.getElementById('pickSharesToSell').value) || 0;
+            const select1 = document.getElementById('pickPositionSelect1');
+            const select2 = document.getElementById('pickPositionSelect2');
+            const sharesToSell1 = parseInt(document.getElementById('pickSharesToSell1').value) || 0;
+            const sharesToSell2 = parseInt(document.getElementById('pickSharesToSell2').value) || 0;
             const previewDiv = document.getElementById('pickMyOwnPreview');
             const executeBtn = document.getElementById('executePickHarvest');
-            const maxSharesDiv = document.getElementById('pickSharesMax');
+            const maxSharesDiv1 = document.getElementById('pickSharesMax1');
+            const maxSharesDiv2 = document.getElementById('pickSharesMax2');
             
-            if (!select.value) {
-                previewDiv.innerHTML = '<em>Select a position and enter shares to see preview...</em>';
+            // Update max shares for position 1
+            if (select1.value) {
+                const pos1 = openPositions.find(p => p.id === parseInt(select1.value));
+                if (pos1) {
+                    maxSharesDiv1.textContent = `Max: ${pos1.shares}`;
+                    document.getElementById('pickSharesToSell1').max = pos1.shares;
+                } else {
+                    maxSharesDiv1.textContent = 'Max: 0';
+                    document.getElementById('pickSharesToSell1').max = 0;
+                }
+            } else {
+                maxSharesDiv1.textContent = 'Max: 0';
+                document.getElementById('pickSharesToSell1').max = 0;
+            }
+            
+            // Update max shares for position 2
+            if (select2.value) {
+                const pos2 = openPositions.find(p => p.id === parseInt(select2.value));
+                if (pos2) {
+                    maxSharesDiv2.textContent = `Max: ${pos2.shares}`;
+                    document.getElementById('pickSharesToSell2').max = pos2.shares;
+                } else {
+                    maxSharesDiv2.textContent = 'Max: 0';
+                    document.getElementById('pickSharesToSell2').max = 0;
+                }
+            } else {
+                maxSharesDiv2.textContent = 'Max: 0';
+                document.getElementById('pickSharesToSell2').max = 0;
+            }
+            
+            // Validate at least one position selected
+            if (!select1.value && !select2.value) {
+                previewDiv.innerHTML = '<em>Select at least one position and enter shares to see preview...</em>';
                 executeBtn.disabled = true;
-                maxSharesDiv.textContent = 'Max: 0 shares available';
-                document.getElementById('pickSharesToSell').max = 0;
                 return;
             }
             
-            // Find selected position
-            const posId = parseInt(select.value);
-            const pos = openPositions.find(p => p.id === posId);
-            if (!pos) {
-                previewDiv.innerHTML = '<em>Position not found</em>';
-                executeBtn.disabled = true;
-                return;
+            // Collect valid sales
+            const sales = [];
+            
+            if (select1.value && sharesToSell1 > 0) {
+                const pos1 = openPositions.find(p => p.id === parseInt(select1.value));
+                if (pos1 && sharesToSell1 <= pos1.shares) {
+                    sales.push({
+                        pos: pos1,
+                        shares: sharesToSell1,
+                        profit: (pos1.currentPrice - pos1.entryPrice) * sharesToSell1,
+                        pct: (sharesToSell1 / pos1.shares) * 100
+                    });
+                }
             }
             
-            // Update max shares display
-            maxSharesDiv.textContent = `Max: ${pos.shares} shares available`;
-            document.getElementById('pickSharesToSell').max = pos.shares;
+            if (select2.value && sharesToSell2 > 0) {
+                const pos2 = openPositions.find(p => p.id === parseInt(select2.value));
+                if (pos2 && sharesToSell2 <= pos2.shares) {
+                    // Check not same position as pos1
+                    if (!sales.find(s => s.pos.id === pos2.id)) {
+                        sales.push({
+                            pos: pos2,
+                            shares: sharesToSell2,
+                            profit: (pos2.currentPrice - pos2.entryPrice) * sharesToSell2,
+                            pct: (sharesToSell2 / pos2.shares) * 100
+                        });
+                    } else {
+                        previewDiv.innerHTML = '<em style="color: #dc2626;">Cannot select the same position twice!</em>';
+                        executeBtn.disabled = true;
+                        return;
+                    }
+                }
+            }
             
-            if (sharesToSell <= 0 || sharesToSell > pos.shares) {
-                previewDiv.innerHTML = '<em style="color: #dc2626;">Enter a valid number of shares (1 to ' + pos.shares + ')</em>';
+            if (sales.length === 0) {
+                previewDiv.innerHTML = '<em style="color: #dc2626;">Enter valid share amounts (greater than 0, less than max)</em>';
                 executeBtn.disabled = true;
                 return;
             }
@@ -4612,7 +4795,6 @@
             const accountSize = getAccountSize();
             const startingAccount = parseFloat(document.getElementById('startingAccount').value) || 250000;
             
-            // Calculate current YTD metrics
             let currentTotalRealized = 0;
             closedTrades.forEach(trade => {
                 currentTotalRealized += (trade.portfolioPnlPercent / 100) * accountSize;
@@ -4636,28 +4818,40 @@
             const currentNetRealized = currentTotalRealized + currentTotalPartialRealized;
             const currentYTDFloor = currentYTD - currentTotalUnrealized;
             const currentYTDLosses = Math.abs(Math.min(0, currentNetRealized));
-            const currentYTDProtection = currentYTDLosses > 0 ? currentTotalUnrealized / currentYTDLosses : null;
             const currentTotalPnL = Math.abs(currentTotalUnrealized + currentNetRealized);
             const currentUnrealizedRisk = currentTotalPnL > 0 ? (currentTotalUnrealized / currentTotalPnL) * 100 : 0;
             
-            // Calculate profit from selling these shares
-            const profitFromSale = (pos.currentPrice - pos.entryPrice) * sharesToSell;
-            const pctOfPosition = (sharesToSell / pos.shares) * 100;
+            // Calculate combined profit from all sales
+            const totalProfitFromSales = sales.reduce((sum, sale) => sum + sale.profit, 0);
             
-            // Calculate NEW metrics after sale
-            const newTotalRealized = currentNetRealized + profitFromSale;
-            const newTotalUnrealized = currentTotalUnrealized - profitFromSale;
+            // Calculate NEW metrics after sales
+            const newTotalRealized = currentNetRealized + totalProfitFromSales;
+            const newTotalUnrealized = currentTotalUnrealized - totalProfitFromSales;
             const newYTDFloor = currentYTD - newTotalUnrealized;
             const newYTDLosses = Math.abs(Math.min(0, newTotalRealized));
-            const newYTDProtection = newYTDLosses > 0 ? newTotalUnrealized / newYTDLosses : null;
             const newTotalPnL = Math.abs(newTotalUnrealized + newTotalRealized);
             const newUnrealizedRisk = newTotalPnL > 0 ? (newTotalUnrealized / newTotalPnL) * 100 : 0;
             
             // Build preview HTML
             let html = `<div style="line-height: 1.6;">`;
-            html += `<div style="margin-bottom: 8px; font-weight: 600; color: #059669;">✅ Selling ${sharesToSell} shares (${pctOfPosition.toFixed(0)}%) of ${pos.symbol}</div>`;
-            html += `<div style="margin-bottom: 4px;">• <strong>$ Locked In:</strong> $${profitFromSale.toLocaleString(undefined, {minimumFractionDigits: 0, maximumFractionDigits: 0})}</div>`;
-            html += `<div style="margin-bottom: 4px;">• <strong>Shares Remaining:</strong> ${pos.shares - sharesToSell} (${(100 - pctOfPosition).toFixed(0)}%)</div>`;
+            
+            // Show each sale
+            sales.forEach(sale => {
+                const symbolCounts = {};
+                openPositions.forEach(p => {
+                    if (!symbolCounts[p.symbol]) symbolCounts[p.symbol] = 0;
+                    if (p.symbol === sale.pos.symbol && p.id <= sale.pos.id) symbolCounts[p.symbol]++;
+                });
+                const displayName = symbolCounts[sale.pos.symbol] > 1 ? 
+                    `${sale.pos.symbol} #${symbolCounts[sale.pos.symbol]}` : sale.pos.symbol;
+                    
+                html += `<div style="margin-bottom: 6px; font-weight: 600; color: #059669;">✅ ${displayName}: ${sale.shares} shares (${sale.pct.toFixed(0)}%)</div>`;
+                html += `<div style="margin-bottom: 4px; font-size: 0.9em; margin-left: 12px;">Locks: $${sale.profit.toLocaleString(undefined, {minimumFractionDigits: 0, maximumFractionDigits: 0})} | Remaining: ${sale.pos.shares - sale.shares} shares</div>`;
+            });
+            
+            html += `<div style="margin: 8px 0; padding: 6px; background: #f0f9ff; border-radius: 4px;">`;
+            html += `<div style="font-weight: 700; color: #0369a1;">Total Locked: $${totalProfitFromSales.toLocaleString(undefined, {minimumFractionDigits: 0, maximumFractionDigits: 0})}</div>`;
+            html += `</div>`;
             html += `<hr style="margin: 8px 0; border: none; border-top: 1px solid #bae6fd;">`;
             
             // YTD Floor comparison
@@ -4665,15 +4859,23 @@
             const floorEmoji = floorChange > 0 ? '✅' : '⚠️';
             html += `<div style="margin-bottom: 4px;">• <strong>YTD Floor:</strong> $${currentYTDFloor.toLocaleString()} → $${newYTDFloor.toLocaleString()} ${floorEmoji}</div>`;
             
-            // YTD Protection comparison
-            if (currentYTDProtection !== null && newYTDProtection !== null) {
-                const protChange = newYTDProtection - currentYTDProtection;
-                const protEmoji = protChange < 0 ? '✅' : '⚠️';
-                html += `<div style="margin-bottom: 4px;">• <strong>YTD Protection:</strong> ${currentYTDProtection.toFixed(1)}x → ${newYTDProtection.toFixed(1)}x ${protEmoji}</div>`;
-            } else if (currentYTDProtection !== null && newYTDProtection === null) {
-                html += `<div style="margin-bottom: 4px;">• <strong>YTD Protection:</strong> ${currentYTDProtection.toFixed(1)}x → Clear ✓ ✅</div>`;
-            } else if (currentYTDProtection === null) {
-                html += `<div style="margin-bottom: 4px;">• <strong>YTD Protection:</strong> Clear ✓ (already net positive)</div>`;
+            // Path to Breakeven comparison (when Net Realized is negative)
+            if (currentYTDLosses > 0) {
+                const remainingBefore = Math.abs(currentNetRealized);
+                const remainingAfter = Math.abs(newTotalRealized);
+                const progressBefore = currentYTDLosses > 0 ? ((currentYTDLosses - remainingBefore) / currentYTDLosses) * 100 : 0;
+                const progressAfter = currentYTDLosses > 0 ? ((currentYTDLosses - remainingAfter) / currentYTDLosses) * 100 : 0;
+                
+                if (newYTDLosses > 0) {
+                    const emoji = remainingAfter < remainingBefore ? '✅' : '⚠️';
+                    html += `<div style="margin-bottom: 4px;">• <strong>Path to Breakeven:</strong> $${remainingBefore.toLocaleString()} → $${remainingAfter.toLocaleString()} ${emoji}</div>`;
+                    html += `<div style="margin-bottom: 4px; margin-left: 12px; font-size: 0.9em;">Progress: ${progressBefore.toFixed(1)}% → ${progressAfter.toFixed(1)}% ✅</div>`;
+                } else {
+                    html += `<div style="margin-bottom: 4px;">• <strong>Path to Breakeven:</strong> $${remainingBefore.toLocaleString()} → Clear ✓ ✅✅</div>`;
+                    html += `<div style="margin-bottom: 4px; margin-left: 12px; font-size: 0.9em; color: #059669;">You'll reach net positive realized!</div>`;
+                }
+            } else {
+                html += `<div style="margin-bottom: 4px;">• <strong>Path to Breakeven:</strong> Already net positive! ✅</div>`;
             }
             
             // Unrealized Risk comparison
@@ -4688,40 +4890,73 @@
         }
         
         function executePickMyOwnHarvest() {
-            const select = document.getElementById('pickPositionSelect');
-            const sharesToSell = parseInt(document.getElementById('pickSharesToSell').value) || 0;
+            const select1 = document.getElementById('pickPositionSelect1');
+            const select2 = document.getElementById('pickPositionSelect2');
+            const sharesToSell1 = parseInt(document.getElementById('pickSharesToSell1').value) || 0;
+            const sharesToSell2 = parseInt(document.getElementById('pickSharesToSell2').value) || 0;
             
-            if (!select.value || sharesToSell <= 0) {
-                alert('Please select a position and enter shares to sell');
+            // Collect valid sales
+            const sales = [];
+            
+            if (select1.value && sharesToSell1 > 0) {
+                const pos1 = openPositions.find(p => p.id === parseInt(select1.value));
+                if (pos1 && sharesToSell1 <= pos1.shares) {
+                    sales.push({
+                        pos: pos1,
+                        shares: sharesToSell1,
+                        profit: (pos1.currentPrice - pos1.entryPrice) * sharesToSell1,
+                        pct: (sharesToSell1 / pos1.shares) * 100
+                    });
+                }
+            }
+            
+            if (select2.value && sharesToSell2 > 0) {
+                const pos2 = openPositions.find(p => p.id === parseInt(select2.value));
+                if (pos2 && sharesToSell2 <= pos2.shares) {
+                    // Check not same position
+                    if (!sales.find(s => s.pos.id === pos2.id)) {
+                        sales.push({
+                            pos: pos2,
+                            shares: sharesToSell2,
+                            profit: (pos2.currentPrice - pos2.entryPrice) * sharesToSell2,
+                            pct: (sharesToSell2 / pos2.shares) * 100
+                        });
+                    }
+                }
+            }
+            
+            if (sales.length === 0) {
+                alert('Please select at least one position and enter valid shares to sell');
                 return;
             }
             
-            const posId = parseInt(select.value);
-            const pos = openPositions.find(p => p.id === posId);
-            
-            if (!pos || sharesToSell > pos.shares) {
-                alert('Invalid selection or share amount');
-                return;
-            }
-            
-            // Confirm with user
-            const profitFromSale = (pos.currentPrice - pos.entryPrice) * sharesToSell;
-            const pctOfPosition = (sharesToSell / pos.shares) * 100;
-            
-            if (!confirm(`Execute this harvest?\n\n${pos.symbol}: Sell ${sharesToSell} shares (${pctOfPosition.toFixed(0)}%)\nLock in: $${profitFromSale.toLocaleString()}\nRemaining: ${pos.shares - sharesToSell} shares`)) {
-                return;
-            }
-            
-            // Record the partial sell
-            if (!pos.partialSells) pos.partialSells = [];
-            pos.partialSells.push({
-                shares: sharesToSell,
-                price: pos.currentPrice,
-                date: new Date().toISOString().split('T')[0]
+            // Build confirmation message
+            const totalProfit = sales.reduce((sum, sale) => sum + sale.profit, 0);
+            let confirmMsg = `Execute this harvest?\n\n`;
+            sales.forEach(sale => {
+                confirmMsg += `${sale.pos.symbol}: Sell ${sale.shares} shares (${sale.pct.toFixed(0)}%)\n`;
+                confirmMsg += `  Lock in: $${sale.profit.toLocaleString()}\n`;
+                confirmMsg += `  Remaining: ${sale.pos.shares - sale.shares} shares\n\n`;
             });
+            confirmMsg += `Total Locked: $${totalProfit.toLocaleString()}`;
             
-            // Reduce shares
-            pos.shares -= sharesToSell;
+            if (!confirm(confirmMsg)) {
+                return;
+            }
+            
+            // Execute all sales
+            sales.forEach(sale => {
+                // Record the partial sell
+                if (!sale.pos.partialSells) sale.pos.partialSells = [];
+                sale.pos.partialSells.push({
+                    shares: sale.shares,
+                    price: sale.pos.currentPrice,
+                    date: new Date().toISOString().split('T')[0]
+                });
+                
+                // Reduce shares
+                sale.pos.shares -= sale.shares;
+            });
             
             // Save and update
             saveToFirebase();
@@ -4731,13 +4966,18 @@
             // Reset the form
             resetPickMyOwn();
             
+            alert(`✅ Harvest executed!\n\n${sales.length} position(s) sold\nTotal locked in: $${totalProfit.toLocaleString()}`);
+        }
+            
             alert(`✅ Harvest executed!\n\nSold ${sharesToSell} shares of ${pos.symbol}\nLocked in: $${profitFromSale.toLocaleString()}`);
         }
         
         function resetPickMyOwn() {
-            document.getElementById('pickPositionSelect').value = '';
-            document.getElementById('pickSharesToSell').value = '';
-            document.getElementById('pickMyOwnPreview').innerHTML = '<em>Select a position and enter shares to see preview...</em>';
+            document.getElementById('pickPositionSelect1').value = '';
+            document.getElementById('pickPositionSelect2').value = '';
+            document.getElementById('pickSharesToSell1').value = '';
+            document.getElementById('pickSharesToSell2').value = '';
+            document.getElementById('pickMyOwnPreview').innerHTML = '<em>Select at least one position and enter shares to see preview...</em>';
             document.getElementById('executePickHarvest').disabled = true;
         }
 
@@ -4759,12 +4999,17 @@
         // What If Calculator Function
         function calculateWhatIf() {
             const starting = parseFloat(document.getElementById('whatIfStarting').value) || 100000;
-            const posSizePct = parseFloat(document.getElementById('whatIfPosSize').value) || 9;
+            const riskPct = parseFloat(document.getElementById('whatIfRiskPct').value) || 0.5;
+            const avgStopPct = parseFloat(document.getElementById('whatIfAvgStop').value) || 3.5;
             const winRate = parseFloat(document.getElementById('whatIfWinRate').value) || 90;
             const avgGainPct = parseFloat(document.getElementById('whatIfAvgGain').value) || 6.8;
             const avgLossPct = parseFloat(document.getElementById('whatIfAvgLoss').value) || 3.4;
             const tradesPerMonth = parseFloat(document.getElementById('whatIfTradesPerMonth').value) || 10;
             const goalPct = parseFloat(document.getElementById('whatIfGoal').value) || 50;
+            
+            // Calculate implied position size from risk-based sizing
+            // Position Size % = Risk % / Stop %
+            const posSizePct = avgStopPct > 0 ? riskPct / avgStopPct * 100 : 0;
             
             // Calculate position value
             const posValue = (posSizePct / 100) * starting;
@@ -4804,7 +5049,7 @@
             // Update all displays
             document.getElementById('whatIfEdge').textContent = portfolioEdge.toFixed(2) + '%';
             document.getElementById('whatIfGrowth').textContent = growthFactor.toFixed(6);
-            document.getElementById('whatIfPosValue').textContent = '$' + posValue.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
+            document.getElementById('whatIfPosValue').textContent = '$' + posValue.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}) + ' (' + posSizePct.toFixed(1) + '%)';
             document.getElementById('whatIfPerTrade').textContent = '$' + expectancyDollars.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
             document.getElementById('whatIfTradesNeeded').textContent = Math.round(tradesNeeded);
             document.getElementById('whatIfMonths').textContent = monthsToGoal.toFixed(1);
