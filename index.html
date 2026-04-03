@@ -778,6 +778,7 @@
             <button class="tab" onclick="switchTab('closed-trades')">Closed Trades</button>
             <button class="tab" onclick="switchTab('expectancy-calc')">Expectancy Calculator</button>
             <button class="tab" onclick="switchTab('what-if-calc')">What If Calculator</button>
+            <button class="tab" onclick="switchTab('strategy-rules')">Strategy Rules</button>
             <button class="tab" onclick="switchTab('stock1')"><span id="stock1Symbol">Stock 1</span></button>
             <button class="tab" onclick="switchTab('stock2')"><span id="stock2Symbol">Stock 2</span></button>
             <button class="tab" onclick="switchTab('stock3')"><span id="stock3Symbol">Stock 3</span></button>
@@ -1308,6 +1309,134 @@
                     </div>
                 </div>
                 <div id="stock6Profile"></div>
+            </div>
+        </div>
+
+        <!-- Strategy Rules Tab -->
+        <div id="strategy-rules" class="tab-content">
+            <div class="card">
+                <h2 style="margin-bottom: 15px;">🎯 Caruso-Aligned Trading Rules & Metrics Priority</h2>
+                <p style="margin-bottom: 20px; opacity: 0.8; font-style: italic;">Based on Matt Caruso's "risk management first" philosophy - preventing the round-trip problem</p>
+                
+                <!-- Round-Trip Prevention Metric -->
+                <div style="background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); padding: 15px; border-radius: 8px; margin-bottom: 20px; border: 2px solid #f59e0b;">
+                    <h3 style="margin-bottom: 10px; color: #92400e;">⚠️ Round-Trip Risk Alert</h3>
+                    <div id="roundTripAlert" style="font-size: 0.9em; color: #78350f;">
+                        Calculating...
+                    </div>
+                </div>
+                
+                <!-- Last Harvest Tracker -->
+                <div style="background: #f0f9ff; padding: 15px; border-radius: 8px; margin-bottom: 20px; border: 2px solid #0284c7;">
+                    <h3 style="margin-bottom: 10px; color: #075985;">📅 Last Harvest</h3>
+                    <div id="lastHarvestTracker" style="font-size: 0.9em; color: #0c4a6e;">
+                        No harvests recorded yet
+                    </div>
+                </div>
+                
+                <!-- Priority Metrics -->
+                <div style="margin-bottom: 30px;">
+                    <h3 style="margin-bottom: 15px;">📊 Metrics Priority (Watch in This Order)</h3>
+                    
+                    <div style="background: white; padding: 15px; border-radius: 8px; margin-bottom: 15px; border-left: 4px solid #ef4444;">
+                        <div style="font-weight: 700; color: #dc2626; margin-bottom: 8px;">Priority 1: YTD Floor</div>
+                        <div style="font-size: 0.9em; margin-bottom: 8px;">
+                            <strong>Current:</strong> <span id="ruleYtdFloor">--</span>
+                        </div>
+                        <div style="font-size: 0.85em; opacity: 0.8;">
+                            <strong>Goal:</strong> Keep POSITIVE (or at worst, small negative like -$200)<br>
+                            <strong>Action Trigger:</strong> If < -$500 → HARVEST NOW<br>
+                            <strong>Why:</strong> Protects you from pullback wiping out your YTD
+                        </div>
+                    </div>
+                    
+                    <div style="background: white; padding: 15px; border-radius: 8px; margin-bottom: 15px; border-left: 4px solid #f59e0b;">
+                        <div style="font-weight: 700; color: #d97706; margin-bottom: 8px;">Priority 2: Unrealized Risk %</div>
+                        <div style="font-size: 0.9em; margin-bottom: 8px;">
+                            <strong>Current:</strong> <span id="ruleUnrealizedRisk">--</span>
+                        </div>
+                        <div style="font-size: 0.85em; opacity: 0.8;">
+                            <strong>Goal:</strong> Keep < 65% (ideally < 50%)<br>
+                            <strong>Action Trigger:</strong> If > 70% → Harvest 25-50% of biggest winner<br>
+                            <strong>Why:</strong> Too much of your P&L is still at risk of pullback
+                        </div>
+                    </div>
+                    
+                    <div style="background: white; padding: 15px; border-radius: 8px; margin-bottom: 15px; border-left: 4px solid #0284c7;">
+                        <div style="font-weight: 700; color: #0369a1; margin-bottom: 8px;">Priority 3: Path to Breakeven</div>
+                        <div style="font-size: 0.9em; margin-bottom: 8px;">
+                            <strong>Current:</strong> <span id="rulePathToBreakeven">--</span>
+                        </div>
+                        <div style="font-size: 0.85em; opacity: 0.8;">
+                            <strong>Goal:</strong> Make steady progress (get it down each month)<br>
+                            <strong>Action Trigger:</strong> Every $1,000 you lock in = progress toward $0<br>
+                            <strong>Why:</strong> Prevents accumulating realized losses while riding unrealized gains
+                        </div>
+                    </div>
+                    
+                    <div style="background: white; padding: 15px; border-radius: 8px; border-left: 4px solid #10b981;">
+                        <div style="font-weight: 700; color: #059669; margin-bottom: 8px;">Priority 4: Recent Recovery</div>
+                        <div style="font-size: 0.9em; margin-bottom: 8px;">
+                            <strong>Current:</strong> <span id="ruleRecentRecovery">--</span>
+                        </div>
+                        <div style="font-size: 0.85em; opacity: 0.8;">
+                            <strong>Goal:</strong> Keep < 1.5x<br>
+                            <strong>Action Trigger:</strong> If > 1.5x → Warning that you're leaning too hard on current winners<br>
+                            <strong>Why:</strong> Early warning you're setting up for another round-trip
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Caruso-Aligned Harvest Rules -->
+                <div style="margin-bottom: 30px;">
+                    <h3 style="margin-bottom: 15px;">📋 Caruso-Aligned Harvest Strategy</h3>
+                    
+                    <div style="background: #fef3c7; padding: 15px; border-radius: 8px; margin-bottom: 12px;">
+                        <div style="font-weight: 700; color: #92400e; margin-bottom: 6px;">Rule 1: YTD Floor Protection</div>
+                        <div style="font-size: 0.9em; color: #78350f;">
+                            IF YTD Floor < $0<br>
+                            THEN harvest enough to make it $0 or positive
+                        </div>
+                    </div>
+                    
+                    <div style="background: #fef3c7; padding: 15px; border-radius: 8px; margin-bottom: 12px;">
+                        <div style="font-weight: 700; color: #92400e; margin-bottom: 6px;">Rule 2: Unrealized Risk Management</div>
+                        <div style="font-size: 0.9em; color: #78350f;">
+                            IF Unrealized Risk > 70%<br>
+                            THEN harvest 25-50% of largest winner
+                        </div>
+                    </div>
+                    
+                    <div style="background: #fef3c7; padding: 15px; border-radius: 8px; margin-bottom: 12px;">
+                        <div style="font-weight: 700; color: #92400e; margin-bottom: 6px;">Rule 3: Path to Breakeven Progress</div>
+                        <div style="font-size: 0.9em; color: #78350f;">
+                            WHEN a winner is up >3R<br>
+                            THEN harvest 25% to chip away at Path to Breakeven
+                        </div>
+                    </div>
+                    
+                    <div style="background: #fef3c7; padding: 15px; border-radius: 8px;">
+                        <div style="font-weight: 700; color: #92400e; margin-bottom: 6px;">Rule 4: Never Give Back a Full Winner</div>
+                        <div style="font-size: 0.9em; color: #78350f;">
+                            WHEN a position hits +5R<br>
+                            THEN lock in at least 50% (move stop to +2.5R minimum OR sell 50%)
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- The Problem Explained -->
+                <div style="background: #fee2e2; padding: 15px; border-radius: 8px;">
+                    <h3 style="margin-bottom: 10px; color: #dc2626;">🔴 The Round-Trip Problem You're Solving</h3>
+                    <div style="font-size: 0.9em; color: #7f1d1d; line-height: 1.6;">
+                        <strong>The Painful Cycle:</strong><br>
+                        Week 1: Lost $500 on 3 small trades (Realized: -$500)<br>
+                        Week 2: GLW is up $3,000 unrealized → YTD looks great! (+$2,500)<br>
+                        Week 3: GLW pulls back to +$1,000 → YTD now +$500<br>
+                        Week 4: GLW stops out at breakeven → YTD: -$500<br><br>
+                        <strong>Result:</strong> You made $3,000, gave it ALL back, ended negative.<br><br>
+                        <strong>The Fix:</strong> When GLW was up $3,000 in Week 2, harvest 25-50% to lock in profit and cover those losses. Then if it pulls back, you're still protected!
+                    </div>
+                </div>
             </div>
         </div>
 
@@ -5000,6 +5129,182 @@
             updateDailyEquityTable();
             updateHarvestHistory();
             populatePickPositionDropdown();
+            updateStrategyRules();
+        }
+        
+        // Update Strategy Rules Tab
+        function updateStrategyRules() {
+            const accountSize = getAccountSize();
+            const startingAccount = parseFloat(document.getElementById('startingAccount').value) || 250000;
+            
+            // Calculate all the metrics we need
+            let totalRealized = 0;
+            closedTrades.forEach(trade => {
+                totalRealized += (trade.portfolioPnlPercent / 100) * accountSize;
+            });
+            
+            let totalUnrealized = 0;
+            let totalPartialRealized = 0;
+            openPositions.forEach(p => {
+                const metrics = calculatePositionMetrics(p);
+                if (metrics.unrealizedPnL > 0) {
+                    totalUnrealized += metrics.unrealizedPnL;
+                }
+                if (p.partialSells && p.partialSells.length > 0) {
+                    p.partialSells.forEach(sell => {
+                        totalPartialRealized += (sell.price - p.entryPrice) * sell.shares;
+                    });
+                }
+            });
+            
+            const currentYTD = accountSize - startingAccount;
+            const netRealized = totalRealized + totalPartialRealized;
+            const ytdFloor = currentYTD - totalUnrealized;
+            const totalPnL = Math.abs(totalUnrealized + netRealized);
+            const unrealizedRisk = totalPnL > 0 ? (totalUnrealized / totalPnL) * 100 : 0;
+            
+            // Path to Breakeven
+            const ytdLosses = Math.abs(Math.min(0, netRealized));
+            let pathToBreakeven = '--';
+            if (ytdLosses > 0) {
+                pathToBreakeven = `$${Math.abs(netRealized).toLocaleString()} remaining`;
+            } else {
+                pathToBreakeven = 'Already positive ✓';
+            }
+            
+            // Recent Recovery
+            const RECOVERY_LOOKBACK = getRecoveryLookback();
+            const lastNTrades = closedTrades.slice(-RECOVERY_LOOKBACK);
+            let lastNLosses = 0;
+            lastNTrades.forEach(trade => {
+                const pnl = (trade.portfolioPnlPercent / 100) * accountSize;
+                if (pnl < 0) lastNLosses += Math.abs(pnl);
+            });
+            const recentRecovery = lastNLosses > 0 ? totalUnrealized / lastNLosses : null;
+            
+            // Update Priority Metrics
+            const ytdFloorColor = ytdFloor >= 0 ? '#10b981' : ytdFloor > -500 ? '#f59e0b' : '#ef4444';
+            document.getElementById('ruleYtdFloor').innerHTML = `<span style="color: ${ytdFloorColor}; font-weight: 700;">$${ytdFloor.toLocaleString()}</span>`;
+            
+            const riskColor = unrealizedRisk < 65 ? '#10b981' : unrealizedRisk < 70 ? '#f59e0b' : '#ef4444';
+            document.getElementById('ruleUnrealizedRisk').innerHTML = `<span style="color: ${riskColor}; font-weight: 700;">${unrealizedRisk.toFixed(0)}%</span>`;
+            
+            document.getElementById('rulePathToBreakeven').innerHTML = `<span style="font-weight: 700;">${pathToBreakeven}</span>`;
+            
+            const recRecColor = recentRecovery === null || recentRecovery < 1.5 ? '#10b981' : '#f59e0b';
+            const recRecDisplay = recentRecovery !== null ? `${recentRecovery.toFixed(1)}x` : 'Clear ✓';
+            document.getElementById('ruleRecentRecovery').innerHTML = `<span style="color: ${recRecColor}; font-weight: 700;">${recRecDisplay}</span>`;
+            
+            // Round-Trip Risk Alert
+            const roundTripRisk = calculateRoundTripRisk(totalUnrealized, netRealized, ytdFloor, unrealizedRisk);
+            document.getElementById('roundTripAlert').innerHTML = roundTripRisk;
+            
+            // Last Harvest Tracker
+            const lastHarvest = getLastHarvestDate();
+            document.getElementById('lastHarvestTracker').innerHTML = lastHarvest;
+        }
+        
+        // Calculate Round-Trip Risk
+        function calculateRoundTripRisk(totalUnrealized, netRealized, ytdFloor, unrealizedRisk) {
+            let riskLevel = 'LOW';
+            let riskColor = '#10b981';
+            let warnings = [];
+            
+            // Check multiple risk factors
+            if (ytdFloor < -500) {
+                warnings.push('YTD Floor is negative - pullback would wipe out your year');
+                riskLevel = 'CRITICAL';
+                riskColor = '#ef4444';
+            } else if (ytdFloor < 0) {
+                warnings.push('YTD Floor is slightly negative');
+                if (riskLevel === 'LOW') riskLevel = 'MODERATE';
+                if (riskColor === '#10b981') riskColor = '#f59e0b';
+            }
+            
+            if (unrealizedRisk > 75) {
+                warnings.push(`${unrealizedRisk.toFixed(0)}% of your P&L is still at risk - very high concentration`);
+                riskLevel = 'CRITICAL';
+                riskColor = '#ef4444';
+            } else if (unrealizedRisk > 70) {
+                warnings.push(`${unrealizedRisk.toFixed(0)}% of your P&L is still at risk`);
+                if (riskLevel === 'LOW') riskLevel = 'MODERATE';
+                if (riskColor === '#10b981') riskColor = '#f59e0b';
+            }
+            
+            if (netRealized < 0 && totalUnrealized > Math.abs(netRealized) * 2) {
+                warnings.push(`You have large unrealized gains (+$${totalUnrealized.toLocaleString()}) offsetting realized losses (-$${Math.abs(netRealized).toLocaleString()}) - classic round-trip setup`);
+                if (riskLevel !== 'CRITICAL') riskLevel = 'HIGH';
+                if (riskColor === '#10b981') riskColor = '#f59e0b';
+            }
+            
+            let html = `<div style="font-weight: 700; font-size: 1.1em; color: ${riskColor}; margin-bottom: 8px;">Risk Level: ${riskLevel}</div>`;
+            
+            if (warnings.length > 0) {
+                html += '<div style="font-size: 0.9em; line-height: 1.6;">';
+                warnings.forEach(w => {
+                    html += `• ${w}<br>`;
+                });
+                html += '</div>';
+                html += '<div style="margin-top: 10px; font-weight: 600; color: #92400e;">⚡ Action: Use Pick My Own Harvest Plan to lock in some profit NOW</div>';
+            } else {
+                html += '<div style="color: #059669;">✓ No immediate round-trip risk detected. Continue monitoring Priority metrics.</div>';
+            }
+            
+            return html;
+        }
+        
+        // Get Last Harvest Date
+        function getLastHarvestDate() {
+            let lastHarvestDate = null;
+            let lastHarvestDetails = [];
+            
+            // Check all positions for partial sells
+            openPositions.forEach(pos => {
+                if (pos.partialSells && pos.partialSells.length > 0) {
+                    pos.partialSells.forEach(sell => {
+                        const sellDate = new Date(sell.date);
+                        if (!lastHarvestDate || sellDate > lastHarvestDate) {
+                            lastHarvestDate = sellDate;
+                            lastHarvestDetails = [{
+                                symbol: pos.symbol,
+                                date: sell.date,
+                                shares: sell.shares,
+                                price: sell.price,
+                                profit: (sell.price - pos.entryPrice) * sell.shares
+                            }];
+                        } else if (sellDate.getTime() === lastHarvestDate.getTime()) {
+                            lastHarvestDetails.push({
+                                symbol: pos.symbol,
+                                date: sell.date,
+                                shares: sell.shares,
+                                price: sell.price,
+                                profit: (sell.price - pos.entryPrice) * sell.shares
+                            });
+                        }
+                    });
+                }
+            });
+            
+            if (!lastHarvestDate) {
+                return '<div style="color: #dc2626;">No harvests recorded yet - consider using Pick My Own when winners hit 3R+</div>';
+            }
+            
+            const today = new Date();
+            const daysSince = Math.floor((today - lastHarvestDate) / (1000 * 60 * 60 * 24));
+            
+            let html = `<div style="font-weight: 700; margin-bottom: 8px;">Last harvest was ${daysSince} days ago (${lastHarvestDate.toLocaleDateString()})</div>`;
+            
+            lastHarvestDetails.forEach(h => {
+                html += `<div style="font-size: 0.9em;">• ${h.symbol}: Sold ${h.shares} shares @ $${h.price.toFixed(2)} → Locked $${h.profit.toLocaleString()}</div>`;
+            });
+            
+            if (daysSince > 30) {
+                html += '<div style="margin-top: 8px; color: #dc2626; font-weight: 600;">⚠️ It\'s been over a month since your last harvest - review your open positions!</div>';
+            } else if (daysSince > 14) {
+                html += '<div style="margin-top: 8px; color: #f59e0b; font-weight: 600;">💡 It\'s been 2+ weeks - check if any winners are ready to harvest</div>';
+            }
+            
+            return html;
         }
 
         // What If Calculator Function
