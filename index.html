@@ -4849,10 +4849,10 @@
                 
                 if (newYTDLosses > 0) {
                     const emoji = remainingAfter < remainingBefore ? '✅' : '⚠️';
-                    html += `<div style="margin-bottom: 4px;">• <strong>Path to Breakeven:</strong> $${remainingBefore.toLocaleString()} → $${remainingAfter.toLocaleString()} ${emoji}</div>`;
+                    html += `<div style="margin-bottom: 4px;">• <strong>Realized profits are negative, Path to Breakeven:</strong> $${remainingBefore.toLocaleString()} → $${remainingAfter.toLocaleString()} ${emoji}</div>`;
                     html += `<div style="margin-bottom: 4px; margin-left: 12px; font-size: 0.9em;">Progress: ${progressBefore.toFixed(1)}% → ${progressAfter.toFixed(1)}% ✅</div>`;
                 } else {
-                    html += `<div style="margin-bottom: 4px;">• <strong>Path to Breakeven:</strong> $${remainingBefore.toLocaleString()} → Clear ✓ ✅✅</div>`;
+                    html += `<div style="margin-bottom: 4px;">• <strong>Realized profits are negative, Path to Breakeven:</strong> $${remainingBefore.toLocaleString()} → Clear ✓ ✅✅</div>`;
                     html += `<div style="margin-bottom: 4px; margin-left: 12px; font-size: 0.9em; color: #059669;">You'll reach net positive realized!</div>`;
                 }
             } else {
