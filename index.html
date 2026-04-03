@@ -588,22 +588,22 @@
 
         <!-- Account Setup -->
         <div class="account-setup" style="padding: 10px;">
-            <h3 style="font-size: 1em; margin-bottom: 8px;">Account Stats</h3>
+            <h3 style="font-size: 1em; margin-bottom: 8px;" title="ACCOUNT STATS: Update these values daily. Trading Account = your current total equity (update after market close). Roth accounts tracked separately. Starting (Jan 1) is set once per year and never changes — it's your benchmark for YTD calculations.">Account Stats ℹ</h3>
             
             <!-- Current Values (for daily updates) -->
             <div style="background: #f0f9ff; padding: 8px; border-radius: 6px; border: 2px solid #667eea; margin-bottom: 8px;">
-                <div style="font-weight: bold; color: #667eea; margin-bottom: 6px; font-size: 0.8em;">📊 Daily Update</div>
+                <div style="font-weight: bold; color: #667eea; margin-bottom: 6px; font-size: 0.8em;" title="Update these fields each day after market close to keep your equity curve and YTD calculations accurate.">📊 Daily Update</div>
                 <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px;">
                     <div class="form-group" style="margin-bottom: 0;">
-                        <label style="font-size: 10px;">Trading Account ($)</label>
-                        <input type="number" id="accountSize" value="250000" style="padding: 4px; font-size: 12px;" onchange="saveToFirebase(); updateAllDisplays();">
+                        <label style="font-size: 10px;" title="Current total equity in your main trading account. Update this daily after market close.">Trading Account ($)</label>
+                        <input type="number" id="accountSize" value="250000" style="padding: 4px; font-size: 12px;" onchange="saveToFirebase(); saveToFirebase(); updateAllDisplays();">
                     </div>
                     <div class="form-group" style="margin-bottom: 0;">
-                        <label style="font-size: 10px;">My Roth ($)</label>
+                        <label style="font-size: 10px;" title="Current value of your personal Roth IRA. Tracked separately from trading account for YTD comparison.">My Roth ($)</label>
                         <input type="number" id="myRoth" value="0" style="padding: 4px; font-size: 12px;" onchange="saveToFirebase(); updateAllDisplays();">
                     </div>
                     <div class="form-group" style="margin-bottom: 0;">
-                        <label style="font-size: 10px;">Wife Roth ($)</label>
+                        <label style="font-size: 10px;" title="Current value of your wife's Roth IRA. Tracked separately for YTD comparison.">Wife Roth ($)</label>
                         <input type="number" id="wifeRoth" value="0" style="padding: 4px; font-size: 12px;" onchange="saveToFirebase(); updateAllDisplays();">
                     </div>
                 </div>
@@ -791,112 +791,120 @@
         <!-- Open Positions Tab -->
         <div id="open-positions" class="tab-content active">
             
-            <!-- Harvest Calculator (shows when YTD Protection triggered) -->
-            <div id="harvestCalculator" class="card" style="padding: 12px; margin-bottom: 12px; display: none; background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); border: 2px solid #f59e0b;">
-                <h2 style="font-size: 1em; margin-bottom: 10px; color: #92400e; cursor: pointer;" onclick="toggleHarvestCalculatorContent()" title="AUTOMATIC PROTECTION: Shows 3 pre-calculated harvest options when your YTD is at risk (YTD Protection > 2.0x or YTD Floor negative). Quick-click solutions to lock in profits and protect your year. Use this when you need fast action.">
-                    💰 Harvest Calculator <span id="harvestCalcToggle">▼</span>
-                </h2>
-                <div id="harvestCalculatorContent" style="font-size: 0.9em; color: #78350f;"></div>
+            <!-- ── Portfolio Health Bar ─────────────────────────────── -->
+            <div class="card" style="padding:8px 14px; margin-bottom:8px;">
+                <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+                    <span style="font-size:0.75em; font-weight:700; color:#9ca3af; letter-spacing:0.5px; text-transform:uppercase; margin-right:2px;">Portfolio Health</span>
+                    <button id="harvestBadge" onclick="toggleMergedPanel('mergedHarvestPanel','harvestBadge')"
+                        title="HARVEST PLANNER: Tracks whether your open winners need to be partially sold to protect gains. 🔴 = YTD Floor is negative or unrealized risk >70% — action required. 🟡 = Getting stretched, consider locking some in. 🟢 = Cushion is healthy. Click to open the Harvest Planner."
+                        style="padding:4px 12px; border-radius:12px; border:none; cursor:pointer; font-size:0.82em; font-weight:700; background:#f3f4f6; color:#6b7280; transition:all 0.2s;">
+                        🌾 Harvest &nbsp;<span id="harvestBadgeStatus">— No positions</span>
+                    </button>
+                    <button id="recoveryBadge" onclick="toggleMergedPanel('mergedRecoveryPanel','recoveryBadge')"
+                        title="RECOVERY STATUS: Shows how many more -1R losses your locked profits can absorb before you go negative for the year. Also flags when stops need to be moved up. 🔴 = Fewer than 2 losses absorbable or stops need immediate attention. 🟡 = 2–4 losses absorbable, getting thin. 🟢 = 5+ losses absorbable, cushion is solid. Click to see details."
+                        style="padding:4px 12px; border-radius:12px; border:none; cursor:pointer; font-size:0.82em; font-weight:700; background:#f3f4f6; color:#6b7280; transition:all 0.2s;">
+                        🛡️ Recovery &nbsp;<span id="recoveryBadgeStatus">— Loading</span>
+                    </button>
+                    <button id="pullbackBadge" onclick="toggleMergedPanel('mergedPullbackPanel','pullbackBadge')"
+                        title="PULLBACK FROM PEAK: Tracks how far each open winner has pulled back from its highest R achieved. 🔴 = A position has given back 50%+ of its peak gain — harvest or tighten stop now. 🟡 = 33–50% given back, watch closely. 🟢 = All positions holding well. Grey = no positions have reached 1R yet. Click to see details per position."
+                        style="padding:4px 12px; border-radius:12px; border:none; cursor:pointer; font-size:0.82em; font-weight:700; background:#f3f4f6; color:#6b7280; transition:all 0.2s;">
+                        📉 Pullback &nbsp;<span id="pullbackBadgeStatus">— No data</span>
+                    </button>
+                </div>
             </div>
 
-            <!-- Pick My Own Harvest Simulator -->
-            <div id="pickMyOwnHarvest" class="card" style="padding: 12px; margin-bottom: 12px; display: none; background: linear-gradient(135deg, #e0f2fe 0%, #bae6fd 100%); border: 2px solid #0284c7;">
-                <h2 style="font-size: 1em; margin-bottom: 10px; color: #075985; cursor: pointer;" onclick="togglePickMyOwnContent()" title="CUSTOM PLANNING: Interactive simulator to plan your own harvest strategy. Select 1-2 positions, choose share amounts, and see live preview of how it impacts your YTD Floor, Path to Breakeven, and risk metrics. Use this when you want precise control and want to experiment with different scenarios before executing.">
-                    🎮 Pick My Own Harvest Plan <span id="pickMyOwnToggle">▼</span>
-                </h2>
-                <div id="pickMyOwnContent">
-                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; font-size: 0.9em;">
-                        <!-- Input Column -->
+            <!-- ── Merged Harvest Planner (collapsed) ─────────────── -->
+            <div id="mergedHarvestPanel" class="card" style="display:none; padding:12px; margin-bottom:8px; background:linear-gradient(135deg,#fef3c7 0%,#fde68a 100%); border:2px solid #f59e0b;">
+                <h2 style="font-size:1em; margin-bottom:12px; color:#92400e;" title="HARVEST PLANNER: Two tools in one. AUTO SUGGESTIONS shows pre-calculated options when your YTD is at risk (triggered by YTD Floor going negative or Unrealized Risk >70%). MANUAL PLAN lets you select any position, choose exactly how many shares to sell, and preview the impact before executing.">🌾 Harvest Planner</h2>
+
+                <!-- Auto Suggestions -->
+                <div style="margin-bottom:14px;">
+                    <div style="font-size:0.78em; font-weight:700; color:#78350f; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:6px;" title="Automatically calculated harvest options triggered when YTD Floor is negative or your unrealized risk is too high. Shows the minimum number of shares to sell from your biggest winner to get back to safety.">⚡ Auto Suggestions ℹ</div>
+                    <div id="harvestCalculatorContent" style="font-size:0.9em; color:#78350f;">
+                        <em style="opacity:0.7;">No harvest action needed right now.</em>
+                    </div>
+                </div>
+
+                <div style="border-top:1px solid rgba(120,53,15,0.25); margin-bottom:14px;"></div>
+
+                <!-- Manual Plan -->
+                <div>
+                    <div style="font-size:0.78em; font-weight:700; color:#78350f; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:10px;" title="Choose exactly which positions to sell and how many shares. See a live preview of the impact on your YTD Floor, Unrealized Risk %, and recovery metrics BEFORE executing. Use the 25%/50%/75% quick links to pre-fill common harvest amounts.">🎮 Manual Harvest Plan ℹ</div>
+                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:15px; font-size:0.9em;">
                         <div>
-                            <!-- Position 1 -->
-                            <div style="padding: 8px; background: rgba(255,255,255,0.5); border-radius: 4px; margin-bottom: 12px;">
-                                <div style="font-weight: 600; color: #075985; margin-bottom: 6px;">Position 1:</div>
-                                <div class="form-group" style="margin-bottom: 8px;">
-                                    <label style="font-weight: 600; color: #075985; font-size: 0.9em;">Select Position:</label>
-                                    <select id="pickPositionSelect1" onchange="updatePickMyOwnPreview()" style="width: 100%; padding: 6px;">
+                            <div style="padding:8px; background:rgba(255,255,255,0.5); border-radius:4px; margin-bottom:10px;">
+                                <div style="font-weight:600; color:#075985; margin-bottom:6px;">Position 1:</div>
+                                <div class="form-group" style="margin-bottom:8px;">
+                                    <label style="font-weight:600; color:#075985; font-size:0.9em;">Select Position:</label>
+                                    <select id="pickPositionSelect1" onchange="updatePickMyOwnPreview()" style="width:100%; padding:6px;">
                                         <option value="">-- Choose a position --</option>
                                     </select>
                                 </div>
-                                
-                                <div class="form-group" style="margin-bottom: 0;">
-                                    <label style="font-weight: 600; color: #075985; font-size: 0.9em;">Shares to Sell:</label>
-                                    <input type="number" id="pickSharesToSell1" min="0" oninput="updatePickMyOwnPreview()" style="width: 100%; padding: 6px;">
-                                    <div style="font-size: 0.8em; color: #0369a1; margin-top: 4px;">
-                                        <span id="pickSharesMax1">Max: 0</span> | 
-                                        <a href="#" onclick="setPickShares(1, 0.25); return false;">25%</a> | 
-                                        <a href="#" onclick="setPickShares(1, 0.50); return false;">50%</a> | 
-                                        <a href="#" onclick="setPickShares(1, 0.75); return false;">75%</a>
+                                <div class="form-group" style="margin-bottom:0;">
+                                    <label style="font-weight:600; color:#075985; font-size:0.9em;">Shares to Sell:</label>
+                                    <input type="number" id="pickSharesToSell1" min="0" oninput="updatePickMyOwnPreview()" style="width:100%; padding:6px;">
+                                    <div style="font-size:0.8em; color:#0369a1; margin-top:4px;">
+                                        <span id="pickSharesMax1">Max: 0</span> |
+                                        <a href="#" onclick="setPickShares(1,0.25);return false;">25%</a> |
+                                        <a href="#" onclick="setPickShares(1,0.50);return false;">50%</a> |
+                                        <a href="#" onclick="setPickShares(1,0.75);return false;">75%</a>
                                     </div>
                                 </div>
                             </div>
-                            
-                            <!-- Position 2 -->
-                            <div style="padding: 8px; background: rgba(255,255,255,0.5); border-radius: 4px;">
-                                <div style="font-weight: 600; color: #075985; margin-bottom: 6px;">Position 2 (optional):</div>
-                                <div class="form-group" style="margin-bottom: 8px;">
-                                    <label style="font-weight: 600; color: #075985; font-size: 0.9em;">Select Position:</label>
-                                    <select id="pickPositionSelect2" onchange="updatePickMyOwnPreview()" style="width: 100%; padding: 6px;">
+                            <div style="padding:8px; background:rgba(255,255,255,0.5); border-radius:4px;">
+                                <div style="font-weight:600; color:#075985; margin-bottom:6px;">Position 2 (optional):</div>
+                                <div class="form-group" style="margin-bottom:8px;">
+                                    <label style="font-weight:600; color:#075985; font-size:0.9em;">Select Position:</label>
+                                    <select id="pickPositionSelect2" onchange="updatePickMyOwnPreview()" style="width:100%; padding:6px;">
                                         <option value="">-- Choose a position --</option>
                                     </select>
                                 </div>
-                                
-                                <div class="form-group" style="margin-bottom: 0;">
-                                    <label style="font-weight: 600; color: #075985; font-size: 0.9em;">Shares to Sell:</label>
-                                    <input type="number" id="pickSharesToSell2" min="0" oninput="updatePickMyOwnPreview()" style="width: 100%; padding: 6px;">
-                                    <div style="font-size: 0.8em; color: #0369a1; margin-top: 4px;">
-                                        <span id="pickSharesMax2">Max: 0</span> | 
-                                        <a href="#" onclick="setPickShares(2, 0.25); return false;">25%</a> | 
-                                        <a href="#" onclick="setPickShares(2, 0.50); return false;">50%</a> | 
-                                        <a href="#" onclick="setPickShares(2, 0.75); return false;">75%</a>
+                                <div class="form-group" style="margin-bottom:0;">
+                                    <label style="font-weight:600; color:#075985; font-size:0.9em;">Shares to Sell:</label>
+                                    <input type="number" id="pickSharesToSell2" min="0" oninput="updatePickMyOwnPreview()" style="width:100%; padding:6px;">
+                                    <div style="font-size:0.8em; color:#0369a1; margin-top:4px;">
+                                        <span id="pickSharesMax2">Max: 0</span> |
+                                        <a href="#" onclick="setPickShares(2,0.25);return false;">25%</a> |
+                                        <a href="#" onclick="setPickShares(2,0.50);return false;">50%</a> |
+                                        <a href="#" onclick="setPickShares(2,0.75);return false;">75%</a>
                                     </div>
                                 </div>
                             </div>
                         </div>
-                        
-                        <!-- Preview Column -->
                         <div>
-                            <div style="font-weight: 600; margin-bottom: 8px; color: #075985;">📊 Combined Preview:</div>
-                            <div id="pickMyOwnPreview" style="background: white; padding: 10px; border-radius: 6px; font-size: 0.85em; color: #0c4a6e;">
+                            <div style="font-weight:600; margin-bottom:8px; color:#075985;">📊 Combined Preview:</div>
+                            <div id="pickMyOwnPreview" style="background:white; padding:10px; border-radius:6px; font-size:0.85em; color:#0c4a6e;">
                                 <em>Select at least one position and enter shares to see preview...</em>
                             </div>
                         </div>
                     </div>
-                    
-                    <div style="margin-top: 12px; text-align: center;">
-                        <button id="executePickHarvest" onclick="executePickMyOwnHarvest()" class="btn-success" disabled style="padding: 8px 20px;">Execute This Harvest</button>
-                        <button onclick="resetPickMyOwn()" class="btn-secondary" style="padding: 8px 20px; margin-left: 10px;">Reset</button>
+                    <div style="margin-top:12px; text-align:center;">
+                        <button id="executePickHarvest" onclick="executePickMyOwnHarvest()" class="btn-success" disabled style="padding:8px 20px;">Execute This Harvest</button>
+                        <button onclick="resetPickMyOwn()" class="btn-secondary" style="padding:8px 20px; margin-left:10px;">Reset</button>
                     </div>
                 </div>
             </div>
 
-            <!-- Regressive Stop Alert -->
-            <div class="card" id="regressiveStopAlert" style="padding: 12px; margin-bottom: 12px; display: none; background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); border: 2px solid #f59e0b;">
-                <h2 style="font-size: 1em; margin-bottom: 10px; color: #92400e; cursor: pointer;" onclick="toggleRegressiveStopContent()" title="POSITION MANAGEMENT: Alerts when a position's stop is below your entry (breakeven). Shows two paths: PATH 1 = Cut the small loss now to free up capital, or PATH 2 = Hold and wait for recovery but accept opportunity cost. Different purpose from harvesting - this is about managing struggling positions, not protecting profits.">
-                    ⚠️ Regressive Stop Required <span id="regressiveStopToggle">▼</span>
-                </h2>
-                <div id="regressiveStopContent">
-                    <p style="font-size: 0.9em; margin-bottom: 10px; color: #78350f;">You are "Net Long hope" - move these stops to lock in profit!</p>
-                    <div id="regressiveStopList" style="font-size: 0.9em;"></div>
-                    <div id="recoveryProximity" style="font-size: 0.85em; margin-top: 10px; padding-top: 10px; border-top: 1px solid rgba(120, 53, 15, 0.2); color: #78350f;"></div>
+            <!-- ── Merged Recovery Status (collapsed) ─────────────── -->
+            <div id="mergedRecoveryPanel" class="card" style="display:none; padding:12px; margin-bottom:8px;">
+                <h2 style="font-size:1em; margin-bottom:12px; color:#374151;" title="RECOVERY STATUS: Two things in one. LOSS BUFFER shows how many more -1R losses your realized profits can absorb — if this number drops below 2, act. STOP ADJUSTMENTS appears when you have unrealized profit but your stops are still below entry — you're relying on hope instead of locked gains.">🛡️ Recovery Status</h2>
+
+                <!-- Loss Buffer -->
+                <div id="lossBufferContent" style="font-size:0.9em; color:#14532d; margin-bottom:10px;"></div>
+
+                <!-- Regressive Stop section (shown only when needed) -->
+                <div id="regressiveStopSection" style="display:none; border-top:1px solid #e5e7eb; margin-top:12px; padding-top:12px;">
+                    <div style="font-size:0.78em; font-weight:700; color:#92400e; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:6px;" title="STOP ADJUSTMENTS: These positions have unrealized profit but stops are still at or below entry — you're 'Net Long Hope'. Moving stops up to lock in profit means even if the stock reverses to your stop, you still end up with a gain rather than a loss. Shown with specific stop price targets to cover your current realized losses.">⚠️ Stop Adjustments Needed ℹ</div>
+                    <p style="font-size:0.9em; margin-bottom:8px; color:#78350f;">You are "Net Long hope" — move these stops to lock in profit!</p>
+                    <div id="regressiveStopList" style="font-size:0.9em;"></div>
+                    <div id="recoveryProximity" style="font-size:0.85em; margin-top:10px; padding-top:10px; border-top:1px solid rgba(120,53,15,0.2); color:#78350f;"></div>
                 </div>
             </div>
 
-            <!-- Pullback from Peak Alert -->
-            <div id="pullbackFromPeakPanel" class="card" style="padding: 12px; margin-bottom: 12px; display: none; background: linear-gradient(135deg, #fdf4ff 0%, #fae8ff 100%); border: 2px solid #a855f7;">
-                <h2 style="font-size: 1em; margin-bottom: 10px; color: #7e22ce; cursor: pointer;" onclick="togglePullbackContent()" title="Shows how much each open winner has pulled back from its peak R. Use this to decide WHEN to harvest more from a fading winner.">
-                    📉 Pullback from Peak <span id="pullbackToggle">▼</span>
-                </h2>
-                <div id="pullbackContent">
-                    <div id="pullbackList" style="font-size: 0.9em;"></div>
-                </div>
-            </div>
-
-            <!-- Loss Buffer Counter -->
-            <div id="lossBufferPanel" class="card" style="padding: 12px; margin-bottom: 12px; background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%); border: 2px solid #16a34a;">
-                <h2 style="font-size: 1em; margin-bottom: 8px; color: #15803d;" title="How many more -1R losses your locked profits can absorb before you're back to breakeven on the year.">
-                    🛡️ Loss Buffer
-                </h2>
-                <div id="lossBufferContent" style="font-size: 0.9em; color: #14532d;"></div>
+            <!-- ── Pullback from Peak (collapsed) ─────────────────── -->
+            <div id="mergedPullbackPanel" class="card" style="display:none; padding:12px; margin-bottom:8px; background:linear-gradient(135deg,#fdf4ff 0%,#fae8ff 100%); border:2px solid #a855f7;">
+                <h2 style="font-size:1em; margin-bottom:10px; color:#7e22ce;" title="PULLBACK FROM PEAK: Tracks the highest R-multiple each position ever achieved (Peak R) and compares it to where it is now. A position that hit 10R but is now at 5R has given back 50% of its peak — a classic round-trip warning. Use this to decide when to take more off the table before a winner becomes a round-trip.">📉 Pullback from Peak</h2>
+                <div id="pullbackList" style="font-size:0.9em;"></div>
             </div>
 
             <div class="card" style="padding: 12px; margin-bottom: 12px;">
@@ -908,20 +916,20 @@
                             <input type="text" id="symbol" required>
                         </div>
                         <div class="form-group">
-                            <label>Entry Price</label>
-                            <input type="number" id="entryPrice" step="0.01" required>
+                            <label title="Your average purchase price for this position. If you added in multiple tranches (Caruso-style), enter your average cost basis.">Entry Price ℹ</label>
+                            <input type="number" id="entryPrice" step="0.01" required title="Average entry price / cost basis.">
                         </div>
                         <div class="form-group">
-                            <label>Initial Stop Loss</label>
-                            <input type="number" id="initialStop" step="0.01" required>
+                            <label title="Your initial stop loss price when you enter the trade. This defines your R — 1R = (Entry - Stop) × Shares. Never move this down after entry. Only move stops UP as the trade works in your favor.">Initial Stop Loss ℹ</label>
+                            <input type="number" id="initialStop" step="0.01" required title="Initial stop loss price. This is fixed and defines your R for the trade. Update the CURRENT stop separately as the trade progresses.">
                         </div>
                         <div class="form-group">
-                            <label>Shares (QTY)</label>
-                            <input type="number" id="shares" step="1" required>
+                            <label title="Total number of shares currently held. If you built in tranches, enter the total. If you have done partial sells, enter remaining shares (partials are tracked separately via the Part button).">Shares (QTY) ℹ</label>
+                            <input type="number" id="shares" step="1" required title="Total shares held. Use Part button to record partial sells rather than editing this manually.">
                         </div>
                         <div class="form-group">
-                            <label>% Risk</label>
-                            <input type="number" id="initialWeight" step="0.001" required>
+                            <label title="% of your total account you are risking on this trade. Formula: (Entry - Stop) × Shares ÷ Account Size × 100. Example at $250k account: 0.5% = $1,250 max loss if stopped out. Current weak market: stay at 0.125%. Scale up to 0.25 → 0.5 → 0.75 → 1% as market strengthens.">% Risk ℹ</label>
+                            <input type="number" id="initialWeight" step="0.001" required title="Enter the % of account you are risking. Use the Stock Risk Profile tabs to calculate this precisely based on entry/stop/shares.">
                         </div>
                     </div>
                     <button type="submit" style="height: fit-content; padding: 10px 20px;">Add Position</button>
@@ -929,7 +937,7 @@
             </div>
 
             <div class="card" style="padding: 12px;">
-                <h2 style="font-size: 1em; margin-bottom: 10px;">Current Open Positions</h2>
+                <h2 style="font-size: 1em; margin-bottom: 10px;" title="Your active trades. Prices auto-refresh every 60 seconds when enabled. Click any column header to sort. Use Part to record a partial sell, Stop to update your stop loss, and Close when fully exiting. Edit lets you correct any field.">Current Open Positions</h2>
                 <div class="refresh-controls">
                     <button onclick="updateAllPrices()" class="btn-success">🔄 Update All Prices</button>
                     <div class="toggle-switch">
@@ -949,7 +957,7 @@
             <!-- Harvest History -->
             <div class="card" style="padding: 12px; margin-top: 12px;">
                 <h2 style="font-size: 1em; margin-bottom: 10px; cursor: pointer;" onclick="toggleHarvestHistory()">
-                    📊 Profit Harvesting Performance <span id="harvestHistoryToggle">▼</span>
+                    <span title="HARVEST HISTORY: Tracks every partial sell you've made. Shows how much you locked in, what the stock did afterward (did you sell too early?), and your overall harvest efficiency. Use this to calibrate your harvest timing over time.">📊 Profit Harvesting Performance ℹ</span> <span id="harvestHistoryToggle">▼</span>
                 </h2>
                 <div id="harvestHistoryContent" style="display: none;">
                     <div id="harvestHistoryStats" style="margin-bottom: 10px; padding: 8px; background: #f0f9ff; border-radius: 4px; font-size: 0.85em;"></div>
@@ -975,7 +983,7 @@
             
             <!-- Monthly Statistics -->
             <div class="card" style="margin-top: 20px;">
-                <h2 style="margin-bottom: 15px;">📅 Monthly Performance</h2>
+                <h2 style="margin-bottom: 15px;" title="MONTHLY PERFORMANCE: Breaks down your closed trades by month. Shows win rate, expectancy, and net R for each month individually. Use this to spot patterns — are certain months consistently weak? Is expectancy improving or declining over time? Net R is the sum of all R-multiples for the month.">📅 Monthly Performance ℹ</h2>
                 <div class="table-scroll" id="monthlyStatsTable">
                     <div class="empty-state">No closed trades</div>
                 </div>
@@ -984,7 +992,7 @@
 
         <!-- Expectancy Calculator Tab -->\n        <div id="expectancy-calc" class="tab-content">
             <div class="card">
-                <h2 style="margin-bottom: 20px;">📊 Expectancy Calculator</h2>
+                <h2 style="margin-bottom: 20px;" title="EXPECTANCY CALCULATOR: The foundation of systematic trading. Expectancy = (Win Rate × Avg Win R) - (Loss Rate × Avg Loss R). A positive expectancy means your system is mathematically profitable over a large sample of trades. Even with a 35% win rate you can have excellent expectancy if your winners are much larger than your losers. Use this to compare different strategy scenarios side by side.">📊 Expectancy Calculator ℹ</h2>
                 <p style="margin-bottom: 20px; color: #666;">Model different trading strategies by adjusting win rate and average R-multiples. Expectancy = (Win Rate × Avg Win R) - (Loss Rate × Avg Loss R)</p>
                 
                 <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 20px;">
@@ -1178,7 +1186,7 @@
         <!-- What If Calculator Tab -->
         <div id="what-if-calc" class="tab-content">
             <div class="card">
-                <h2 style="margin-bottom: 15px;">"What If Scenarios" - Distribution-Based Expectancy (R-Multiples)</h2>
+                <h2 style="margin-bottom: 15px;" title="Model different trading outcomes by adjusting your expected win/loss distribution. This is more realistic than simple win rate calculators because it accounts for the fact that not all wins are the same size. A system with 35% win rate but big winners can massively outperform a 60% win rate system with small wins.">"What If Scenarios" — Distribution-Based Expectancy (R-Multiples) ℹ</h2>
                 <p style="margin-bottom: 20px; opacity: 0.8;">Model your actual win/loss distribution to get accurate projections. Test different strategies!</p>
                 
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 30px;">
@@ -1329,7 +1337,7 @@
 
             <!-- ── R Distribution: Actual vs Target ── -->
             <div class="card" style="margin-top:20px;">
-                <h2 style="margin-bottom:5px;">🎯 R Distribution: Actual vs Target</h2>
+                <h2 style="margin-bottom:5px;" title="R DISTRIBUTION: Compares your actual closed-trade results against your target distribution. The colored bars show where your trades actually landed. The black vertical lines show where they should land based on your targets. Use this to identify if you're cutting winners too early (too many small wins), holding losers too long (avg loss >1R), or missing homeruns.">🎯 R Distribution: Actual vs Target ℹ</h2>
                 <p style="font-size:0.85em; color:#666; margin-bottom:15px;">Are your real results matching your plan? Compare actual closed-trade distribution against your targets.</p>
                 <!-- Summary stats — updated by JS -->
                 <div id="rDistSummaryStats" style="margin-bottom:15px;"></div>
@@ -1342,7 +1350,7 @@
 
             <!-- ── If I Hit My Targets Calculator ── -->
             <div class="card" style="margin-top:20px; background:linear-gradient(135deg,#eff6ff 0%,#dbeafe 100%); border:2px solid #3b82f6;">
-                <h2 style="margin-bottom:4px; color:#1e40af;">🧮 "If I Hit My Targets — What Would I Make?"</h2>
+                <h2 style="margin-bottom:4px; color:#1e40af;" title="EXPECTANCY CALCULATOR: Uses your target distribution to calculate the mathematical expectancy (expected R per trade). Expectancy = sum of (% of trades in bucket × avg R for that bucket). Then multiplied by risk % and trades/month to get real portfolio projections. Adjust the % and avg R per bucket to stress-test different scenarios.">🧮 "If I Hit My Targets — What Would I Make?" ℹ</h2>
                 <p style="margin-bottom:16px; font-size:0.85em; color:#3730a3;">Adjust % of trades and avg R per bucket, plus trades/month and risk %. Results update live.</p>
                 <div style="display:grid; grid-template-columns:1fr 1fr; gap:20px;">
                     <!-- LEFT: Inputs -->
@@ -1459,7 +1467,7 @@
                     <h3 style="margin-bottom: 15px;">📊 Metrics Priority (Watch in This Order)</h3>
                     
                     <div style="background: white; padding: 15px; border-radius: 8px; margin-bottom: 15px; border-left: 4px solid #ef4444;">
-                        <div style="font-weight: 700; color: #dc2626; margin-bottom: 8px;">Priority 1: YTD Floor</div>
+                        <div style="font-weight: 700; color: #dc2626; margin-bottom: 8px;" title="YTD FLOOR = Your account growth YTD minus all unrealized profit. It answers: 'If all my open positions went to zero right now, what would my YTD be?' Keep this positive. A negative YTD Floor means your entire year's gain exists only on paper and could evaporate.">Priority 1: YTD Floor ℹ</div>
                         <div style="font-size: 0.9em; margin-bottom: 8px;">
                             <strong>Current:</strong> <span id="ruleYtdFloor">--</span>
                         </div>
@@ -1471,7 +1479,7 @@
                     </div>
                     
                     <div style="background: white; padding: 15px; border-radius: 8px; margin-bottom: 15px; border-left: 4px solid #f59e0b;">
-                        <div style="font-weight: 700; color: #d97706; margin-bottom: 8px;">Priority 2: Unrealized Risk %</div>
+                        <div style="font-weight: 700; color: #d97706; margin-bottom: 8px;" title="UNREALIZED RISK% = What % of your total P&L activity is still unrealized (not yet locked in). Formula: Unrealized Profit ÷ (Unrealized + Realized). If this is 80%, it means 80% of your apparent gains could still disappear. Target: keep below 60%. Above 70% = harvest something.">Priority 2: Unrealized Risk % ℹ</div>
                         <div style="font-size: 0.9em; margin-bottom: 8px;">
                             <strong>Current:</strong> <span id="ruleUnrealizedRisk">--</span>
                         </div>
@@ -1483,7 +1491,7 @@
                     </div>
                     
                     <div style="background: white; padding: 15px; border-radius: 8px; margin-bottom: 15px; border-left: 4px solid #0284c7;">
-                        <div style="font-weight: 700; color: #0369a1; margin-bottom: 8px;">Priority 3: Path to Breakeven</div>
+                        <div style="font-weight: 700; color: #0369a1; margin-bottom: 8px;" title="PATH TO BREAKEVEN: Your total realized losses that haven't yet been covered by realized wins. Represents the 'hole' your open winners need to fill. If this is -$3,000, you need to lock in $3,000 in realized profits to truly be breakeven on the year. Progress each time you harvest a winner or a winner closes profitably.">Priority 3: Path to Breakeven ℹ</div>
                         <div style="font-size: 0.9em; margin-bottom: 8px;">
                             <strong>Current:</strong> <span id="rulePathToBreakeven">--</span>
                         </div>
@@ -1495,7 +1503,7 @@
                     </div>
                     
                     <div style="background: white; padding: 15px; border-radius: 8px; border-left: 4px solid #10b981;">
-                        <div style="font-weight: 700; color: #059669; margin-bottom: 8px;">Priority 4: Recent Recovery</div>
+                        <div style="font-weight: 700; color: #059669; margin-bottom: 8px;" title="RECENT RECOVERY: How many times your open unrealized profit could cover losses from your last N trades (configurable lookback). >1.5x = warning, you're leaning too hard on current open winners to bail out recent losses. Think of it as: are you gambling on your open positions to save you, or are you actually generating consistent profits?">Priority 4: Recent Recovery ℹ</div>
                         <div style="font-size: 0.9em; margin-bottom: 8px;">
                             <strong>Current:</strong> <span id="ruleRecentRecovery">--</span>
                         </div>
@@ -1641,11 +1649,11 @@
             </div>
 
             <div class="card">
-                <h2>Cumulative Closed P&L %</h2>
+                <h2 title="CLOSED EQUITY CURVE: Cumulative % gain/loss from closed trades only. This is your 'realized' equity curve — money actually locked in. A rising line here means you're consistently generating realized profits. Compare this with the Daily Account Value curve above to see how much of your apparent gains are still unrealized.">Cumulative Closed P&L % ℹ</h2>
                 <div id="closedEquityCurve"></div>
             </div>
             <div class="card">
-                <h2>Daily Account Value (with Open P&L)</h2>
+                <h2 title="EQUITY CURVE: Your account value over time including unrealized P&L from open positions. This is a 'total equity' view. Note that big swings are often driven by open positions — the Closed P&L curve below shows only what's actually been locked in.">Daily Account Value (with Open P&L) ℹ</h2>
                 <div id="accountValueCurve"></div>
             </div>
             <div class="card">
@@ -2642,7 +2650,7 @@
                             <th onclick="sortOpenPositions('symbol')" style="cursor: pointer;" title="Stock ticker symbol">Symbol ▼</th>
                             <th onclick="sortOpenPositions('currentPrice')" style="cursor: pointer;" title="Most recent market price">Current Price ▼</th>
                             <th onclick="sortOpenPositions('entryPrice')" style="cursor: pointer;" title="Original purchase price">Entry ▼</th>
-                            <th onclick="sortOpenPositions('adjustedPrice')" style="cursor: pointer;" title="Entry price adjusted for partial sells">Adj Price ▼</th>
+                            <th onclick="sortOpenPositions('adjustedPrice')" style="cursor: pointer;" title="ADJUSTED PRICE: Your effective cost basis after partial sells. When you sell part of a position, the proceeds reduce your effective cost basis on the remaining shares — making your 'breakeven' lower. P&L% is calculated off this adjusted price, not the original entry.">Adj Price ▼</th>
                             <th onclick="sortOpenPositions('shares')" style="cursor: pointer;" title="Current number of shares held">QTY ▼</th>
                             <th onclick="sortOpenPositions('initialStop')" style="cursor: pointer;" title="Original stop loss price when position opened">Initial Stop ▼</th>
                             <th onclick="sortOpenPositions('currentStop')" style="cursor: pointer; background: #dbeafe; font-weight: 700;" title="Current stop loss price (update as position moves)">Current Stop ▼</th>
@@ -2650,10 +2658,10 @@
                             <th onclick="sortOpenPositions('accountWeight')" style="cursor: pointer;" title="Current position size as % of account">Acct Wt% ▼</th>
                             <th class="highlight-col" onclick="sortOpenPositions('pnlPercent')" style="cursor: pointer;" title="Profit/loss on this position (includes partial sells)">P&L% ▼</th>
                             <th class="highlight-col" onclick="sortOpenPositions('portfolioPnl')" style="cursor: pointer;" title="P&L as % of total account">Port P&L% ▼</th>
-                            <th class="highlight-col" onclick="sortOpenPositions('portfolioDrawdown')" style="cursor: pointer;" title="Portfolio loss from current price to current stop">Port Drawdown ▼</th>
-                            <th class="highlight-col" onclick="sortOpenPositions('portfolioRisk')" style="cursor: pointer;" title="Potential loss if stop is hit (% of account)">Port Risk% ▼</th>
-                            <th class="highlight-col" onclick="sortOpenPositions('initialR')" style="cursor: pointer;" title="R multiple based off initial Risk">Init Risk Ratio ▼</th>
-                            <th onclick="sortOpenPositions('twoRTarget')" style="cursor: pointer;" title="Price target for 2x initial risk">2R Target ▼</th>
+                            <th class="highlight-col" onclick="sortOpenPositions('portfolioDrawdown')" style="cursor: pointer;" title="PORTFOLIO DRAWDOWN: If this position hits your current stop right now, how much would your total account drop? Calculated as position size × distance to stop ÷ account size. Red = >8% portfolio drawdown (dangerous). Yellow = 5-8% (caution). Keep all positions' combined drawdown in check.">Port Drawdown ▼</th>
+                            <th class="highlight-col" onclick="sortOpenPositions('portfolioRisk')" style="cursor: pointer;" title="PORTFOLIO RISK%: Your actual current risk as % of account if this position hits its stop. Starts equal to your initial % Risk, but decreases as you raise your stop above entry. Once stop is above entry, this goes to 0 — you can't lose money even if stopped out.">Port Risk% ▼</th>
+                            <th class="highlight-col" onclick="sortOpenPositions('initialR')" style="cursor: pointer;" title="INIT RISK RATIO (R-Multiple): Current unrealized gain divided by your initial risk. 1R = gain equals your original risk. 2R = made double your risk. This is how you measure position performance independent of dollar amount or position size. Your target: take partial at 2R, let rest run to 5R+, keep homeruns alive for 10R+.">Init Risk Ratio (R) ▼</th>
+                            <th onclick="sortOpenPositions('twoRTarget')" style="cursor: pointer;" title="2R TARGET PRICE: The stock price at which your position would be up exactly 2x your initial risk. This is your first harvest trigger in the Minervini hybrid approach — consider selling 1/3 to 1/2 at this level to lock in something real while letting the rest run.">2R Target ▼</th>
                             <th title="Edit, partial sell, update stop, close, or delete position">Actions</th>
                         </tr>
                     </thead>
@@ -2972,11 +2980,10 @@
             }
             
             // Check for Regressive Stop alerts
-            // Suggest spreading stop raises across multiple positions
-            const regressiveStopAlert = document.getElementById('regressiveStopAlert');
+            const regressiveStopSection = document.getElementById('regressiveStopSection');
             const regressiveStopList = document.getElementById('regressiveStopList');
             
-            if (regressiveStopAlert && regressiveStopList) {
+            if (regressiveStopSection && regressiveStopList) {
                 // Calculate remaining losses after accounting for ALL realized profits from partials
                 let totalRealizedFromAllPartials = 0;
                 openPositions.forEach(pos => {
@@ -3048,7 +3055,8 @@
                         const canCoverWithOne = positionsWithProfit.some(p => p.unrealizedProfit > remainingLossesToCover);
                         
                         if (canCoverWithOne || positionsWithProfit.length >= 1) {
-                            regressiveStopAlert.style.display = 'block';
+                        regressiveStopSection.style.display = 'block';
+                            portfolioHealthSignals.regressiveStop = true;
                             let html = `<div style="margin-bottom: 8px;"><strong>Losses to cover: $${remainingLossesToCover.toFixed(0)}</strong>`;
                             
                             if (totalRealizedFromAllPartials > 0) {
@@ -3117,17 +3125,20 @@
                                 recoveryProximityEl.innerHTML = `<strong>Progress to Goal:</strong> <span title="Profit locked in at current stop prices">Stops: $${lockedInAtStops.toFixed(0)}</span> | <span title="Total unrealized profit still at risk">Unrealized: $${totalUnrealizedProfit.toFixed(0)}</span> | <span title="Additional profit needed to cover all losses">Need: $${gapToGoal.toFixed(0)}</span>`;
                             }
                         } else {
-                            regressiveStopAlert.style.display = 'none';
+                            regressiveStopSection.style.display = 'none';
+                            portfolioHealthSignals.regressiveStop = false;
                             const recoveryProximityEl = document.getElementById('recoveryProximity');
                             if (recoveryProximityEl) recoveryProximityEl.innerHTML = '';
                         }
                     } else {
-                        regressiveStopAlert.style.display = 'none';
+                        regressiveStopSection.style.display = 'none';
+                        portfolioHealthSignals.regressiveStop = false;
                         const recoveryProximityEl = document.getElementById('recoveryProximity');
                         if (recoveryProximityEl) recoveryProximityEl.innerHTML = '';
                     }
                 } else {
-                    regressiveStopAlert.style.display = 'none';
+                    regressiveStopSection.style.display = 'none';
+                    portfolioHealthSignals.regressiveStop = false;
                     const recoveryProximityEl = document.getElementById('recoveryProximity');
                     if (recoveryProximityEl) recoveryProximityEl.innerHTML = '';
                 }
@@ -3272,13 +3283,13 @@
                             <th>Symbol</th>
                             <th>Entry</th>
                             <th>Exit</th>
-                            <th>Acct Wt%</th>
+                            <th title="Account Weight%: Size of this position as a % of total account at the time of the trade. Used to calculate portfolio-level P&L impact.">Acct Wt% ℹ</th>
                             <th title="% of total portfolio risked on this trade">% Risk</th>
                             <th>P&L%</th>
-                            <th>Port P&L%</th>
-                            <th>R Multiple</th>
+                            <th title="Portfolio P&L%: This trade's gain or loss as a % of your total account (not just the position). A 20% gain on a 10% position = 2% portfolio P&L. This is what actually matters for account growth.">Port P&L% ℹ</th>
+                            <th title="R-Multiple: How many times your initial risk you made or lost. 1R = broke even on risk. 2R = made 2x your risk. -1R = lost your full risk amount. Formula: Total P&L ÷ Initial Risk Dollars. This is the core metric — it normalizes all trades to be comparable regardless of position size.">R Multiple ℹ</th>
                             <th>Date</th>
-                            <th>Cum P/L%</th>
+                            <th title="Cumulative Portfolio P&L%: Running total of all closed trade gains and losses as a % of your account. Shows your equity curve in table form — each trade's contribution stacked on top of the previous.">Cum P/L% ℹ</th>
                             <th>Notes</th>
                             <th>Actions</th>
                         </tr>
@@ -4686,13 +4697,10 @@
         
         // Update Harvest Calculator
         function updateHarvestCalculator(ytdProtection, ytdFloorDollars, ytdLosses, totalUnrealizedDollars) {
-            const calcEl = document.getElementById('harvestCalculator');
             const contentEl = document.getElementById('harvestCalculatorContent');
-            
-            // Only show if YTD Protection > 2.0x or YTD Floor < 0
-            if ((ytdProtection !== null && ytdProtection > 2.0) || ytdFloorDollars < 0) {
-                calcEl.style.display = 'block';
+            const triggered = (ytdProtection !== null && ytdProtection > 2.0) || ytdFloorDollars < 0;
                 
+                if (triggered) {
                 // Find top winners
                 const positionsWithProfit = [];
                 openPositions.forEach(pos => {
@@ -4768,57 +4776,24 @@
                     html += `</div></div>`;
                     
                     contentEl.innerHTML = html;
+                    portfolioHealthSignals.harvest = 'red';
                 } else {
-                    calcEl.style.display = 'none';
+                    contentEl.innerHTML = '<em style="opacity:0.7;">No open winners available to harvest.</em>';
+                    portfolioHealthSignals.harvest = 'yellow';
                 }
             } else {
-                calcEl.style.display = 'none';
+                // Check if there are positions with profit available for manual harvest
+                const hasWinners = openPositions.some(pos => calculatePositionMetrics(pos).unrealizedPnL > 0);
+                contentEl.innerHTML = '<em style="opacity:0.7;">No harvest action needed right now.</em>';
+                portfolioHealthSignals.harvest = hasWinners ? 'green' : 'grey';
             }
+            updatePortfolioHealthBar();
         }
         
         // Toggle Harvest History
         function toggleHarvestHistory() {
             const content = document.getElementById('harvestHistoryContent');
             const toggle = document.getElementById('harvestHistoryToggle');
-            if (content.style.display === 'none') {
-                content.style.display = 'block';
-                toggle.textContent = '▲';
-            } else {
-                content.style.display = 'none';
-                toggle.textContent = '▼';
-            }
-        }
-        
-        // Toggle Harvest Calculator content
-        function toggleHarvestCalculatorContent() {
-            const content = document.getElementById('harvestCalculatorContent');
-            const toggle = document.getElementById('harvestCalcToggle');
-            if (content.style.display === 'none') {
-                content.style.display = 'block';
-                toggle.textContent = '▲';
-            } else {
-                content.style.display = 'none';
-                toggle.textContent = '▼';
-            }
-        }
-        
-        // Toggle Regressive Stop content
-        function toggleRegressiveStopContent() {
-            const content = document.getElementById('regressiveStopContent');
-            const toggle = document.getElementById('regressiveStopToggle');
-            if (content.style.display === 'none') {
-                content.style.display = 'block';
-                toggle.textContent = '▲';
-            } else {
-                content.style.display = 'none';
-                toggle.textContent = '▼';
-            }
-        }
-        
-        // Toggle Pick My Own content
-        function togglePickMyOwnContent() {
-            const content = document.getElementById('pickMyOwnContent');
-            const toggle = document.getElementById('pickMyOwnToggle');
             if (content.style.display === 'none') {
                 content.style.display = 'block';
                 toggle.textContent = '▲';
@@ -4891,10 +4866,53 @@
         }
 
         // Pick My Own Harvest Simulator Functions
+        // ── Portfolio health signals (shared between functions) ──
+        let portfolioHealthSignals = { harvest: 'grey', recovery: 'green', pullback: 'grey', regressiveStop: false };
+
+        function toggleMergedPanel(panelId, badgeId) {
+            const panel = document.getElementById(panelId);
+            if (!panel) return;
+            const isOpen = panel.style.display !== 'none';
+            panel.style.display = isOpen ? 'none' : 'block';
+        }
+
+        function updatePortfolioHealthBar() {
+            const configs = [
+                { badgeId: 'harvestBadge', statusId: 'harvestBadgeStatus', signal: portfolioHealthSignals.harvest },
+                { badgeId: 'recoveryBadge', statusId: 'recoveryBadgeStatus', signal: portfolioHealthSignals.recovery },
+                { badgeId: 'pullbackBadge', statusId: 'pullbackBadgeStatus', signal: portfolioHealthSignals.pullback },
+            ];
+
+            const styles = {
+                red:    { bg: '#fee2e2', color: '#dc2626', text: '⚠ Action Needed' },
+                yellow: { bg: '#fef9c3', color: '#b45309', text: '⚡ Review' },
+                green:  { bg: '#dcfce7', color: '#15803d', text: '✓ OK' },
+                grey:   { bg: '#f3f4f6', color: '#6b7280', text: '— N/A' },
+            };
+
+            const labels = {
+                harvestBadgeStatus:  { red: '⚠ Harvest Now', yellow: '⚡ Consider Harvest', green: '✓ OK', grey: '— No positions' },
+                recoveryBadgeStatus: { red: '⚠ Protect Now', yellow: '⚡ Getting Thin', green: '✓ Cushion OK', grey: '— No data' },
+                pullbackBadgeStatus: { red: '⚠ Fading Fast', yellow: '⚡ Watch Closely', green: '✓ Holding Well', grey: '— No data' },
+            };
+
+            configs.forEach(({ badgeId, statusId, signal }) => {
+                const badge = document.getElementById(badgeId);
+                const statusEl = document.getElementById(statusId);
+                const s = signal in styles ? signal : 'grey';
+                const style = styles[s];
+                const labelMap = labels[statusId];
+                if (badge) {
+                    badge.style.background = style.bg;
+                    badge.style.color = style.color;
+                }
+                if (statusEl && labelMap) statusEl.textContent = labelMap[s];
+            });
+        }
         function populatePickPositionDropdown() {
             const select1 = document.getElementById('pickPositionSelect1');
             const select2 = document.getElementById('pickPositionSelect2');
-            const pickSection = document.getElementById('pickMyOwnHarvest');
+            if (!select1 || !select2) return;
             
             // Clear existing options except first
             select1.innerHTML = '<option value="">-- Choose a position --</option>';
@@ -4926,10 +4944,8 @@
                 }
             });
             
-            // Show or hide Pick My Own section
+            // Populate dropdowns (harvest panel visibility controlled by badge/toggle)
             if (positionsWithProfit.length > 0) {
-                pickSection.style.display = 'block';
-                
                 // Add options to both dropdowns
                 positionsWithProfit.forEach(pos => {
                     const displayName = symbolCounts[pos.symbol] > 1 ? 
@@ -4946,8 +4962,6 @@
                     option2.textContent = `${displayName} - ${pos.shares} shares - ${profitDisplay}`;
                     select2.appendChild(option2);
                 });
-            } else {
-                pickSection.style.display = 'none';
             }
         }
         
@@ -5254,27 +5268,15 @@
             updatePullbackFromPeak();
             updateLossBuffer();
             updateRDistribution();
+            updatePortfolioHealthBar();
         }
 
         // ─────────────────────────────────────────────────────────
         // FEATURE 1: Pullback from Peak Tracker
         // ─────────────────────────────────────────────────────────
-        function togglePullbackContent() {
-            const content = document.getElementById('pullbackContent');
-            const toggle = document.getElementById('pullbackToggle');
-            if (content.style.display === 'none') {
-                content.style.display = 'block';
-                toggle.textContent = '▼';
-            } else {
-                content.style.display = 'none';
-                toggle.textContent = '▶';
-            }
-        }
-
         function updatePullbackFromPeak() {
-            const panel = document.getElementById('pullbackFromPeakPanel');
             const list = document.getElementById('pullbackList');
-            if (!panel || !list) return;
+            if (!list) return;
 
             // Only show positions that are in profit (have positive R)
             const winners = [];
@@ -5300,11 +5302,11 @@
             if (peakUpdated) saveToFirebase();
 
             if (winners.length === 0) {
-                panel.style.display = 'none';
+                portfolioHealthSignals.pullback = 'grey';
+                list.innerHTML = '<em style="opacity:0.6;">No positions have reached 1R yet.</em>';
+                updatePortfolioHealthBar();
                 return;
             }
-
-            panel.style.display = 'block';
 
             // Sort by pullback amount (most pulled back first)
             winners.sort((a, b) => (b.peakR - b.currentR) - (a.peakR - a.currentR));
@@ -5367,6 +5369,16 @@
             </div>`;
 
             list.innerHTML = html;
+
+            // Set badge signal based on worst position
+            const worstPct = Math.max(...winners.map(w => {
+                const pctOfPeak = w.peakR > 0 ? (w.currentR / w.peakR) * 100 : 100;
+                return 100 - pctOfPeak;
+            }));
+            if (worstPct >= 50)      portfolioHealthSignals.pullback = 'red';
+            else if (worstPct >= 33) portfolioHealthSignals.pullback = 'yellow';
+            else                     portfolioHealthSignals.pullback = 'green';
+            updatePortfolioHealthBar();
         }
 
         // ─────────────────────────────────────────────────────────
@@ -5433,13 +5445,24 @@
             let status, statusColor, statusBg;
             if (lossesAbsorbable >= 5) {
                 status = '✅ SAFE'; statusColor = '#15803d'; statusBg = '#dcfce7';
+                portfolioHealthSignals.recovery = 'green';
             } else if (lossesAbsorbable >= 2) {
                 status = '⚠️ CAUTION'; statusColor = '#d97706'; statusBg = '#fef9c3';
+                portfolioHealthSignals.recovery = 'yellow';
             } else if (lossesAbsorbable >= 0) {
                 status = '🔴 PROTECT NOW'; statusColor = '#dc2626'; statusBg = '#fee2e2';
+                portfolioHealthSignals.recovery = 'red';
             } else {
                 status = '🚨 OVERDRAWN'; statusColor = '#7f1d1d'; statusBg = '#fca5a5';
+                portfolioHealthSignals.recovery = 'red';
             }
+            // Regressive stop makes it worse
+            if (portfolioHealthSignals.regressiveStop && portfolioHealthSignals.recovery === 'green') {
+                portfolioHealthSignals.recovery = 'yellow';
+            } else if (portfolioHealthSignals.regressiveStop) {
+                portfolioHealthSignals.recovery = 'red';
+            }
+            updatePortfolioHealthBar();
 
             panel.innerHTML = `
                 <div style="display:grid; grid-template-columns: repeat(3,1fr); gap:10px; margin-bottom:10px;">
