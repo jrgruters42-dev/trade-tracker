@@ -5512,27 +5512,32 @@
                 <p style="margin:0 0 14px 0; font-size:0.8em; color:#3730a3;">Adjust avg R per bucket and trades/month to model your upside. Pre-filled with your target distribution.</p>
                 <div style="display:grid; grid-template-columns:1fr 1fr; gap:20px;">
                     <div>
-                        <div style="font-weight:700; font-size:0.85em; color:#1e40af; margin-bottom:8px;">Avg R per Bucket</div>
+                        <div style="font-weight:700; font-size:0.85em; color:#1e40af; margin-bottom:8px;">Avg R &amp; % per Bucket <span id="distTotalPctBadge" style="font-size:0.8em; margin-left:8px; padding:2px 8px; border-radius:10px; background:#dcfce7; color:#16a34a;">= 100% ✓</span></div>
                         <div style="display:grid; gap:7px;">
-                            <div style="display:grid; grid-template-columns:1fr auto; align-items:center; gap:8px; padding:6px 10px; background:white; border-radius:6px; border-left:4px solid #dc2626;">
-                                <div><div style="font-size:0.82em; font-weight:600; color:#dc2626;">Loss/Scratch — 60% of trades</div><div style="font-size:0.72em; color:#888;">avg loss per loser</div></div>
-                                <div style="display:flex; align-items:center; gap:4px;"><input type="number" id="distAvgLoss" value="-1.0" step="0.1" max="0" style="width:70px; padding:4px 6px; font-size:0.9em; border:2px solid #fca5a5; border-radius:4px; text-align:center;" oninput="calcTargetExpectancy()"><span style="font-size:0.8em; color:#888;">R</span></div>
+                            <div style="display:grid; grid-template-columns:1fr auto auto; align-items:center; gap:8px; padding:6px 10px; background:white; border-radius:6px; border-left:4px solid #dc2626;">
+                                <div><div style="font-size:0.82em; font-weight:600; color:#dc2626;">Loss/Scratch</div><div style="font-size:0.72em; color:#888;">avg loss per loser</div></div>
+                                <div style="display:flex; align-items:center; gap:4px;"><input type="number" id="distPctLoss" value="60" step="1" min="0" max="100" style="width:55px; padding:4px 6px; font-size:0.9em; border:2px solid #fca5a5; border-radius:4px; text-align:center;" oninput="calcTargetExpectancy()"><span style="font-size:0.8em; color:#888;">%</span></div>
+                                <div style="display:flex; align-items:center; gap:4px;"><input type="number" id="distAvgLoss" value="-1.0" step="0.1" max="0" style="width:65px; padding:4px 6px; font-size:0.9em; border:2px solid #fca5a5; border-radius:4px; text-align:center;" oninput="calcTargetExpectancy()"><span style="font-size:0.8em; color:#888;">R</span></div>
                             </div>
-                            <div style="display:grid; grid-template-columns:1fr auto; align-items:center; gap:8px; padding:6px 10px; background:white; border-radius:6px; border-left:4px solid #fbbf24;">
-                                <div><div style="font-size:0.82em; font-weight:600; color:#d97706;">Small Win — 15% of trades</div><div style="font-size:0.72em; color:#888;">0–2R range</div></div>
-                                <div style="display:flex; align-items:center; gap:4px;"><input type="number" id="distAvgSmall" value="1.5" step="0.1" min="0" max="2" style="width:70px; padding:4px 6px; font-size:0.9em; border:2px solid #fde68a; border-radius:4px; text-align:center;" oninput="calcTargetExpectancy()"><span style="font-size:0.8em; color:#888;">R</span></div>
+                            <div style="display:grid; grid-template-columns:1fr auto auto; align-items:center; gap:8px; padding:6px 10px; background:white; border-radius:6px; border-left:4px solid #fbbf24;">
+                                <div><div style="font-size:0.82em; font-weight:600; color:#d97706;">Small Win (0–2R)</div><div style="font-size:0.72em; color:#888;">partial exits, quick wins</div></div>
+                                <div style="display:flex; align-items:center; gap:4px;"><input type="number" id="distPctSmall" value="15" step="1" min="0" max="100" style="width:55px; padding:4px 6px; font-size:0.9em; border:2px solid #fde68a; border-radius:4px; text-align:center;" oninput="calcTargetExpectancy()"><span style="font-size:0.8em; color:#888;">%</span></div>
+                                <div style="display:flex; align-items:center; gap:4px;"><input type="number" id="distAvgSmall" value="1.5" step="0.1" min="0" max="2" style="width:65px; padding:4px 6px; font-size:0.9em; border:2px solid #fde68a; border-radius:4px; text-align:center;" oninput="calcTargetExpectancy()"><span style="font-size:0.8em; color:#888;">R</span></div>
                             </div>
-                            <div style="display:grid; grid-template-columns:1fr auto; align-items:center; gap:8px; padding:6px 10px; background:white; border-radius:6px; border-left:4px solid #10b981;">
-                                <div><div style="font-size:0.82em; font-weight:600; color:#065f46;">Solid Win — 15% of trades</div><div style="font-size:0.72em; color:#888;">2–10R range</div></div>
-                                <div style="display:flex; align-items:center; gap:4px;"><input type="number" id="distAvgSolid" value="5.0" step="0.5" min="2" max="10" style="width:70px; padding:4px 6px; font-size:0.9em; border:2px solid #6ee7b7; border-radius:4px; text-align:center;" oninput="calcTargetExpectancy()"><span style="font-size:0.8em; color:#888;">R</span></div>
+                            <div style="display:grid; grid-template-columns:1fr auto auto; align-items:center; gap:8px; padding:6px 10px; background:white; border-radius:6px; border-left:4px solid #10b981;">
+                                <div><div style="font-size:0.82em; font-weight:600; color:#065f46;">Solid Win (2–10R)</div><div style="font-size:0.72em; color:#888;">trend followers</div></div>
+                                <div style="display:flex; align-items:center; gap:4px;"><input type="number" id="distPctSolid" value="15" step="1" min="0" max="100" style="width:55px; padding:4px 6px; font-size:0.9em; border:2px solid #6ee7b7; border-radius:4px; text-align:center;" oninput="calcTargetExpectancy()"><span style="font-size:0.8em; color:#888;">%</span></div>
+                                <div style="display:flex; align-items:center; gap:4px;"><input type="number" id="distAvgSolid" value="5.0" step="0.5" min="2" max="10" style="width:65px; padding:4px 6px; font-size:0.9em; border:2px solid #6ee7b7; border-radius:4px; text-align:center;" oninput="calcTargetExpectancy()"><span style="font-size:0.8em; color:#888;">R</span></div>
                             </div>
-                            <div style="display:grid; grid-template-columns:1fr auto; align-items:center; gap:8px; padding:6px 10px; background:white; border-radius:6px; border-left:4px solid #3b82f6;">
-                                <div><div style="font-size:0.82em; font-weight:600; color:#1e40af;">Strong Win — 5% of trades</div><div style="font-size:0.72em; color:#888;">10–20R range</div></div>
-                                <div style="display:flex; align-items:center; gap:4px;"><input type="number" id="distAvgStrong" value="14.0" step="1" min="10" max="20" style="width:70px; padding:4px 6px; font-size:0.9em; border:2px solid #93c5fd; border-radius:4px; text-align:center;" oninput="calcTargetExpectancy()"><span style="font-size:0.8em; color:#888;">R</span></div>
+                            <div style="display:grid; grid-template-columns:1fr auto auto; align-items:center; gap:8px; padding:6px 10px; background:white; border-radius:6px; border-left:4px solid #3b82f6;">
+                                <div><div style="font-size:0.82em; font-weight:600; color:#1e40af;">Strong Win (10–20R)</div><div style="font-size:0.72em; color:#888;">extended moves</div></div>
+                                <div style="display:flex; align-items:center; gap:4px;"><input type="number" id="distPctStrong" value="5" step="1" min="0" max="100" style="width:55px; padding:4px 6px; font-size:0.9em; border:2px solid #93c5fd; border-radius:4px; text-align:center;" oninput="calcTargetExpectancy()"><span style="font-size:0.8em; color:#888;">%</span></div>
+                                <div style="display:flex; align-items:center; gap:4px;"><input type="number" id="distAvgStrong" value="14.0" step="1" min="10" max="20" style="width:65px; padding:4px 6px; font-size:0.9em; border:2px solid #93c5fd; border-radius:4px; text-align:center;" oninput="calcTargetExpectancy()"><span style="font-size:0.8em; color:#888;">R</span></div>
                             </div>
-                            <div style="display:grid; grid-template-columns:1fr auto; align-items:center; gap:8px; padding:6px 10px; background:white; border-radius:6px; border-left:4px solid #7c3aed;">
-                                <div><div style="font-size:0.82em; font-weight:600; color:#4c1d95;">Homerun — 5% of trades</div><div style="font-size:0.72em; color:#888;">20R+ range</div></div>
-                                <div style="display:flex; align-items:center; gap:4px;"><input type="number" id="distAvgHomerun" value="35.0" step="5" min="20" style="width:70px; padding:4px 6px; font-size:0.9em; border:2px solid #c4b5fd; border-radius:4px; text-align:center;" oninput="calcTargetExpectancy()"><span style="font-size:0.8em; color:#888;">R</span></div>
+                            <div style="display:grid; grid-template-columns:1fr auto auto; align-items:center; gap:8px; padding:6px 10px; background:white; border-radius:6px; border-left:4px solid #7c3aed;">
+                                <div><div style="font-size:0.82em; font-weight:600; color:#4c1d95;">Homerun (20R+)</div><div style="font-size:0.72em; color:#888;">monster winners</div></div>
+                                <div style="display:flex; align-items:center; gap:4px;"><input type="number" id="distPctHomerun" value="5" step="1" min="0" max="100" style="width:55px; padding:4px 6px; font-size:0.9em; border:2px solid #c4b5fd; border-radius:4px; text-align:center;" oninput="calcTargetExpectancy()"><span style="font-size:0.8em; color:#888;">%</span></div>
+                                <div style="display:flex; align-items:center; gap:4px;"><input type="number" id="distAvgHomerun" value="35.0" step="5" min="20" style="width:65px; padding:4px 6px; font-size:0.9em; border:2px solid #c4b5fd; border-radius:4px; text-align:center;" oninput="calcTargetExpectancy()"><span style="font-size:0.8em; color:#888;">R</span></div>
                             </div>
                         </div>
                         <div style="margin-top:10px; display:grid; grid-template-columns:1fr 1fr; gap:8px;">
@@ -5567,8 +5572,28 @@
             const tradesMonth = parseFloat(document.getElementById('distTradesMonth')?.value) || 10;
             const riskPct     = parseFloat(document.getElementById('distRiskPct')?.value)     || 0.5;
 
-            // Target weights
-            const wLoss = 0.60, wSmall = 0.15, wSolid = 0.15, wStrong = 0.05, wHomerun = 0.05;
+            // Target weights — now from inputs
+            const pctLoss    = parseFloat(document.getElementById('distPctLoss')?.value)    || 60;
+            const pctSmall   = parseFloat(document.getElementById('distPctSmall')?.value)   || 15;
+            const pctSolid   = parseFloat(document.getElementById('distPctSolid')?.value)   || 15;
+            const pctStrong  = parseFloat(document.getElementById('distPctStrong')?.value)  || 5;
+            const pctHomerun = parseFloat(document.getElementById('distPctHomerun')?.value) || 5;
+            const totalPct   = pctLoss + pctSmall + pctSolid + pctStrong + pctHomerun;
+
+            // Update the badge
+            const badge = document.getElementById('distTotalPctBadge');
+            if (badge) {
+                if (Math.abs(totalPct - 100) < 0.01) {
+                    badge.style.background = '#dcfce7'; badge.style.color = '#16a34a';
+                    badge.textContent = '= 100% ✓';
+                } else {
+                    badge.style.background = '#fee2e2'; badge.style.color = '#dc2626';
+                    badge.textContent = `= ${totalPct}% ✗ (must = 100%)`;
+                }
+            }
+
+            const wLoss = pctLoss / 100, wSmall = pctSmall / 100, wSolid = pctSolid / 100,
+                  wStrong = pctStrong / 100, wHomerun = pctHomerun / 100;
 
             // Expectancy per trade
             const expectancy = (wLoss * avgLoss) + (wSmall * avgSmall) + (wSolid * avgSolid) + (wStrong * avgStrong) + (wHomerun * avgHomerun);
@@ -5595,7 +5620,7 @@
                     <div style="font-size:0.78em; color:#6b7280; margin-bottom:4px; text-transform:uppercase; letter-spacing:0.5px;">Expectancy per Trade</div>
                     <div style="font-size:2.4em; font-weight:800; color:${expColor};">${expectancy.toFixed(2)}R</div>
                     <div style="font-size:0.75em; color:#888; margin-top:4px; line-height:1.6;">
-                        = (60%×${avgLoss}R) + (15%×${avgSmall}R) + (15%×${avgSolid}R) + (5%×${avgStrong}R) + (5%×${avgHomerun}R)
+                        = (${pctLoss}%×${avgLoss}R) + (${pctSmall}%×${avgSmall}R) + (${pctSolid}%×${avgSolid}R) + (${pctStrong}%×${avgStrong}R) + (${pctHomerun}%×${avgHomerun}R)
                     </div>
                 </div>
 
