@@ -5415,13 +5415,11 @@
 
             // Bucket definitions: [label, min, max, targetPct, color]
             const buckets = [
-                { label: 'Loss (< -0.5R)',  min: -Infinity, max: -0.5, target: 60, color: '#dc2626', textColor: 'white' },
-                { label: 'Scratch (-0.5–0R)', min: -0.5, max: 0,  target: 0,  color: '#f87171', textColor: 'white' },
-                { label: 'Small (0–2R)',    min: 0,        max: 2,   target: 10, color: '#fbbf24', textColor: '#78350f' },
-                { label: 'Solid (2–5R)',    min: 2,        max: 5,   target: 15, color: '#34d399', textColor: '#065f46' },
-                { label: 'Strong (5–10R)',  min: 5,        max: 10,  target: 10, color: '#10b981', textColor: 'white' },
-                { label: 'Big (10–20R)',    min: 10,       max: 20,  target: 4,  color: '#3b82f6', textColor: 'white' },
-                { label: 'Homerun (20R+)', min: 20,       max: Infinity, target: 1, color: '#7c3aed', textColor: 'white' },
+                { label: 'Loss / Scratch (≤0R)', min: -Infinity, max: 0,        target: 60, color: '#dc2626', textColor: 'white' },
+                { label: 'Small Win (0–2R)',      min: 0,         max: 2,        target: 15, color: '#fbbf24', textColor: '#78350f' },
+                { label: 'Solid Win (2–10R)',     min: 2,         max: 10,       target: 15, color: '#10b981', textColor: 'white' },
+                { label: 'Strong Win (10–20R)',   min: 10,        max: 20,       target: 5,  color: '#3b82f6', textColor: 'white' },
+                { label: 'Homerun (20R+)',        min: 20,        max: Infinity, target: 5,  color: '#7c3aed', textColor: 'white' },
             ];
 
             // Count actual trades per bucket
