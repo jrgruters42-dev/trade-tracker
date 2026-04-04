@@ -772,7 +772,67 @@
             </div>
         </div>
 
-        <!-- Tabs -->
+        <!-- ── Card 1: Exposure Scaling ───────────────────────────────────── -->
+        <div class="card" style="padding:10px 14px; margin-bottom:8px;">
+            <div style="display:grid; grid-template-columns:1fr auto; align-items:start; gap:12px;">
+
+                <!-- Left: checkboxes + recommended level -->
+                <div>
+                    <div style="font-size:0.72em; font-weight:700; color:#9ca3af; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:6px;"
+                         title="EXPOSURE SCALING: Use these market condition checkboxes to determine what % risk per trade is appropriate. Net New Highs is non-negotiable — if unchecked, max risk is 0.25% regardless of other conditions. The recommended level updates automatically as you check/uncheck boxes.">
+                        📡 Exposure Scaling
+                    </div>
+                    <div style="display:flex; flex-wrap:wrap; gap:8px; align-items:center;">
+                        <label style="display:flex; align-items:center; gap:5px; cursor:pointer; font-size:0.82em; font-weight:600; padding:4px 8px; border-radius:6px; background:#f9fafb; border:1px solid #e5e7eb;"
+                               title="NET NEW HIGHS (Nasdaq): More stocks making new 52-week highs than new lows. This is the most important breadth indicator — it tells you the market internals support a trending environment. Non-negotiable: if this is unchecked, max risk is capped at 0.25% regardless of other conditions.">
+                            <input type="checkbox" id="chkNetNewHighs" onchange="saveMarketConditions(); updateExposureScaling();" style="width:15px; height:15px; cursor:pointer;">
+                            Net New Highs (Nasdaq)
+                        </label>
+                        <label style="display:flex; align-items:center; gap:5px; cursor:pointer; font-size:0.82em; font-weight:600; padding:4px 8px; border-radius:6px; background:#f9fafb; border:1px solid #e5e7eb;"
+                               title="JNK ABOVE 20 SMA: JNK is the high-yield bond ETF. When it's above its 20-day moving average, credit markets are healthy and risk appetite is strong — institutions are buying risky assets. Below = credit stress, risk-off environment.">
+                            <input type="checkbox" id="chkJNK" onchange="saveMarketConditions(); updateExposureScaling();" style="width:15px; height:15px; cursor:pointer;">
+                            JNK &gt; 20 SMA
+                        </label>
+                        <label style="display:flex; align-items:center; gap:5px; cursor:pointer; font-size:0.82em; font-weight:600; padding:4px 8px; border-radius:6px; background:#f9fafb; border:1px solid #e5e7eb;"
+                               title="QQQ ABOVE 21 EMA: Nasdaq 100 ETF above its 21-day exponential moving average. This confirms the tech-heavy market leaders are in an uptrend. Below = market is in a correction or downtrend, not a safe environment to be aggressive.">
+                            <input type="checkbox" id="chkQQQ" onchange="saveMarketConditions(); updateExposureScaling();" style="width:15px; height:15px; cursor:pointer;">
+                            QQQ &gt; 21 EMA
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Right: recommended level + open risk -->
+                <div style="display:flex; flex-direction:column; align-items:flex-end; gap:6px; min-width:160px;">
+                    <div style="text-align:right;">
+                        <div style="font-size:0.68em; color:#9ca3af; text-transform:uppercase; letter-spacing:0.4px;"
+                             title="Recommended risk % per trade based on your current market condition checkboxes. This updates automatically. Note: you can always use discretion, especially when open risk is yellow/red.">
+                            Recommended Risk/Trade
+                        </div>
+                        <div id="recommendedRisk" style="font-size:1.6em; font-weight:800; color:#6b7280;">—</div>
+                        <div id="recommendedRiskReason" style="font-size:0.68em; color:#9ca3af; margin-top:1px;"></div>
+                    </div>
+                    <div id="openRiskBadge" style="padding:4px 10px; border-radius:8px; font-size:0.8em; font-weight:700; background:#f3f4f6; color:#6b7280; text-align:center; cursor:help;"
+                         title="OPEN RISK: Your total portfolio risk if ALL current stops are hit simultaneously. Green (<2%) = safe to add. Yellow (2-3%) = getting full, use discretion. Red (3%+) = consider moving stops up or harvesting before adding new positions. This is a soft guide — not a hard block.">
+                        Open Risk: <span id="openRiskPct">0%</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ── Card 2: Trade Quality (collapsed) ──────────────────────────── -->
+        <div class="card" style="padding:8px 14px; margin-bottom:8px;">
+            <div style="display:flex; align-items:center; justify-content:space-between; cursor:pointer;" onclick="toggleTradeQuality()"
+                 title="TRADE QUALITY: Feedback on how well you've been executing your system over the last 10 events (open positions count at their current R). These metrics don't gate your scaling — they're a mirror for your execution. Use them to spot if losses are blowing out, if you're cutting winners too early, or if expectancy is drifting.">
+                <span style="font-size:0.72em; font-weight:700; color:#9ca3af; text-transform:uppercase; letter-spacing:0.5px;">📊 Trade Quality — Last 10 Events</span>
+                <div style="display:flex; align-items:center; gap:8px;">
+                    <div id="tradeQualitySummaryBadge" style="font-size:0.75em; padding:2px 8px; border-radius:8px; background:#f3f4f6; color:#6b7280; font-weight:600;"></div>
+                    <span id="tradeQualityToggle" style="font-size:0.8em; color:#9ca3af;">▶</span>
+                </div>
+            </div>
+            <div id="tradeQualityContent" style="display:none; margin-top:10px;">
+                <div id="tradeQualityGrid"></div>
+            </div>
+        </div>
         <div class="tabs">
             <button class="tab active" onclick="switchTab('open-positions')">Open Positions</button>
             <button class="tab" onclick="switchTab('closed-trades')">Closed Trades</button>
@@ -2079,6 +2139,11 @@
                 lookbackPeriod: parseInt(document.getElementById('lookbackPeriod').value) || 15,
                 apiKey: document.getElementById('apiKey').value,
                 stockProfiles: stockProfiles,
+                marketConditions: {
+                    netNewHighs: document.getElementById('chkNetNewHighs')?.checked || false,
+                    jnk: document.getElementById('chkJNK')?.checked || false,
+                    qqq: document.getElementById('chkQQQ')?.checked || false
+                },
                 lastModified: new Date().toISOString()
             };
 
@@ -2314,6 +2379,16 @@
             document.getElementById('wifeRothJan1').value = data.wifeRothJan1 || 0;
             document.getElementById('spyJan1').value = data.spyJan1 || 0;
             document.getElementById('lookbackPeriod').value = data.lookbackPeriod || 15;
+
+            // Load market conditions checkboxes
+            if (data.marketConditions) {
+                const el1 = document.getElementById('chkNetNewHighs');
+                const el2 = document.getElementById('chkJNK');
+                const el3 = document.getElementById('chkQQQ');
+                if (el1) el1.checked = data.marketConditions.netNewHighs || false;
+                if (el2) el2.checked = data.marketConditions.jnk || false;
+                if (el3) el3.checked = data.marketConditions.qqq || false;
+            }
             document.getElementById('apiKey').value = data.apiKey || '';
             
             // Load stock profiles
@@ -2335,6 +2410,7 @@
             }
 
             updateAllDisplays();
+            updateExposureScaling();
             console.log('Data loaded from Firebase successfully');
         }
 
@@ -2466,11 +2542,12 @@
                     wifeRothJan1: parseFloat(document.getElementById('wifeRothJan1').value),
                     apiKey: document.getElementById('apiKey').value,
                     stockProfiles: stockProfiles,
+                    marketConditions: {
+                        netNewHighs: document.getElementById('chkNetNewHighs')?.checked || false,
+                        jnk: document.getElementById('chkJNK')?.checked || false,
+                        qqq: document.getElementById('chkQQQ')?.checked || false
+                    },
                     lastModified: new Date().toISOString()
-                };
-                
-                dbRef.set(data).then(() => {
-                    console.log(`✓ Position ${symbol} saved to Firebase successfully`);
                     resolve();
                 }).catch((error) => {
                     console.error('Save failed:', error);
@@ -5251,6 +5328,141 @@
             document.getElementById('executePickHarvest').disabled = true;
         }
 
+        // ── Exposure Scaling ─────────────────────────────────────────────────
+        function saveMarketConditions() {
+            saveToFirebase();
+        }
+
+        function updateExposureScaling() {
+            const nnh  = document.getElementById('chkNetNewHighs')?.checked || false;
+            const jnk  = document.getElementById('chkJNK')?.checked || false;
+            const qqq  = document.getElementById('chkQQQ')?.checked || false;
+            const totalRiskEl = document.getElementById('totalRiskCompact');
+            const openRisk = totalRiskEl ? parseFloat(totalRiskEl.textContent) || 0 : 0;
+
+            // Recommended risk level
+            let level, reason, levelColor;
+            if (!nnh) {
+                level = '0.25%'; reason = 'Net New Highs ❌ — hard ceiling'; levelColor = '#dc2626';
+            } else {
+                const checks = (nnh ? 1 : 0) + (jnk ? 1 : 0) + (qqq ? 1 : 0);
+                if (checks === 3)      { level = '1.00%'; reason = 'All 3 conditions ✅';         levelColor = '#15803d'; }
+                else if (checks === 2) { level = '0.75%'; reason = 'Net New Highs + 1 other ✅'; levelColor = '#0369a1'; }
+                else                   { level = '0.50%'; reason = 'Net New Highs ✅ only';       levelColor = '#d97706'; }
+            }
+
+            const levelEl  = document.getElementById('recommendedRisk');
+            const reasonEl = document.getElementById('recommendedRiskReason');
+            if (levelEl)  { levelEl.textContent = level; levelEl.style.color = levelColor; }
+            if (reasonEl) reasonEl.textContent = reason;
+
+            // Color-code checkbox labels
+            ['chkNetNewHighs','chkJNK','chkQQQ'].forEach(id => {
+                const el    = document.getElementById(id);
+                const label = el?.parentElement;
+                if (!label) return;
+                const checked = el.checked;
+                label.style.background   = checked ? '#dcfce7' : '#fef2f2';
+                label.style.borderColor  = checked ? '#86efac' : '#fca5a5';
+                label.style.color        = checked ? '#15803d' : '#dc2626';
+            });
+
+            // Open Risk badge
+            const badge = document.getElementById('openRiskBadge');
+            const pctEl = document.getElementById('openRiskPct');
+            if (pctEl) pctEl.textContent = openRisk.toFixed(2) + '%';
+            if (badge) {
+                if (openRisk < 2)      { badge.style.background = '#dcfce7'; badge.style.color = '#15803d'; }
+                else if (openRisk < 3) { badge.style.background = '#fef9c3'; badge.style.color = '#b45309'; }
+                else                   { badge.style.background = '#fee2e2'; badge.style.color = '#dc2626'; }
+            }
+        }
+
+        // ── Trade Quality ─────────────────────────────────────────────────────
+        function toggleTradeQuality() {
+            const content = document.getElementById('tradeQualityContent');
+            const toggle  = document.getElementById('tradeQualityToggle');
+            if (!content) return;
+            const open = content.style.display !== 'none';
+            content.style.display = open ? 'none' : 'block';
+            if (toggle) toggle.textContent = open ? '▶' : '▼';
+            if (!open) updateTradeQuality();
+        }
+
+        function updateTradeQuality() {
+            const grid  = document.getElementById('tradeQualityGrid');
+            const badge = document.getElementById('tradeQualitySummaryBadge');
+            if (!grid) return;
+
+            // Build event list: open positions + closed trades, newest first, take 10
+            const events = [];
+            openPositions.forEach(pos => {
+                const m = calculatePositionMetrics(pos);
+                events.push({ symbol: pos.symbol, date: pos.entryDate || '0000-00-00', r: m.initialR, status: 'open' });
+            });
+            closedTrades.forEach(trade => {
+                events.push({ symbol: trade.symbol, date: trade.exitDate || '0000-00-00', r: trade.rMultiple || 0, status: 'closed' });
+            });
+            events.sort((a, b) => b.date.localeCompare(a.date));
+            const last10 = events.slice(0, 10);
+
+            if (last10.length === 0) {
+                grid.innerHTML = '<div style="color:#9ca3af; font-size:0.85em; padding:8px;">No trades yet.</div>';
+                if (badge) { badge.textContent = 'No data'; badge.style.background = '#f3f4f6'; badge.style.color = '#6b7280'; }
+                return;
+            }
+
+            const wins    = last10.filter(e => e.r > 0);
+            const losses  = last10.filter(e => e.r < 0);
+            const twoRHit = last10.filter(e => e.r >= 2);
+            const winRate    = (wins.length / last10.length) * 100;
+            const avgLossR   = losses.length > 0 ? losses.reduce((s,e) => s + e.r, 0) / losses.length : 0;
+            const twoRRate   = (twoRHit.length / last10.length) * 100;
+            const expectancy = last10.reduce((s,e) => s + e.r, 0) / last10.length;
+
+            const metrics = [
+                { label: 'Win Rate',    value: winRate.toFixed(0)+'%',    tip: 'Target: 40%+. % of last 10 events positive R. Open positions count at current R.',
+                  ok: winRate >= 40,    warn: winRate >= 25 },
+                { label: 'Avg Loss',    value: avgLossR !== 0 ? avgLossR.toFixed(2)+'R' : 'N/A', tip: 'Target: near -1R. If worse than -1.5R, stop discipline may be slipping.',
+                  ok: avgLossR >= -1.2, warn: avgLossR >= -1.5 },
+                { label: '2R+ Rate',    value: twoRRate.toFixed(0)+'%',   tip: 'Target: 20%+. What % of last 10 reached 2R or better. Low = cutting winners early.',
+                  ok: twoRRate >= 20,   warn: twoRRate >= 10 },
+                { label: 'Expectancy',  value: expectancy.toFixed(2)+'R', tip: 'Target: >0.5R. Average R per event. Positive = system working.',
+                  ok: expectancy >= 0.5, warn: expectancy >= 0 }
+            ];
+
+            const greens = metrics.filter(m => m.ok).length;
+            if (badge) {
+                if (greens >= 3)      { badge.textContent = '✓ Executing Well';   badge.style.background = '#dcfce7'; badge.style.color = '#15803d'; }
+                else if (greens >= 2) { badge.textContent = '⚡ Mixed';            badge.style.background = '#fef9c3'; badge.style.color = '#b45309'; }
+                else                  { badge.textContent = '⚠ Review Execution'; badge.style.background = '#fee2e2'; badge.style.color = '#dc2626'; }
+            }
+
+            let html = '<div style="display:grid; grid-template-columns:repeat(4,1fr); gap:8px; margin-bottom:12px;">';
+            metrics.forEach(m => {
+                const bg    = m.ok ? '#dcfce7' : m.warn ? '#fef9c3' : '#fee2e2';
+                const color = m.ok ? '#15803d' : m.warn ? '#b45309' : '#dc2626';
+                html += `<div style="padding:8px 10px; background:${bg}; border-radius:6px; text-align:center; cursor:help;" title="${m.tip}">
+                    <div style="font-size:0.7em; color:#6b7280; margin-bottom:3px;">${m.label} ℹ</div>
+                    <div style="font-size:1.3em; font-weight:800; color:${color};">${m.value}</div>
+                </div>`;
+            });
+            html += '</div>';
+
+            html += '<div style="font-size:0.78em; font-weight:700; color:#9ca3af; text-transform:uppercase; letter-spacing:0.4px; margin-bottom:6px;">Last ' + last10.length + ' Events</div>';
+            html += '<div style="display:flex; flex-wrap:wrap; gap:5px;">';
+            last10.forEach(e => {
+                const bg = e.r >= 2 ? '#dcfce7' : e.r > 0 ? '#dbeafe' : e.r === 0 ? '#f3f4f6' : '#fee2e2';
+                const c  = e.r >= 2 ? '#15803d' : e.r > 0 ? '#0369a1' : e.r === 0 ? '#6b7280' : '#dc2626';
+                html += `<div style="padding:3px 8px; background:${bg}; color:${c}; border-radius:4px; font-size:0.82em; font-weight:700;" title="${e.symbol} (${e.status}): ${e.r.toFixed(2)}R">
+                    ${e.symbol} ${e.r.toFixed(1)}R${e.status === 'open' ? ' •' : ''}
+                </div>`;
+            });
+            html += '</div>';
+            html += '<div style="margin-top:8px; font-size:0.72em; color:#9ca3af;">• = open position at current R. Closed at final R.</div>';
+            grid.innerHTML = html;
+        }
+
         // Update all displays
         function updateAllDisplays() {
             updateSafetyDashboard();
@@ -5269,6 +5481,11 @@
             updateLossBuffer();
             updateRDistribution();
             updatePortfolioHealthBar();
+            updateExposureScaling();
+            // Trade quality only updates when panel is open (performance)
+            if (document.getElementById('tradeQualityContent')?.style.display !== 'none') {
+                updateTradeQuality();
+            }
         }
 
         // ─────────────────────────────────────────────────────────
