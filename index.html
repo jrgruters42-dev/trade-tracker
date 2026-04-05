@@ -2462,8 +2462,10 @@
             const drawdown = ((pos.currentPrice - pos.currentStop) / pos.currentPrice) * 100;
             const portfolioDrawdown = (drawdown / 100) * accountWeight;
             const initialRiskPercent = ((pos.entryPrice - pos.initialStop) / pos.entryPrice) * 100;
-            const capitalRisk = Math.max(0, ((adjustedPrice - pos.currentStop) * pos.shares / totalCost) * 100);
-            const portfolioCapitalRisk = (capitalRisk / 100) * pos.initialWeight;
+            // Port Risk%: net dollar risk = (entry - currentStop) × remaining shares - locked partial profits
+            // Goes to 0 when stop moved to entry OR when partial profits cover remaining position risk
+            const netRiskDollars = Math.max(0, (pos.entryPrice - pos.currentStop) * pos.shares - realizedPnL);
+            const portfolioCapitalRisk = (netRiskDollars / accountSize) * 100;
             
             // Calculate R-multiple based on initial risk (entry - initial stop) × initial shares
             // Use UNREALIZED P&L only (not total) so Net R drops when partials are sold
@@ -2481,7 +2483,6 @@
                 drawdown,
                 portfolioDrawdown,
                 initialRiskPercent,
-                capitalRisk,
                 portfolioCapitalRisk,
                 initialR,
                 twoRTarget,
@@ -2740,7 +2741,7 @@
                             <th class="highlight-col" onclick="sortOpenPositions('pnlPercent')" style="cursor: pointer;" title="Profit/loss on this position (includes partial sells)">P&L% ▼</th>
                             <th class="highlight-col" onclick="sortOpenPositions('portfolioPnl')" style="cursor: pointer;" title="P&L as % of total account">Port P&L% ▼</th>
                             <th class="highlight-col" onclick="sortOpenPositions('portfolioDrawdown')" style="cursor: pointer;" title="PORTFOLIO DRAWDOWN: If this position hits your current stop right now, how much would your total account drop? Calculated as position size × distance to stop ÷ account size. Red = >8% portfolio drawdown (dangerous). Yellow = 5-8% (caution). Keep all positions' combined drawdown in check.">Port Drawdown ▼</th>
-                            <th class="highlight-col" onclick="sortOpenPositions('portfolioRisk')" style="cursor: pointer;" title="PORTFOLIO RISK%: Your actual current risk as % of account if this position hits its stop. Starts equal to your initial % Risk, but decreases as you raise your stop above entry. Once stop is above entry, this goes to 0 — you can't lose money even if stopped out.">Port Risk% ▼</th>
+                            <th class="highlight-col" onclick="sortOpenPositions('portfolioRisk')" style="cursor: pointer;" title="PORTFOLIO RISK%: Net dollar risk as % of account. Formula: max(0, (Entry - Current Stop) × Remaining Shares - Locked Partial Profits) ÷ Account Size. Goes to 0 when: (1) stop is moved up to entry price, OR (2) partial sell profits cover the remaining position's risk — e.g. selling ⅓ at 2R locks in exactly enough profit to offset the risk on the remaining ⅔ position.">Port Risk% ▼</th>
                             <th class="highlight-col" onclick="sortOpenPositions('initialR')" style="cursor: pointer;" title="INIT RISK RATIO (R-Multiple): Total position gain (unrealized + realized from partials) divided by your initial risk. 1R = made back your original risk. 2R = made double your risk. Includes profits already locked in via partial sells — so this shows the true combined performance of the whole position. Your target: take partial at 2R, let rest run to 5R+.">Init Risk Ratio (R) ▼</th>
                             <th onclick="sortOpenPositions('twoRTarget')" style="cursor: pointer;" title="2R TARGET PRICE: The stock price at which your position would be up exactly 2x your initial risk. This is your first harvest trigger in the Minervini hybrid approach — consider selling 1/3 to 1/2 at this level to lock in something real while letting the rest run.">2R Target ▼</th>
                             <th title="Edit, partial sell, update stop, close, or delete position">Actions</th>
