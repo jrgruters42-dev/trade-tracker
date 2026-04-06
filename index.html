@@ -588,61 +588,68 @@
 
         <!-- Account Setup -->
         <div class="account-setup" style="padding: 10px;">
-            <h3 style="font-size: 1em; margin-bottom: 8px;" title="ACCOUNT STATS: Update these values daily. Trading Account = your current total equity (update after market close). Roth accounts tracked separately. Starting (Jan 1) is set once per year and never changes — it's your benchmark for YTD calculations.">Account Stats ℹ</h3>
-            
-            <!-- Current Values (for daily updates) -->
-            <div style="background: #f0f9ff; padding: 8px; border-radius: 6px; border: 2px solid #667eea; margin-bottom: 8px;">
-                <div style="font-weight: bold; color: #667eea; margin-bottom: 6px; font-size: 0.8em;" title="Update these fields each day after market close to keep your equity curve and YTD calculations accurate.">📊 Daily Update</div>
-                <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px;">
-                    <div class="form-group" style="margin-bottom: 0;">
-                        <label style="font-size: 10px;" title="Current total equity in your main trading account. Update this daily after market close.">Trading Account ($)</label>
-                        <input type="number" id="accountSize" value="250000" style="padding: 4px; font-size: 12px;" onchange="saveToFirebase(); saveToFirebase(); updateAllDisplays();">
-                    </div>
-                    <div class="form-group" style="margin-bottom: 0;">
-                        <label style="font-size: 10px;" title="Current value of your personal Roth IRA. Tracked separately from trading account for YTD comparison.">My Roth ($)</label>
-                        <input type="number" id="myRoth" value="0" style="padding: 4px; font-size: 12px;" onchange="saveToFirebase(); updateAllDisplays();">
-                    </div>
-                    <div class="form-group" style="margin-bottom: 0;">
-                        <label style="font-size: 10px;" title="Current value of your wife's Roth IRA. Tracked separately for YTD comparison.">Wife Roth ($)</label>
-                        <input type="number" id="wifeRoth" value="0" style="padding: 4px; font-size: 12px;" onchange="saveToFirebase(); updateAllDisplays();">
-                    </div>
-                </div>
+            <!-- Collapsible header row -->
+            <div style="display:flex; align-items:center; justify-content:space-between; cursor:pointer; margin-bottom:6px;" onclick="toggleAccountSetup()" title="Click to show/hide account input fields">
+                <h3 style="font-size: 1em; margin: 0;" title="ACCOUNT STATS: Update these values daily. Trading Account = your current total equity (update after market close). Roth accounts tracked separately. Starting (Jan 1) is set once per year and never changes — it's your benchmark for YTD calculations.">Account Setup ℹ</h3>
+                <span id="accountSetupToggle" style="font-size:0.75em; color:#9ca3af; font-weight:600;">▶ tap to edit</span>
             </div>
-            
-            <!-- Jan 1 Starting Values -->
-            <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 8px;">
-                <div class="form-group" style="margin-bottom: 0;">
-                    <label style="font-size: 10px;">Trading Jan 1 ($)</label>
-                    <input type="number" id="startingAccount" value="248288" style="padding: 4px; font-size: 12px;" onchange="saveToFirebase(); updateAllDisplays();">
+
+            <!-- Collapsible inputs — hidden by default -->
+            <div id="accountSetupInputs" style="display:none;">
+                <!-- Current Values (for daily updates) -->
+                <div style="background: #f0f9ff; padding: 8px; border-radius: 6px; border: 2px solid #667eea; margin-bottom: 8px;">
+                    <div style="font-weight: bold; color: #667eea; margin-bottom: 6px; font-size: 0.8em;" title="Update these fields each day after market close to keep your equity curve and YTD calculations accurate.">📊 Daily Update</div>
+                    <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px;">
+                        <div class="form-group" style="margin-bottom: 0;">
+                            <label style="font-size: 10px;" title="Current total equity in your main trading account. Update this daily after market close.">Trading Account ($)</label>
+                            <input type="number" id="accountSize" value="250000" style="padding: 4px; font-size: 12px;" onchange="saveToFirebase(); saveToFirebase(); updateAllDisplays();">
+                        </div>
+                        <div class="form-group" style="margin-bottom: 0;">
+                            <label style="font-size: 10px;" title="Current value of your personal Roth IRA. Tracked separately from trading account for YTD comparison.">My Roth ($)</label>
+                            <input type="number" id="myRoth" value="0" style="padding: 4px; font-size: 12px;" onchange="saveToFirebase(); updateAllDisplays();">
+                        </div>
+                        <div class="form-group" style="margin-bottom: 0;">
+                            <label style="font-size: 10px;" title="Current value of your wife's Roth IRA. Tracked separately for YTD comparison.">Wife Roth ($)</label>
+                            <input type="number" id="wifeRoth" value="0" style="padding: 4px; font-size: 12px;" onchange="saveToFirebase(); updateAllDisplays();">
+                        </div>
+                    </div>
                 </div>
-                <div class="form-group" style="margin-bottom: 0;">
-                    <label style="font-size: 10px;">My Roth Jan 1 ($)</label>
-                    <input type="number" id="myRothJan1" value="0" style="padding: 4px; font-size: 12px;" onchange="saveToFirebase(); updateAllDisplays();">
+                
+                <!-- Jan 1 Starting Values -->
+                <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 8px;">
+                    <div class="form-group" style="margin-bottom: 0;">
+                        <label style="font-size: 10px;">Trading Jan 1 ($)</label>
+                        <input type="number" id="startingAccount" value="248288" style="padding: 4px; font-size: 12px;" onchange="saveToFirebase(); updateAllDisplays();">
+                    </div>
+                    <div class="form-group" style="margin-bottom: 0;">
+                        <label style="font-size: 10px;">My Roth Jan 1 ($)</label>
+                        <input type="number" id="myRothJan1" value="0" style="padding: 4px; font-size: 12px;" onchange="saveToFirebase(); updateAllDisplays();">
+                    </div>
+                    <div class="form-group" style="margin-bottom: 0;">
+                        <label style="font-size: 10px;">Wife Roth Jan 1 ($)</label>
+                        <input type="number" id="wifeRothJan1" value="0" style="padding: 4px; font-size: 12px;" onchange="saveToFirebase(); updateAllDisplays();">
+                    </div>
                 </div>
-                <div class="form-group" style="margin-bottom: 0;">
-                    <label style="font-size: 10px;">Wife Roth Jan 1 ($)</label>
-                    <input type="number" id="wifeRothJan1" value="0" style="padding: 4px; font-size: 12px;" onchange="saveToFirebase(); updateAllDisplays();">
+                
+                <!-- API Key and Buttons -->
+                <div style="display: grid; grid-template-columns: 1fr auto auto auto auto auto auto; gap: 6px; align-items: end; margin-bottom: 6px;">
+                    <div class="form-group" style="margin-bottom: 0;">
+                        <label style="font-size: 10px;">Finnhub API Key</label>
+                        <input type="text" id="apiKey" placeholder="Optional" style="padding: 4px; font-size: 11px;">
+                    </div>
+                    <div class="form-group" style="margin-bottom: 0;">
+                        <label style="font-size: 10px;">SPY Jan 2</label>
+                        <input type="number" step="0.01" id="spyJan1" value="0" style="padding: 4px; font-size: 11px; width: 70px;" onchange="saveToFirebase(); updateSPYPrice();">
+                    </div>
+                    <div class="form-group" style="margin-bottom: 0;">
+                        <label style="font-size: 10px;">Lookback</label>
+                        <input type="number" id="lookbackPeriod" value="15" min="5" max="50" style="padding: 4px; font-size: 11px; width: 50px;" onchange="saveToFirebase(); updateAllDisplays();" title="Number of recent trades to analyze for Recovery Status and Net R">
+                    </div>
+                    <button onclick="takeSnapshot()" class="btn-success" style="padding: 5px 10px; font-size: 11px;">📸</button>
+                    <button onclick="openFirebaseSetup()" class="btn-secondary btn-small" style="padding: 5px 10px; font-size: 10px;">⚙️</button>
+                    <button onclick="testFirebaseConnection()" class="btn-success btn-small" style="padding: 5px 10px; font-size: 10px;">🔄</button>
+                    <span id="lastSnapshot" style="color: #666; font-size: 10px; font-style: italic; white-space: nowrap;"></span>
                 </div>
-            </div>
-            
-            <!-- API Key and Buttons -->
-            <div style="display: grid; grid-template-columns: 1fr auto auto auto auto auto auto; gap: 6px; align-items: end; margin-bottom: 6px;">
-                <div class="form-group" style="margin-bottom: 0;">
-                    <label style="font-size: 10px;">Finnhub API Key</label>
-                    <input type="text" id="apiKey" placeholder="Optional" style="padding: 4px; font-size: 11px;">
-                </div>
-                <div class="form-group" style="margin-bottom: 0;">
-                    <label style="font-size: 10px;">SPY Jan 2</label>
-                    <input type="number" step="0.01" id="spyJan1" value="0" style="padding: 4px; font-size: 11px; width: 70px;" onchange="saveToFirebase(); updateSPYPrice();">
-                </div>
-                <div class="form-group" style="margin-bottom: 0;">
-                    <label style="font-size: 10px;">Lookback</label>
-                    <input type="number" id="lookbackPeriod" value="15" min="5" max="50" style="padding: 4px; font-size: 11px; width: 50px;" onchange="saveToFirebase(); updateAllDisplays();" title="Number of recent trades to analyze for Recovery Status and Net R">
-                </div>
-                <button onclick="takeSnapshot()" class="btn-success" style="padding: 5px 10px; font-size: 11px;">📸</button>
-                <button onclick="openFirebaseSetup()" class="btn-secondary btn-small" style="padding: 5px 10px; font-size: 10px;">⚙️</button>
-                <button onclick="testFirebaseConnection()" class="btn-success btn-small" style="padding: 5px 10px; font-size: 10px;">🔄</button>
-                <span id="lastSnapshot" style="color: #666; font-size: 10px; font-style: italic; white-space: nowrap;"></span>
             </div>
             
             <!-- Account Info (Compact) -->
@@ -680,8 +687,8 @@
                             </div>
                         </div>
                         
-                        <div style="cursor: help;" title="Worst-case YTD if all unrealized profit evaporates. Keep this POSITIVE to protect against drawdowns">
-                            <div style="font-size: 0.65em; opacity: 0.7;">YTD Floor</div>
+                        <div style="cursor: help;" title="LOCKED IN YTD: Formula = Current YTD $ − Total Unrealized Gains. Answers: 'If every open position went to zero right now, what would my year look like?' Keep this POSITIVE. A negative number means your entire apparent YTD gain exists only on paper and could evaporate with a bad week.">
+                            <div style="font-size: 0.65em; opacity: 0.7;">Locked in YTD</div>
                             <div style="font-size: 1.1em; font-weight: 700;" id="ytdFloor">$0 (0.0%)</div>
                         </div>
                         
@@ -705,8 +712,8 @@
                             <div style="font-size: 1.1em; font-weight: 700;" id="spyYTDCompact">--</div>
                         </div>
                         
-                        <div style="cursor: help;" title="Net realized profit locked in for the year (your safety cushion)">
-                            <div style="font-size: 0.65em; opacity: 0.7;">Realized Cushion</div>
+                        <div style="cursor: help;" title="BANKED PROFITS: Formula = Cash already booked from fully closed trades + partial sell profits on still-open positions. This is money that cannot be taken back by the market — truly locked in regardless of what happens to your open positions.">
+                            <div style="font-size: 0.65em; opacity: 0.7;">Banked Profits</div>
                             <div style="font-size: 1.1em; font-weight: 700;" id="realizedCushion">$0</div>
                         </div>
                         
@@ -811,10 +818,6 @@
                         <div id="recommendedRisk" style="font-size:1.6em; font-weight:800; color:#6b7280;">—</div>
                         <div id="recommendedRiskReason" style="font-size:0.68em; color:#9ca3af; margin-top:1px;"></div>
                     </div>
-                    <div id="openRiskBadge" style="padding:4px 10px; border-radius:8px; font-size:0.8em; font-weight:700; background:#f3f4f6; color:#6b7280; text-align:center; cursor:help;"
-                         title="OPEN RISK: Your total portfolio risk if ALL current stops are hit simultaneously. Green (<2%) = safe to add. Yellow (2-3%) = getting full, use discretion. Red (3%+) = consider moving stops up or harvesting before adding new positions. This is a soft guide — not a hard block.">
-                        Open Risk: <span id="openRiskPct">0%</span>
-                    </div>
                 </div>
             </div>
         </div>
@@ -836,7 +839,6 @@
         <div class="tabs">
             <button class="tab active" onclick="switchTab('open-positions')">Open Positions</button>
             <button class="tab" onclick="switchTab('closed-trades')">Closed Trades</button>
-            <button class="tab" onclick="switchTab('expectancy-calc')">Expectancy Calculator</button>
             <button class="tab" onclick="switchTab('what-if-calc')">What If Calculator</button>
             <button class="tab" onclick="switchTab('strategy-rules')">Strategy Rules</button>
             <button class="tab" onclick="switchTab('stock1')"><span id="stock1Symbol">Stock 1</span></button>
@@ -856,7 +858,7 @@
                 <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
                     <span style="font-size:0.75em; font-weight:700; color:#9ca3af; letter-spacing:0.5px; text-transform:uppercase; margin-right:2px;">Portfolio Health</span>
                     <button id="harvestBadge" onclick="toggleMergedPanel('mergedHarvestPanel','harvestBadge')"
-                        title="HARVEST PLANNER: Tracks whether your open winners need to be partially sold to protect gains. 🔴 = YTD Floor is negative or unrealized risk >70% — action required. 🟡 = Getting stretched, consider locking some in. 🟢 = Cushion is healthy. Click to open the Harvest Planner."
+                        title="HARVEST PLANNER: Tracks whether your open winners need to be partially sold to protect gains. 🔴 = Locked in YTD is negative or unrealized risk >70% — action required. 🟡 = Getting stretched, consider locking some in. 🟢 = Cushion is healthy. Click to open the Harvest Planner."
                         style="padding:4px 12px; border-radius:12px; border:none; cursor:pointer; font-size:0.82em; font-weight:700; background:#f3f4f6; color:#6b7280; transition:all 0.2s;">
                         🌾 Harvest &nbsp;<span id="harvestBadgeStatus">— No positions</span>
                     </button>
@@ -879,7 +881,7 @@
 
                 <!-- Auto Suggestions -->
                 <div style="margin-bottom:14px;">
-                    <div style="font-size:0.78em; font-weight:700; color:#78350f; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:6px;" title="Automatically calculated harvest options triggered when YTD Floor is negative or your unrealized risk is too high. Shows the minimum number of shares to sell from your biggest winner to get back to safety.">⚡ Auto Suggestions ℹ</div>
+                    <div style="font-size:0.78em; font-weight:700; color:#78350f; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:6px;" title="Automatically calculated harvest options triggered when Locked in YTD is negative or your unrealized risk is too high. Shows the minimum number of shares to sell from your biggest winner to get back to safety.">⚡ Auto Suggestions ℹ</div>
                     <div id="harvestCalculatorContent" style="font-size:0.9em; color:#78350f;">
                         <em style="opacity:0.7;">No harvest action needed right now.</em>
                     </div>
@@ -1050,166 +1052,6 @@
             </div>
         </div>
 
-        <!-- Expectancy Calculator Tab -->\n        <div id="expectancy-calc" class="tab-content">
-            <div class="card">
-                <h2 style="margin-bottom: 20px;" title="EXPECTANCY CALCULATOR: The foundation of systematic trading. Expectancy = (Win Rate × Avg Win R) - (Loss Rate × Avg Loss R). A positive expectancy means your system is mathematically profitable over a large sample of trades. Even with a 35% win rate you can have excellent expectancy if your winners are much larger than your losers. Use this to compare different strategy scenarios side by side.">📊 Expectancy Calculator ℹ</h2>
-                <p style="margin-bottom: 20px; color: #666;">Model different trading strategies by adjusting win rate and average R-multiples. Expectancy = (Win Rate × Avg Win R) - (Loss Rate × Avg Loss R)</p>
-                
-                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 20px;">
-                    
-                    <!-- Scenario 1 -->
-                    <div style="padding: 20px; background: #f9fafb; border-radius: 12px; border: 2px solid #e5e7eb;">
-                        <h3 style="font-size: 1.1em; margin-bottom: 15px; color: #667eea; font-weight: 700;">Scenario 1</h3>
-                        <div style="display: grid; gap: 12px;">
-                            <div>
-                                <label style="font-size: 0.9em; display: block; margin-bottom: 5px; font-weight: 600;">Win Rate (%)</label>
-                                <input type="number" id="calc1WinRate" step="1" value="60" style="width: 100%; padding: 10px; font-size: 1em; border: 2px solid #e5e7eb; border-radius: 6px;">
-                            </div>
-                            <div>
-                                <label style="font-size: 0.9em; display: block; margin-bottom: 5px; font-weight: 600;">Avg Win (R)</label>
-                                <input type="number" id="calc1AvgWinR" step="0.1" value="3.0" style="width: 100%; padding: 10px; font-size: 1em; border: 2px solid #e5e7eb; border-radius: 6px;">
-                            </div>
-                            <div>
-                                <label style="font-size: 0.9em; display: block; margin-bottom: 5px; font-weight: 600;">Avg Loss (R)</label>
-                                <input type="number" id="calc1AvgLossR" step="0.1" value="1.0" style="width: 100%; padding: 10px; font-size: 1em; border: 2px solid #e5e7eb; border-radius: 6px;">
-                            </div>
-                            <div>
-                                <label style="font-size: 0.9em; display: block; margin-bottom: 5px; font-weight: 600;">Risk % per Trade</label>
-                                <input type="number" id="calc1RiskPct" step="0.1" value="1.0" style="width: 100%; padding: 10px; font-size: 1em; border: 2px solid #e5e7eb; border-radius: 6px;">
-                            </div>
-                            <div>
-                                <label style="font-size: 0.9em; display: block; margin-bottom: 5px; font-weight: 600;">Trades per Year</label>
-                                <input type="number" id="calc1TradesYear" step="1" value="100" style="width: 100%; padding: 10px; font-size: 1em; border: 2px solid #e5e7eb; border-radius: 6px;">
-                            </div>
-                            <div style="margin-top: 15px; padding: 20px; background: white; border-radius: 8px; text-align: center; border: 2px solid #10b981;">
-                                <div style="font-size: 0.85em; color: #666; margin-bottom: 5px; text-transform: uppercase; letter-spacing: 0.5px;">Expectancy</div>
-                                <div id="calc1Result" style="font-size: 2em; font-weight: 700; color: #10b981;">1.40R</div>
-                                <div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid #e5e7eb;">
-                                    <div style="font-size: 0.75em; color: #666; margin-bottom: 3px;">Annual Gain</div>
-                                    <div id="calc1Annual" style="font-size: 1.3em; font-weight: 700; color: #10b981;">140%</div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <!-- Scenario 2 -->
-                    <div style="padding: 20px; background: #f9fafb; border-radius: 12px; border: 2px solid #e5e7eb;">
-                        <h3 style="font-size: 1.1em; margin-bottom: 15px; color: #667eea; font-weight: 700;">Scenario 2</h3>
-                        <div style="display: grid; gap: 12px;">
-                            <div>
-                                <label style="font-size: 0.9em; display: block; margin-bottom: 5px; font-weight: 600;">Win Rate (%)</label>
-                                <input type="number" id="calc2WinRate" step="1" value="50" style="width: 100%; padding: 10px; font-size: 1em; border: 2px solid #e5e7eb; border-radius: 6px;">
-                            </div>
-                            <div>
-                                <label style="font-size: 0.9em; display: block; margin-bottom: 5px; font-weight: 600;">Avg Win (R)</label>
-                                <input type="number" id="calc2AvgWinR" step="0.1" value="4.0" style="width: 100%; padding: 10px; font-size: 1em; border: 2px solid #e5e7eb; border-radius: 6px;">
-                            </div>
-                            <div>
-                                <label style="font-size: 0.9em; display: block; margin-bottom: 5px; font-weight: 600;">Avg Loss (R)</label>
-                                <input type="number" id="calc2AvgLossR" step="0.1" value="1.0" style="width: 100%; padding: 10px; font-size: 1em; border: 2px solid #e5e7eb; border-radius: 6px;">
-                            </div>
-                            <div>
-                                <label style="font-size: 0.9em; display: block; margin-bottom: 5px; font-weight: 600;">Risk % per Trade</label>
-                                <input type="number" id="calc2RiskPct" step="0.1" value="1.0" style="width: 100%; padding: 10px; font-size: 1em; border: 2px solid #e5e7eb; border-radius: 6px;">
-                            </div>
-                            <div>
-                                <label style="font-size: 0.9em; display: block; margin-bottom: 5px; font-weight: 600;">Trades per Year</label>
-                                <input type="number" id="calc2TradesYear" step="1" value="100" style="width: 100%; padding: 10px; font-size: 1em; border: 2px solid #e5e7eb; border-radius: 6px;">
-                            </div>
-                            <div style="margin-top: 15px; padding: 20px; background: white; border-radius: 8px; text-align: center; border: 2px solid #10b981;">
-                                <div style="font-size: 0.85em; color: #666; margin-bottom: 5px; text-transform: uppercase; letter-spacing: 0.5px;">Expectancy</div>
-                                <div id="calc2Result" style="font-size: 2em; font-weight: 700; color: #10b981;">1.50R</div>
-                                <div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid #e5e7eb;">
-                                    <div style="font-size: 0.75em; color: #666; margin-bottom: 3px;">Annual Gain</div>
-                                    <div id="calc2Annual" style="font-size: 1.3em; font-weight: 700; color: #10b981;">150%</div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <!-- Scenario 3 -->
-                    <div style="padding: 20px; background: #f9fafb; border-radius: 12px; border: 2px solid #e5e7eb;">
-                        <h3 style="font-size: 1.1em; margin-bottom: 15px; color: #667eea; font-weight: 700;">Scenario 3</h3>
-                        <div style="display: grid; gap: 12px;">
-                            <div>
-                                <label style="font-size: 0.9em; display: block; margin-bottom: 5px; font-weight: 600;">Win Rate (%)</label>
-                                <input type="number" id="calc3WinRate" step="1" value="40" style="width: 100%; padding: 10px; font-size: 1em; border: 2px solid #e5e7eb; border-radius: 6px;">
-                            </div>
-                            <div>
-                                <label style="font-size: 0.9em; display: block; margin-bottom: 5px; font-weight: 600;">Avg Win (R)</label>
-                                <input type="number" id="calc3AvgWinR" step="0.1" value="5.0" style="width: 100%; padding: 10px; font-size: 1em; border: 2px solid #e5e7eb; border-radius: 6px;">
-                            </div>
-                            <div>
-                                <label style="font-size: 0.9em; display: block; margin-bottom: 5px; font-weight: 600;">Avg Loss (R)</label>
-                                <input type="number" id="calc3AvgLossR" step="0.1" value="1.0" style="width: 100%; padding: 10px; font-size: 1em; border: 2px solid #e5e7eb; border-radius: 6px;">
-                            </div>
-                            <div>
-                                <label style="font-size: 0.9em; display: block; margin-bottom: 5px; font-weight: 600;">Risk % per Trade</label>
-                                <input type="number" id="calc3RiskPct" step="0.1" value="1.0" style="width: 100%; padding: 10px; font-size: 1em; border: 2px solid #e5e7eb; border-radius: 6px;">
-                            </div>
-                            <div>
-                                <label style="font-size: 0.9em; display: block; margin-bottom: 5px; font-weight: 600;">Trades per Year</label>
-                                <input type="number" id="calc3TradesYear" step="1" value="100" style="width: 100%; padding: 10px; font-size: 1em; border: 2px solid #e5e7eb; border-radius: 6px;">
-                            </div>
-                            <div style="margin-top: 15px; padding: 20px; background: white; border-radius: 8px; text-align: center; border: 2px solid #10b981;">
-                                <div style="font-size: 0.85em; color: #666; margin-bottom: 5px; text-transform: uppercase; letter-spacing: 0.5px;">Expectancy</div>
-                                <div id="calc3Result" style="font-size: 2em; font-weight: 700; color: #10b981;">1.40R</div>
-                                <div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid #e5e7eb;">
-                                    <div style="font-size: 0.75em; color: #666; margin-bottom: 3px;">Annual Gain</div>
-                                    <div id="calc3Annual" style="font-size: 1.3em; font-weight: 700; color: #10b981;">140%</div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    
-                </div>
-                
-                <div style="margin-top: 30px; padding: 20px; background: #eff6ff; border-radius: 8px; border-left: 4px solid #3b82f6;">
-                    <h4 style="margin: 0 0 10px 0; color: #1e40af;">💡 How to Use</h4>
-                    <ul style="margin: 0; padding-left: 20px; color: #1e40af;">
-                        <li>Compare different strategies side-by-side</li>
-                        <li>Positive expectancy = profitable over time</li>
-                        <li>Model "what if" scenarios for improvement</li>
-                        <li>Example: "If I increase avg win to 4R, expectancy goes from 1.4R to 1.9R"</li>
-                    </ul>
-                </div>
-            </div>
-        </div>
-
-        <!-- Stock Risk Profile Tabs -->
-
-        <!-- Stock Risk Profile Tabs -->
-        <!-- Stock 1 Tab -->
-        <div id="stock1" class="tab-content">
-            <div class="card">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-                    <h2 id="stock1Title">Stock Risk Profile</h2>
-                    <div style="display: flex; gap: 10px; align-items: center;">
-                        <input type="text" id="stock1SymbolInput" placeholder="Symbol" style="width: 100px; padding: 8px;">
-                        <input type="number" id="stock1Price" placeholder="Price" step="0.01" style="width: 120px; padding: 8px;">
-                        <input type="number" id="stock1Stop" placeholder="Stop" step="0.01" style="width: 120px; padding: 8px;">
-                        <button onclick="updateStockProfile(1)" class="btn-success">Update</button>
-                    </div>
-                </div>
-                <div id="stock1Profile"></div>
-            </div>
-        </div>
-
-        <!-- Stock 2 Tab -->
-        <div id="stock2" class="tab-content">
-            <div class="card">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-                    <h2 id="stock2Title">Stock Risk Profile</h2>
-                    <div style="display: flex; gap: 10px; align-items: center;">
-                        <input type="text" id="stock2SymbolInput" placeholder="Symbol" style="width: 100px; padding: 8px;">
-                        <input type="number" id="stock2Price" placeholder="Price" step="0.01" style="width: 120px; padding: 8px;">
-                        <input type="number" id="stock2Stop" placeholder="Stop" step="0.01" style="width: 120px; padding: 8px;">
-                        <button onclick="updateStockProfile(2)" class="btn-success">Update</button>
-                    </div>
-                </div>
-                <div id="stock2Profile"></div>
-            </div>
-        </div>
 
         <!-- Stock 3 Tab -->
         <div id="stock3" class="tab-content">
@@ -1468,6 +1310,173 @@
             </div>
         </div>
 
+            <!-- Expectancy Calculator (merged from tab) -->
+            <div class="card" style="margin-top:20px;">
+                <div style="display:flex; align-items:center; justify-content:space-between; cursor:pointer; margin-bottom:0;" onclick="toggleExpectancyCalc()">
+                    <h2 style="margin:0;" title="EXPECTANCY CALCULATOR: Compare different strategy scenarios side by side. Expectancy = (Win Rate × Avg Win R) - (Loss Rate × Avg Loss R). Use this to model what your system is capable of at different win rates and R-multiples.">📊 Expectancy Calculator ℹ</h2>
+                    <span id="expectancyCalcToggle" style="font-size:0.85em; color:#9ca3af; font-weight:600;">▼</span>
+                </div>
+                <div id="expectancyCalcContent">
+            <div class="card">
+                <h2 style="margin-bottom: 20px;" title="EXPECTANCY CALCULATOR: The foundation of systematic trading. Expectancy = (Win Rate × Avg Win R) - (Loss Rate × Avg Loss R). A positive expectancy means your system is mathematically profitable over a large sample of trades. Even with a 35% win rate you can have excellent expectancy if your winners are much larger than your losers. Use this to compare different strategy scenarios side by side.">📊 Expectancy Calculator ℹ</h2>
+                <p style="margin-bottom: 20px; color: #666;">Model different trading strategies by adjusting win rate and average R-multiples. Expectancy = (Win Rate × Avg Win R) - (Loss Rate × Avg Loss R)</p>
+                
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 20px;">
+                    
+                    <!-- Scenario 1 -->
+                    <div style="padding: 20px; background: #f9fafb; border-radius: 12px; border: 2px solid #e5e7eb;">
+                        <h3 style="font-size: 1.1em; margin-bottom: 15px; color: #667eea; font-weight: 700;">Scenario 1</h3>
+                        <div style="display: grid; gap: 12px;">
+                            <div>
+                                <label style="font-size: 0.9em; display: block; margin-bottom: 5px; font-weight: 600;">Win Rate (%)</label>
+                                <input type="number" id="calc1WinRate" step="1" value="60" style="width: 100%; padding: 10px; font-size: 1em; border: 2px solid #e5e7eb; border-radius: 6px;">
+                            </div>
+                            <div>
+                                <label style="font-size: 0.9em; display: block; margin-bottom: 5px; font-weight: 600;">Avg Win (R)</label>
+                                <input type="number" id="calc1AvgWinR" step="0.1" value="3.0" style="width: 100%; padding: 10px; font-size: 1em; border: 2px solid #e5e7eb; border-radius: 6px;">
+                            </div>
+                            <div>
+                                <label style="font-size: 0.9em; display: block; margin-bottom: 5px; font-weight: 600;">Avg Loss (R)</label>
+                                <input type="number" id="calc1AvgLossR" step="0.1" value="1.0" style="width: 100%; padding: 10px; font-size: 1em; border: 2px solid #e5e7eb; border-radius: 6px;">
+                            </div>
+                            <div>
+                                <label style="font-size: 0.9em; display: block; margin-bottom: 5px; font-weight: 600;">Risk % per Trade</label>
+                                <input type="number" id="calc1RiskPct" step="0.1" value="1.0" style="width: 100%; padding: 10px; font-size: 1em; border: 2px solid #e5e7eb; border-radius: 6px;">
+                            </div>
+                            <div>
+                                <label style="font-size: 0.9em; display: block; margin-bottom: 5px; font-weight: 600;">Trades per Year</label>
+                                <input type="number" id="calc1TradesYear" step="1" value="100" style="width: 100%; padding: 10px; font-size: 1em; border: 2px solid #e5e7eb; border-radius: 6px;">
+                            </div>
+                            <div style="margin-top: 15px; padding: 20px; background: white; border-radius: 8px; text-align: center; border: 2px solid #10b981;">
+                                <div style="font-size: 0.85em; color: #666; margin-bottom: 5px; text-transform: uppercase; letter-spacing: 0.5px;">Expectancy</div>
+                                <div id="calc1Result" style="font-size: 2em; font-weight: 700; color: #10b981;">1.40R</div>
+                                <div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid #e5e7eb;">
+                                    <div style="font-size: 0.75em; color: #666; margin-bottom: 3px;">Annual Gain</div>
+                                    <div id="calc1Annual" style="font-size: 1.3em; font-weight: 700; color: #10b981;">140%</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Scenario 2 -->
+                    <div style="padding: 20px; background: #f9fafb; border-radius: 12px; border: 2px solid #e5e7eb;">
+                        <h3 style="font-size: 1.1em; margin-bottom: 15px; color: #667eea; font-weight: 700;">Scenario 2</h3>
+                        <div style="display: grid; gap: 12px;">
+                            <div>
+                                <label style="font-size: 0.9em; display: block; margin-bottom: 5px; font-weight: 600;">Win Rate (%)</label>
+                                <input type="number" id="calc2WinRate" step="1" value="50" style="width: 100%; padding: 10px; font-size: 1em; border: 2px solid #e5e7eb; border-radius: 6px;">
+                            </div>
+                            <div>
+                                <label style="font-size: 0.9em; display: block; margin-bottom: 5px; font-weight: 600;">Avg Win (R)</label>
+                                <input type="number" id="calc2AvgWinR" step="0.1" value="4.0" style="width: 100%; padding: 10px; font-size: 1em; border: 2px solid #e5e7eb; border-radius: 6px;">
+                            </div>
+                            <div>
+                                <label style="font-size: 0.9em; display: block; margin-bottom: 5px; font-weight: 600;">Avg Loss (R)</label>
+                                <input type="number" id="calc2AvgLossR" step="0.1" value="1.0" style="width: 100%; padding: 10px; font-size: 1em; border: 2px solid #e5e7eb; border-radius: 6px;">
+                            </div>
+                            <div>
+                                <label style="font-size: 0.9em; display: block; margin-bottom: 5px; font-weight: 600;">Risk % per Trade</label>
+                                <input type="number" id="calc2RiskPct" step="0.1" value="1.0" style="width: 100%; padding: 10px; font-size: 1em; border: 2px solid #e5e7eb; border-radius: 6px;">
+                            </div>
+                            <div>
+                                <label style="font-size: 0.9em; display: block; margin-bottom: 5px; font-weight: 600;">Trades per Year</label>
+                                <input type="number" id="calc2TradesYear" step="1" value="100" style="width: 100%; padding: 10px; font-size: 1em; border: 2px solid #e5e7eb; border-radius: 6px;">
+                            </div>
+                            <div style="margin-top: 15px; padding: 20px; background: white; border-radius: 8px; text-align: center; border: 2px solid #10b981;">
+                                <div style="font-size: 0.85em; color: #666; margin-bottom: 5px; text-transform: uppercase; letter-spacing: 0.5px;">Expectancy</div>
+                                <div id="calc2Result" style="font-size: 2em; font-weight: 700; color: #10b981;">1.50R</div>
+                                <div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid #e5e7eb;">
+                                    <div style="font-size: 0.75em; color: #666; margin-bottom: 3px;">Annual Gain</div>
+                                    <div id="calc2Annual" style="font-size: 1.3em; font-weight: 700; color: #10b981;">150%</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Scenario 3 -->
+                    <div style="padding: 20px; background: #f9fafb; border-radius: 12px; border: 2px solid #e5e7eb;">
+                        <h3 style="font-size: 1.1em; margin-bottom: 15px; color: #667eea; font-weight: 700;">Scenario 3</h3>
+                        <div style="display: grid; gap: 12px;">
+                            <div>
+                                <label style="font-size: 0.9em; display: block; margin-bottom: 5px; font-weight: 600;">Win Rate (%)</label>
+                                <input type="number" id="calc3WinRate" step="1" value="40" style="width: 100%; padding: 10px; font-size: 1em; border: 2px solid #e5e7eb; border-radius: 6px;">
+                            </div>
+                            <div>
+                                <label style="font-size: 0.9em; display: block; margin-bottom: 5px; font-weight: 600;">Avg Win (R)</label>
+                                <input type="number" id="calc3AvgWinR" step="0.1" value="5.0" style="width: 100%; padding: 10px; font-size: 1em; border: 2px solid #e5e7eb; border-radius: 6px;">
+                            </div>
+                            <div>
+                                <label style="font-size: 0.9em; display: block; margin-bottom: 5px; font-weight: 600;">Avg Loss (R)</label>
+                                <input type="number" id="calc3AvgLossR" step="0.1" value="1.0" style="width: 100%; padding: 10px; font-size: 1em; border: 2px solid #e5e7eb; border-radius: 6px;">
+                            </div>
+                            <div>
+                                <label style="font-size: 0.9em; display: block; margin-bottom: 5px; font-weight: 600;">Risk % per Trade</label>
+                                <input type="number" id="calc3RiskPct" step="0.1" value="1.0" style="width: 100%; padding: 10px; font-size: 1em; border: 2px solid #e5e7eb; border-radius: 6px;">
+                            </div>
+                            <div>
+                                <label style="font-size: 0.9em; display: block; margin-bottom: 5px; font-weight: 600;">Trades per Year</label>
+                                <input type="number" id="calc3TradesYear" step="1" value="100" style="width: 100%; padding: 10px; font-size: 1em; border: 2px solid #e5e7eb; border-radius: 6px;">
+                            </div>
+                            <div style="margin-top: 15px; padding: 20px; background: white; border-radius: 8px; text-align: center; border: 2px solid #10b981;">
+                                <div style="font-size: 0.85em; color: #666; margin-bottom: 5px; text-transform: uppercase; letter-spacing: 0.5px;">Expectancy</div>
+                                <div id="calc3Result" style="font-size: 2em; font-weight: 700; color: #10b981;">1.40R</div>
+                                <div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid #e5e7eb;">
+                                    <div style="font-size: 0.75em; color: #666; margin-bottom: 3px;">Annual Gain</div>
+                                    <div id="calc3Annual" style="font-size: 1.3em; font-weight: 700; color: #10b981;">140%</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                </div>
+                
+                <div style="margin-top: 30px; padding: 20px; background: #eff6ff; border-radius: 8px; border-left: 4px solid #3b82f6;">
+                    <h4 style="margin: 0 0 10px 0; color: #1e40af;">💡 How to Use</h4>
+                    <ul style="margin: 0; padding-left: 20px; color: #1e40af;">
+                        <li>Compare different strategies side-by-side</li>
+                        <li>Positive expectancy = profitable over time</li>
+                        <li>Model "what if" scenarios for improvement</li>
+                        <li>Example: "If I increase avg win to 4R, expectancy goes from 1.4R to 1.9R"</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- Stock Risk Profile Tabs -->
+
+        <!-- Stock Risk Profile Tabs -->
+        <!-- Stock 1 Tab -->
+        <div id="stock1" class="tab-content">
+            <div class="card">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                    <h2 id="stock1Title">Stock Risk Profile</h2>
+                    <div style="display: flex; gap: 10px; align-items: center;">
+                        <input type="text" id="stock1SymbolInput" placeholder="Symbol" style="width: 100px; padding: 8px;">
+                        <input type="number" id="stock1Price" placeholder="Price" step="0.01" style="width: 120px; padding: 8px;">
+                        <input type="number" id="stock1Stop" placeholder="Stop" step="0.01" style="width: 120px; padding: 8px;">
+                        <button onclick="updateStockProfile(1)" class="btn-success">Update</button>
+                    </div>
+                </div>
+                <div id="stock1Profile"></div>
+            </div>
+        </div>
+
+        <!-- Stock 2 Tab -->
+        <div id="stock2" class="tab-content">
+            <div class="card">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                    <h2 id="stock2Title">Stock Risk Profile</h2>
+                    <div style="display: flex; gap: 10px; align-items: center;">
+                        <input type="text" id="stock2SymbolInput" placeholder="Symbol" style="width: 100px; padding: 8px;">
+                        <input type="number" id="stock2Price" placeholder="Price" step="0.01" style="width: 120px; padding: 8px;">
+                        <input type="number" id="stock2Stop" placeholder="Stop" step="0.01" style="width: 120px; padding: 8px;">
+                        <button onclick="updateStockProfile(2)" class="btn-success">Update</button>
+                    </div>
+                </div>
+                <div id="stock2Profile"></div>
+            </div>
+                </div>
+            </div>
         <!-- Stock 5 Tab -->
         <div id="stock5" class="tab-content">
             <div class="card">
@@ -1527,7 +1536,7 @@
                     <h3 style="margin-bottom: 15px;">📊 Metrics Priority (Watch in This Order)</h3>
                     
                     <div style="background: white; padding: 15px; border-radius: 8px; margin-bottom: 15px; border-left: 4px solid #ef4444;">
-                        <div style="font-weight: 700; color: #dc2626; margin-bottom: 8px;" title="YTD FLOOR = Your account growth YTD minus all unrealized profit. It answers: 'If all my open positions went to zero right now, what would my YTD be?' Keep this positive. A negative YTD Floor means your entire year's gain exists only on paper and could evaporate.">Priority 1: YTD Floor ℹ</div>
+                        <div style="font-weight: 700; color: #dc2626; margin-bottom: 8px;" title="LOCKED IN YTD = Current YTD $ − Total Unrealized Gains. It answers: 'If all my open positions went to zero right now, what would my YTD be?' Keep this positive. A negative number means your entire year's gain exists only on paper and could evaporate.">Priority 1: Locked in YTD ℹ</div>
                         <div style="font-size: 0.9em; margin-bottom: 8px;">
                             <strong>Current:</strong> <span id="ruleYtdFloor">--</span>
                         </div>
@@ -1580,9 +1589,9 @@
                     <h3 style="margin-bottom: 15px;">📋 Caruso-Aligned Harvest Strategy</h3>
                     
                     <div style="background: #fef3c7; padding: 15px; border-radius: 8px; margin-bottom: 12px;">
-                        <div style="font-weight: 700; color: #92400e; margin-bottom: 6px;">Rule 1: YTD Floor Protection</div>
+                        <div style="font-weight: 700; color: #92400e; margin-bottom: 6px;">Rule 1: Locked in YTD Protection</div>
                         <div style="font-size: 0.9em; color: #78350f;">
-                            IF YTD Floor < $0<br>
+                            IF Locked in YTD < $0<br>
                             THEN harvest enough to make it $0 or positive
                         </div>
                     </div>
@@ -4586,16 +4595,16 @@
 
         // Tab switching
         function switchTab(tabName) {
+            // expectancy-calc merged into what-if-calc
+            if (tabName === 'expectancy-calc') tabName = 'what-if-calc';
             document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
             document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
             
-            // Find the button that was clicked
             const clickedButton = event ? event.target : document.querySelector(`[onclick="switchTab('${tabName}')"]`);
-            if (clickedButton) {
-                clickedButton.classList.add('active');
-            }
+            if (clickedButton) clickedButton.classList.add('active');
             
-            document.getElementById(tabName).classList.add('active');
+            const tabEl = document.getElementById(tabName);
+            if (tabEl) tabEl.classList.add('active');
         }
 
         // Update Safety Dashboard
@@ -5333,6 +5342,25 @@
             document.getElementById('executePickHarvest').disabled = true;
         }
 
+        // ── UI Toggle Functions ───────────────────────────────────────────────
+        function toggleAccountSetup() {
+            const inputs  = document.getElementById('accountSetupInputs');
+            const toggle  = document.getElementById('accountSetupToggle');
+            if (!inputs) return;
+            const open = inputs.style.display !== 'none';
+            inputs.style.display = open ? 'none' : 'block';
+            toggle.textContent   = open ? '▶ tap to edit' : '▼ tap to collapse';
+        }
+
+        function toggleExpectancyCalc() {
+            const content = document.getElementById('expectancyCalcContent');
+            const toggle  = document.getElementById('expectancyCalcToggle');
+            if (!content) return;
+            const open = content.style.display !== 'none';
+            content.style.display = open ? 'none' : 'block';
+            toggle.textContent    = open ? '▶' : '▼';
+        }
+
         // ── Exposure Scaling ─────────────────────────────────────────────────
         function saveMarketConditions() {
             saveToFirebase();
@@ -5372,14 +5400,22 @@
                 label.style.color        = checked ? '#15803d' : '#dc2626';
             });
 
-            // Open Risk badge
-            const badge = document.getElementById('openRiskBadge');
-            const pctEl = document.getElementById('openRiskPct');
-            if (pctEl) pctEl.textContent = openRisk.toFixed(2) + '%';
-            if (badge) {
-                if (openRisk < 2)      { badge.style.background = '#dcfce7'; badge.style.color = '#15803d'; }
-                else if (openRisk < 3) { badge.style.background = '#fef9c3'; badge.style.color = '#b45309'; }
-                else                   { badge.style.background = '#fee2e2'; badge.style.color = '#dc2626'; }
+            // Color-code the existing Total Risk compact display (already in stats bar)
+            const totalRiskDisplayEl = document.getElementById('totalRiskCompact');
+            if (totalRiskDisplayEl) {
+                if (openRisk < 2) {
+                    totalRiskDisplayEl.style.color = '#15803d';
+                    totalRiskDisplayEl.parentElement.style.background = '#f0fdf4';
+                    totalRiskDisplayEl.parentElement.style.borderRadius = '6px';
+                } else if (openRisk < 3) {
+                    totalRiskDisplayEl.style.color = '#b45309';
+                    totalRiskDisplayEl.parentElement.style.background = '#fefce8';
+                    totalRiskDisplayEl.parentElement.style.borderRadius = '6px';
+                } else {
+                    totalRiskDisplayEl.style.color = '#dc2626';
+                    totalRiskDisplayEl.parentElement.style.background = '#fef2f2';
+                    totalRiskDisplayEl.parentElement.style.borderRadius = '6px';
+                }
             }
         }
 
