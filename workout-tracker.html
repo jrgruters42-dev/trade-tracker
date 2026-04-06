@@ -27,6 +27,15 @@
     input:focus, select:focus { border-color: #e85d04 !important; outline: none; }
     select option { background: #fff; color: #111; }
     button:active { opacity: 0.75; transform: scale(0.97); }
+
+    @keyframes toastIn {
+      0%   { opacity: 0; transform: translateX(-50%) translateY(20px) scale(0.9); }
+      100% { opacity: 1; transform: translateX(-50%) translateY(0)    scale(1); }
+    }
+    @keyframes toastOut {
+      0%   { opacity: 1; }
+      100% { opacity: 0; }
+    }
   </style>
 </head>
 <body>
@@ -71,96 +80,79 @@
   const CARD2   = "#f5f5f5";
   const BORDER  = "#dddddd";
 
-  // Table styles — bigger
-  const thSt = {
-    fontFamily: "Oswald,sans-serif", fontSize: 22, letterSpacing: 1,
-    color: BLACK, padding: "18px 8px", textAlign: "center",
-    borderBottom: `2px solid ${BORDER}`, background: CARD2
-  };
+  const thSt = { fontFamily: "Oswald,sans-serif", fontSize: 22, letterSpacing: 1, color: BLACK, padding: "18px 8px", textAlign: "center", borderBottom: `2px solid ${BORDER}`, background: CARD2 };
   const tdSt = { padding: "16px 8px", textAlign: "center", borderBottom: `1px solid ${BORDER}` };
-
-  // Input boxes — very large
-  const inSt = {
-    width: "100%", background: CARD, border: `3px solid ${BORDER}`,
-    borderRadius: 12, color: BLACK, fontFamily: "Barlow,sans-serif",
-    fontSize: 48, fontWeight: 700, padding: "20px 8px", textAlign: "center", outline: "none"
-  };
-
-  // Dropdowns — large
-  const selSt = (val) => ({
-    width: "100%", background: CARD, border: `3px solid ${BORDER}`,
-    borderRadius: 14, color: val ? BLACK : SUBTEXT,
-    fontFamily: "Barlow,sans-serif", fontSize: 28, fontWeight: 600, padding: "22px 18px"
-  });
-
+  const inSt = { width: "100%", background: CARD, border: `3px solid ${BORDER}`, borderRadius: 12, color: BLACK, fontFamily: "Barlow,sans-serif", fontSize: 48, fontWeight: 700, padding: "20px 8px", textAlign: "center", outline: "none" };
+  const selSt = (val) => ({ width: "100%", background: CARD, border: `3px solid ${BORDER}`, borderRadius: 14, color: val ? BLACK : SUBTEXT, fontFamily: "Barlow,sans-serif", fontSize: 28, fontWeight: 600, padding: "22px 18px" });
   const slabel = { fontFamily: "Oswald,sans-serif", fontSize: 20, letterSpacing: 2, color: SUBTEXT, fontWeight: 700 };
 
   function bigBtn(active, isCardio) {
-    return {
-      width: "100%", padding: 28, border: "none", borderRadius: 16,
-      background: active ? (isCardio ? BLUE : ORANGE) : "#ccc",
-      color: active ? "#fff" : "#888",
-      fontFamily: "Oswald,sans-serif", fontSize: 30, fontWeight: 700,
-      letterSpacing: 2, cursor: active ? "pointer" : "not-allowed"
-    };
+    return { width: "100%", padding: 28, border: "none", borderRadius: 16, background: active ? (isCardio ? BLUE : ORANGE) : "#ccc", color: active ? "#fff" : "#888", fontFamily: "Oswald,sans-serif", fontSize: 30, fontWeight: 700, letterSpacing: 2, cursor: active ? "pointer" : "not-allowed" };
   }
+  const iconBtn = { background: CARD2, border: `2px solid ${BORDER}`, borderRadius: 10, color: SUBTEXT, fontSize: 24, padding: "12px 20px", cursor: "pointer", fontFamily: "Barlow,sans-serif", fontWeight: 700 };
 
-  const iconBtn = {
-    background: CARD2, border: `2px solid ${BORDER}`, borderRadius: 10,
-    color: SUBTEXT, fontSize: 24, padding: "12px 20px", cursor: "pointer",
-    fontFamily: "Barlow,sans-serif", fontWeight: 700
-  };
-
-  function SignIn() {
-    const [err, setErr] = useState(null);
-    const [loading, setLoading] = useState(false);
-    async function go() {
-      try { setErr(null); setLoading(true); await auth.signInWithPopup(googleProvider); }
-      catch(e) { setErr("Sign in failed — try again."); setLoading(false); }
-    }
+  // ── Toast ────────────────────────────────────────────────────────
+  function Toast({ message, visible }) {
     return (
-      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", minHeight: "100vh", padding: 28, background: BG }}>
-        <div style={{ fontFamily: "Oswald,sans-serif", fontSize: 64, fontWeight: 700, letterSpacing: 6, color: ORANGE }}>IRON LOG</div>
-        <div style={{ fontFamily: "Oswald,sans-serif", fontSize: 22, letterSpacing: 4, color: SUBTEXT, marginBottom: 60, marginTop: 12 }}>TRACK · PROGRESS · CRUSH</div>
-        <button onClick={go} disabled={loading}
-          style={{ background: loading ? "#ccc" : ORANGE, color: "#fff", border: "none", borderRadius: 16, padding: "28px 0", fontSize: 30, fontFamily: "Barlow,sans-serif", fontWeight: 700, cursor: "pointer", width: "100%" }}>
-          {loading ? "Signing in..." : "Sign in with Google"}
-        </button>
-        {err && <div style={{ color: "#cc0000", marginTop: 20, fontSize: 26, fontWeight: 700 }}>{err}</div>}
+      <div style={{
+        position: "fixed", bottom: 40, left: "50%",
+        transform: "translateX(-50%)",
+        background: "#1a1a1a", color: "#fff",
+        fontFamily: "Oswald,sans-serif", fontSize: 28, fontWeight: 700,
+        letterSpacing: 2, padding: "18px 40px", borderRadius: 50,
+        zIndex: 200, pointerEvents: "none",
+        animation: visible ? "toastIn 0.25s ease forwards" : "toastOut 0.3s ease forwards",
+        whiteSpace: "nowrap"
+      }}>
+        ✓ {message}
       </div>
     );
   }
 
-  function RestTimer({ timerKey, onDismiss }) {
-    const DUR = 90;
-    const [sec, setSec] = useState(DUR);
-    useEffect(() => { setSec(DUR); }, [timerKey]);
+  // ── Stopwatch ────────────────────────────────────────────────────
+  function Stopwatch({ watchKey, onDismiss }) {
+    const [sec, setSec] = useState(0);
+    const [running, setRunning] = useState(true);
+    const ref = useRef(null);
+
+    useEffect(() => { setSec(0); setRunning(true); }, [watchKey]);
+
     useEffect(() => {
-      if (sec <= 0) return;
-      const t = setTimeout(() => setSec(s => s - 1), 1000);
-      return () => clearTimeout(t);
-    }, [sec]);
-    const pct = (sec / DUR) * 100;
-    const color  = sec > 45 ? "#16a34a" : sec > 20 ? "#d97706" : "#dc2626";
-    const bgColor = sec > 45 ? "#f0fdf4" : sec > 20 ? "#fffbeb" : "#fef2f2";
+      if (!running) { clearInterval(ref.current); return; }
+      ref.current = setInterval(() => setSec(s => s + 1), 1000);
+      return () => clearInterval(ref.current);
+    }, [running]);
+
+    const mins = Math.floor(sec / 60);
+    const secs = sec % 60;
+    const color = sec < 60 ? "#16a34a" : sec < 120 ? "#d97706" : "#dc2626";
+    const bgColor = sec < 60 ? "#f0fdf4" : sec < 120 ? "#fffbeb" : "#fef2f2";
+
     return (
       <div style={{ position: "fixed", bottom: "calc(14px + env(safe-area-inset-bottom))", left: 14, right: 14, zIndex: 100, background: bgColor, border: `5px solid ${color}`, borderRadius: 20, padding: "20px 22px", textAlign: "center", boxShadow: "0 8px 40px rgba(0,0,0,0.25)" }}>
-        <div style={{ fontFamily: "Oswald,sans-serif", fontSize: 20, letterSpacing: 4, color, marginBottom: 4, fontWeight: 700 }}>REST TIMER</div>
+        <div style={{ fontFamily: "Oswald,sans-serif", fontSize: 20, letterSpacing: 4, color, marginBottom: 4, fontWeight: 700 }}>REST STOPWATCH</div>
         <div style={{ fontFamily: "Oswald,sans-serif", fontSize: 110, fontWeight: 700, color, lineHeight: 1 }}>
-          {Math.floor(sec / 60)}:{String(sec % 60).padStart(2, "0")}
+          {String(mins).padStart(2, "0")}:{String(secs).padStart(2, "0")}
         </div>
-        <div style={{ height: 14, background: "#ddd", borderRadius: 7, margin: "14px 0", overflow: "hidden" }}>
-          <div style={{ height: "100%", width: `${pct}%`, background: color, borderRadius: 7, transition: "width 1s linear" }} />
-        </div>
-        {sec === 0 && <div style={{ color: "#dc2626", fontSize: 34, marginBottom: 14, fontWeight: 700 }}>TIME'S UP! 💪</div>}
-        <div style={{ display: "flex", gap: 14, justifyContent: "center" }}>
-          <button onClick={() => setSec(DUR)} style={{ ...iconBtn, fontSize: 26, padding: "16px 40px" }}>Reset</button>
-          <button onClick={onDismiss} style={{ ...iconBtn, fontSize: 26, padding: "16px 40px" }}>Dismiss</button>
+        <div style={{ display: "flex", gap: 14, justifyContent: "center", marginTop: 16 }}>
+          <button onClick={() => setRunning(r => !r)}
+            style={{ background: running ? "#fee2e2" : "#dcfce7", border: `2px solid ${color}`, borderRadius: 12, color, fontSize: 26, padding: "16px 36px", cursor: "pointer", fontFamily: "Barlow,sans-serif", fontWeight: 700 }}>
+            {running ? "Pause" : "Resume"}
+          </button>
+          <button onClick={() => { setSec(0); setRunning(true); }}
+            style={{ background: CARD2, border: `2px solid ${BORDER}`, borderRadius: 12, color: BLACK, fontSize: 26, padding: "16px 36px", cursor: "pointer", fontFamily: "Barlow,sans-serif", fontWeight: 700 }}>
+            Reset
+          </button>
+          <button onClick={onDismiss}
+            style={{ background: CARD2, border: `2px solid ${BORDER}`, borderRadius: 12, color: BLACK, fontSize: 26, padding: "16px 36px", cursor: "pointer", fontFamily: "Barlow,sans-serif", fontWeight: 700 }}>
+            Done
+          </button>
         </div>
       </div>
     );
   }
 
+  // ── Set Table ────────────────────────────────────────────────────
   function SetTable({ sets, readonly, entryId, onUpdate, onRepsBlur }) {
     return (
       <table style={{ width: "100%", borderCollapse: "collapse" }}>
@@ -192,15 +184,13 @@
     );
   }
 
-  // ── Last Time Banner — BIG and prominent ─────────────────────────
+  // ── Last Time Banner ─────────────────────────────────────────────
   function LastTimeBanner({ last, isCardio }) {
     const accent = isCardio ? BLUE : ORANGE;
     const bg     = isCardio ? "#e8f4fd" : "#fff3ec";
     if (!last) return (
       <div style={{ background: bg, borderLeft: `8px solid ${accent}`, padding: "20px 20px", borderRadius: "0 14px 14px 0" }}>
-        <div style={{ color: accent, fontSize: 28, fontWeight: 700, fontFamily: "Oswald,sans-serif", letterSpacing: 1 }}>
-          FIRST TIME — SET A BASELINE! 🔥
-        </div>
+        <div style={{ color: accent, fontSize: 28, fontWeight: 700, fontFamily: "Oswald,sans-serif", letterSpacing: 1 }}>FIRST TIME — SET A BASELINE! 🔥</div>
       </div>
     );
     return (
@@ -210,14 +200,8 @@
         </div>
         {isCardio ? (
           <div style={{ display: "flex", gap: 14, flexWrap: "wrap" }}>
-            <span style={{ fontSize: 36, color: BLACK, fontWeight: 700, background: CARD, padding: "12px 22px", borderRadius: 10, border: `2px solid ${BORDER}` }}>
-              {last.duration} min
-            </span>
-            {last.distance && (
-              <span style={{ fontSize: 36, color: BLACK, fontWeight: 700, background: CARD, padding: "12px 22px", borderRadius: 10, border: `2px solid ${BORDER}` }}>
-                {last.distance} mi
-              </span>
-            )}
+            <span style={{ fontSize: 36, color: BLACK, fontWeight: 700, background: CARD, padding: "12px 22px", borderRadius: 10, border: `2px solid ${BORDER}` }}>{last.duration} min</span>
+            {last.distance && <span style={{ fontSize: 36, color: BLACK, fontWeight: 700, background: CARD, padding: "12px 22px", borderRadius: 10, border: `2px solid ${BORDER}` }}>{last.distance} mi</span>}
           </div>
         ) : (
           <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
@@ -234,6 +218,7 @@
     );
   }
 
+  // ── Date Card (history) ──────────────────────────────────────────
   function DateCard({ date, strength, cardio }) {
     const [open, setOpen] = useState(false);
     const total = (strength?.length || 0) + (cardio?.length || 0);
@@ -285,6 +270,26 @@
     );
   }
 
+  function SignIn() {
+    const [err, setErr] = useState(null);
+    const [loading, setLoading] = useState(false);
+    async function go() {
+      try { setErr(null); setLoading(true); await auth.signInWithPopup(googleProvider); }
+      catch(e) { setErr("Sign in failed — try again."); setLoading(false); }
+    }
+    return (
+      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", minHeight: "100vh", padding: 28, background: BG }}>
+        <div style={{ fontFamily: "Oswald,sans-serif", fontSize: 64, fontWeight: 700, letterSpacing: 6, color: ORANGE }}>IRON LOG</div>
+        <div style={{ fontFamily: "Oswald,sans-serif", fontSize: 22, letterSpacing: 4, color: SUBTEXT, marginBottom: 60, marginTop: 12 }}>TRACK · PROGRESS · CRUSH</div>
+        <button onClick={go} disabled={loading} style={{ background: loading ? "#ccc" : ORANGE, color: "#fff", border: "none", borderRadius: 16, padding: "28px 0", fontSize: 30, fontFamily: "Barlow,sans-serif", fontWeight: 700, cursor: "pointer", width: "100%" }}>
+          {loading ? "Signing in..." : "Sign in with Google"}
+        </button>
+        {err && <div style={{ color: "#cc0000", marginTop: 20, fontSize: 26, fontWeight: 700 }}>{err}</div>}
+      </div>
+    );
+  }
+
+  // ── Main App ─────────────────────────────────────────────────────
   function App({ user }) {
     const [tab, setTab] = useState("log");
     const [exercises, setExercises] = useState([]);
@@ -298,15 +303,17 @@
     const [cardioDuration, setCardioDuration] = useState("");
     const [cardioDistance, setCardioDistance] = useState("");
     const [newCardioEx, setNewCardioEx] = useState("");
-    const [timerVisible, setTimerVisible] = useState(false);
-    const [timerKey, setTimerKey] = useState(0);
+    const [watchVisible, setWatchVisible] = useState(false);
+    const [watchKey, setWatchKey] = useState(0);
     const [histView, setHistView] = useState("date");
     const [histEx, setHistEx] = useState("");
     const [histCardioEx, setHistCardioEx] = useState("");
     const [histType, setHistType] = useState("strength");
     const [loaded, setLoaded] = useState(false);
     const [saveStatus, setSaveStatus] = useState("saved");
+    const [toast, setToast] = useState({ visible: false, msg: "" });
     const saveTimer = useRef(null);
+    const toastTimer = useRef(null);
 
     useEffect(() => {
       loadUserData(user.uid).then(data => {
@@ -327,15 +334,35 @@
       }, 1500);
     }, [exercises, workouts, cardioExercises, cardioWorkouts, loaded]);
 
+    function showToast(msg) {
+      if (toastTimer.current) clearTimeout(toastTimer.current);
+      setToast({ visible: true, msg });
+      toastTimer.current = setTimeout(() => setToast({ visible: false, msg }), 1800);
+    }
+
     const todayStrength = workouts[TODAY] || [];
     const todayCardio   = cardioWorkouts[TODAY] || [];
     const allDates = [...new Set([...Object.keys(workouts), ...Object.keys(cardioWorkouts)])].sort().reverse();
 
+    // Add exercise — prepend so newest is on top
     function addStrength() {
       if (!selEx) return;
       const sets = Array.from({ length: numSets }, () => ({ weight: "", reps: "" }));
-      setWorkouts(prev => ({ ...prev, [TODAY]: [...(prev[TODAY] || []), { id: Date.now(), name: selEx, sets }] }));
+      setWorkouts(prev => ({ ...prev, [TODAY]: [{ id: Date.now(), name: selEx, sets }, ...(prev[TODAY] || [])] }));
+      showToast("Added!");
     }
+
+    // Add a single set to an existing exercise
+    function addSet(entryId) {
+      setWorkouts(prev => {
+        const day = [...(prev[TODAY] || [])];
+        const ei = day.findIndex(e => e.id === entryId);
+        if (ei < 0) return prev;
+        day[ei] = { ...day[ei], sets: [...day[ei].sets, { weight: "", reps: "" }] };
+        return { ...prev, [TODAY]: day };
+      });
+    }
+
     function updateSet(entryId, si, field, value) {
       setWorkouts(prev => {
         const day = [...(prev[TODAY] || [])];
@@ -345,9 +372,11 @@
         return { ...prev, [TODAY]: day };
       });
     }
+
     function onRepsBlur(val) {
-      if (val && val.trim()) { setTimerVisible(true); setTimerKey(k => k + 1); }
+      if (val && val.trim()) { setWatchVisible(true); setWatchKey(k => k + 1); }
     }
+
     function getLastStrength(name) {
       for (const d of Object.keys(workouts).filter(d => d < TODAY).sort().reverse()) {
         const e = workouts[d]?.find(e => e.name === name);
@@ -359,11 +388,15 @@
       return Object.keys(workouts).filter(d => workouts[d]?.some(e => e.name === name))
         .sort().reverse().map(d => ({ date: d, sets: workouts[d].find(e => e.name === name).sets }));
     }
+
+    // Add cardio — prepend so newest is on top
     function addCardio() {
       if (!selCardio || !cardioDuration) return;
-      setCardioWorkouts(prev => ({ ...prev, [TODAY]: [...(prev[TODAY] || []), { id: Date.now(), name: selCardio, duration: cardioDuration, distance: cardioDistance }] }));
+      setCardioWorkouts(prev => ({ ...prev, [TODAY]: [{ id: Date.now(), name: selCardio, duration: cardioDuration, distance: cardioDistance }, ...(prev[TODAY] || [])] }));
       setCardioDuration(""); setCardioDistance("");
+      showToast("Added!");
     }
+
     function getLastCardio(name) {
       for (const d of Object.keys(cardioWorkouts).filter(d => d < TODAY).sort().reverse()) {
         const e = cardioWorkouts[d]?.find(e => e.name === name);
@@ -375,6 +408,7 @@
       return Object.keys(cardioWorkouts).filter(d => cardioWorkouts[d]?.some(e => e.name === name))
         .sort().reverse().map(d => ({ date: d, ...cardioWorkouts[d].find(e => e.name === name) }));
     }
+
     function addEx(val, list, setter, setVal) {
       const t = val.trim();
       if (!t || list.includes(t)) return;
@@ -394,8 +428,10 @@
 
     return (
       <div style={{ background: BG, color: BLACK, minHeight: "100vh", width: "100%" }}>
-        {timerVisible && <RestTimer timerKey={timerKey} onDismiss={() => setTimerVisible(false)} />}
+        {toast.visible && <Toast message={toast.msg} visible={toast.visible} />}
+        {watchVisible && <Stopwatch watchKey={watchKey} onDismiss={() => setWatchVisible(false)} />}
 
+        {/* HEADER */}
         <header style={{ padding: `18px ${P}px 14px`, borderBottom: `4px solid ${ORANGE}`, display: "flex", alignItems: "center", justifyContent: "space-between", background: CARD }}>
           <div>
             <div style={{ fontFamily: "Oswald,sans-serif", fontSize: 48, fontWeight: 700, letterSpacing: 5, color: ORANGE, lineHeight: 1 }}>IRON LOG</div>
@@ -411,6 +447,7 @@
           </div>
         </header>
 
+        {/* NAV */}
         <nav style={{ display: "flex", background: CARD, borderBottom: `2px solid ${BORDER}` }}>
           {[["log", "📋 LOG"], ["history", "📊 HISTORY"], ["exercises", "⚙️ EXERCISES"]].map(([t, label]) => (
             <button key={t} onClick={() => setTab(t)}
@@ -422,7 +459,7 @@
 
         <main style={{ padding: P }}>
 
-          {/* LOG TAB */}
+          {/* ── LOG TAB ── */}
           {tab === "log" && (
             <div style={{ ...col, gap: 28 }}>
 
@@ -448,6 +485,8 @@
                   </div>
                   <button onClick={addCardio} disabled={!selCardio || !cardioDuration} style={bigBtn(selCardio && cardioDuration, true)}>+ ADD CARDIO</button>
                 </div>
+
+                {/* Cardio logged today — newest first */}
                 {todayCardio.map(c => (
                   <div key={c.id} style={{ background: CARD, borderRadius: 16, border: `2px solid ${BORDER}`, borderLeft: `8px solid ${BLUE}`, padding: "20px 18px", display: "flex", alignItems: "center" }}>
                     <div style={{ flex: 1 }}>
@@ -487,13 +526,25 @@
                   <button onClick={addStrength} disabled={!selEx} style={bigBtn(selEx, false)}>+ ADD TO WORKOUT</button>
                 </div>
 
+                {/* Strength logged today — newest first (already prepended) */}
                 {todayStrength.map(entry => (
                   <div key={entry.id} style={{ background: CARD, borderRadius: 16, overflow: "hidden", border: `2px solid ${BORDER}` }}>
+                    {/* Exercise header */}
                     <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "20px 18px", background: CARD2, borderBottom: `2px solid ${BORDER}` }}>
                       <span style={{ fontFamily: "Oswald,sans-serif", fontSize: 34, fontWeight: 700, color: BLACK }}>{entry.name}</span>
                       <button onClick={() => setWorkouts(prev => ({ ...prev, [TODAY]: prev[TODAY].filter(e => e.id !== entry.id) }))} style={iconBtn}>✕</button>
                     </div>
+
+                    {/* Set rows */}
                     <SetTable sets={entry.sets} entryId={entry.id} onUpdate={updateSet} onRepsBlur={onRepsBlur} />
+
+                    {/* + Add Set button */}
+                    <div style={{ padding: "14px 16px", borderTop: `2px solid ${BORDER}`, background: CARD }}>
+                      <button onClick={() => addSet(entry.id)}
+                        style={{ width: "100%", padding: "18px 0", background: CARD2, border: `2px solid ${ORANGE}`, borderRadius: 12, color: ORANGE, fontFamily: "Oswald,sans-serif", fontSize: 26, fontWeight: 700, letterSpacing: 1, cursor: "pointer" }}>
+                        + ADD SET
+                      </button>
+                    </div>
                   </div>
                 ))}
 
@@ -501,11 +552,12 @@
                   <div style={{ textAlign: "center", color: SUBTEXT, fontSize: 26, padding: "36px 0 52px", fontWeight: 700 }}>Nothing logged yet today.</div>
                 )}
               </div>
-              <div style={{ height: timerVisible ? 220 : 0 }} />
+
+              <div style={{ height: watchVisible ? 220 : 0 }} />
             </div>
           )}
 
-          {/* HISTORY TAB */}
+          {/* ── HISTORY TAB ── */}
           {tab === "history" && (
             <div style={col}>
               <div style={{ display: "flex", border: `2px solid ${BORDER}`, borderRadius: 16, overflow: "hidden" }}>
@@ -571,7 +623,7 @@
             </div>
           )}
 
-          {/* EXERCISES TAB */}
+          {/* ── EXERCISES TAB ── */}
           {tab === "exercises" && (
             <div style={{ ...col, gap: 28 }}>
               <div style={col}>
