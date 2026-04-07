@@ -1314,12 +1314,10 @@
             <div class="card" style="margin-top:20px;">
                 <div style="display:flex; align-items:center; justify-content:space-between; cursor:pointer; margin-bottom:0;" onclick="toggleExpectancyCalc()">
                     <h2 style="margin:0;" title="EXPECTANCY CALCULATOR: Compare different strategy scenarios side by side. Expectancy = (Win Rate × Avg Win R) - (Loss Rate × Avg Loss R). Use this to model what your system is capable of at different win rates and R-multiples.">📊 Expectancy Calculator ℹ</h2>
-                    <span id="expectancyCalcToggle" style="font-size:0.85em; color:#9ca3af; font-weight:600;">▼</span>
+                    <span id="expectancyCalcToggle" style="font-size:0.85em; color:#9ca3af; font-weight:600;">▶</span>
                 </div>
-                <div id="expectancyCalcContent">
-            <div class="card">
-                <h2 style="margin-bottom: 20px;" title="EXPECTANCY CALCULATOR: The foundation of systematic trading. Expectancy = (Win Rate × Avg Win R) - (Loss Rate × Avg Loss R). A positive expectancy means your system is mathematically profitable over a large sample of trades. Even with a 35% win rate you can have excellent expectancy if your winners are much larger than your losers. Use this to compare different strategy scenarios side by side.">📊 Expectancy Calculator ℹ</h2>
-                <p style="margin-bottom: 20px; color: #666;">Model different trading strategies by adjusting win rate and average R-multiples. Expectancy = (Win Rate × Avg Win R) - (Loss Rate × Avg Loss R)</p>
+                <div id="expectancyCalcContent" style="display:none;">
+                <p style="margin-bottom: 20px; color: #666; margin-top:15px;">Model different trading strategies by adjusting win rate and average R-multiples. Expectancy = (Win Rate × Avg Win R) - (Loss Rate × Avg Loss R)</p>
                 
                 <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 20px;">
                     
@@ -3254,13 +3252,14 @@
             const myRothJan1 = parseFloat(document.getElementById('myRothJan1').value) || 0;
             const myRothYTD = myRothJan1 > 0 ? ((myRoth - myRothJan1) / myRothJan1) * 100 : 0;
             const spyYTDText = document.getElementById('spyYTDCompact').textContent;
-            let myRothDisplay = myRothYTD.toFixed(1) + '%';
+            const myRothColor = myRothYTD >= 0 ? '#15803d' : '#dc2626';
+            let myRothDisplay = `<span style="color:${myRothColor}; font-weight:700;">${myRothYTD.toFixed(1)}%</span>`;
             
             // Add gold outline if beating SPY
             if (spyYTDText && spyYTDText !== '--') {
-                const spyYTD = parseFloat(spyYTDText.replace('%', ''));
+                const spyYTD = parseFloat(spyYTDText.replace('%', '').replace('+', ''));
                 if (!isNaN(spyYTD) && myRothYTD > spyYTD) {
-                    myRothDisplay = `<span style="border: 2px solid #fbbf24; padding: 2px 4px; border-radius: 3px; box-shadow: 0 0 6px rgba(251, 191, 36, 0.4);">${myRothYTD.toFixed(1)}%</span>`;
+                    myRothDisplay = `<span style="color:${myRothColor}; font-weight:700; border: 2px solid #fbbf24; padding: 2px 4px; border-radius: 3px; box-shadow: 0 0 6px rgba(251, 191, 36, 0.5);">${myRothYTD.toFixed(1)}%</span>`;
                 }
             }
             document.getElementById('myRothCompact').innerHTML = myRothDisplay;
@@ -3269,13 +3268,14 @@
             const wifeRoth = parseFloat(document.getElementById('wifeRoth').value) || 0;
             const wifeRothJan1 = parseFloat(document.getElementById('wifeRothJan1').value) || 0;
             const wifeRothYTD = wifeRothJan1 > 0 ? ((wifeRoth - wifeRothJan1) / wifeRothJan1) * 100 : 0;
-            let wifeRothDisplay = wifeRothYTD.toFixed(1) + '%';
+            const wifeRothColor = wifeRothYTD >= 0 ? '#15803d' : '#dc2626';
+            let wifeRothDisplay = `<span style="color:${wifeRothColor}; font-weight:700;">${wifeRothYTD.toFixed(1)}%</span>`;
             
             // Add gold outline if beating SPY
             if (spyYTDText && spyYTDText !== '--') {
-                const spyYTD = parseFloat(spyYTDText.replace('%', ''));
+                const spyYTD = parseFloat(spyYTDText.replace('%', '').replace('+', ''));
                 if (!isNaN(spyYTD) && wifeRothYTD > spyYTD) {
-                    wifeRothDisplay = `<span style="border: 2px solid #fbbf24; padding: 2px 4px; border-radius: 3px; box-shadow: 0 0 6px rgba(251, 191, 36, 0.4);">${wifeRothYTD.toFixed(1)}%</span>`;
+                    wifeRothDisplay = `<span style="color:${wifeRothColor}; font-weight:700; border: 2px solid #fbbf24; padding: 2px 4px; border-radius: 3px; box-shadow: 0 0 6px rgba(251, 191, 36, 0.5);">${wifeRothYTD.toFixed(1)}%</span>`;
                 }
             }
             document.getElementById('wifeRothCompact').innerHTML = wifeRothDisplay;
@@ -4699,9 +4699,14 @@
             document.getElementById('accountSizeDisplay').textContent = '$' + accountSize.toLocaleString();
             document.getElementById('startingAccountDisplay').textContent = '$' + startingAccount.toLocaleString();
             
-            // Display YTD
+            // Display YTD — green/red + gold glow if beating SPY
             const ytdColor = currentYTD >= 0 ? '#10b981' : '#ef4444';
-            document.getElementById('ytdDisplay').innerHTML = `<span style="color: ${ytdColor};">${currentYTD >= 0 ? '+' : ''}$${currentYTD.toLocaleString()} (${currentYTDPercent.toFixed(1)}%)</span>`;
+            const spyYTDForComp = parseFloat((document.getElementById('spyYTDCompact').textContent || '').replace('%','').replace('+','')) || null;
+            let ytdHTML = `<span style="color: ${ytdColor};">${currentYTD >= 0 ? '+' : ''}$${currentYTD.toLocaleString()} (${currentYTDPercent.toFixed(1)}%)</span>`;
+            if (spyYTDForComp !== null && !isNaN(spyYTDForComp) && currentYTDPercent > spyYTDForComp) {
+                ytdHTML = `<span style="color: ${ytdColor}; border: 2px solid #fbbf24; padding: 1px 4px; border-radius: 3px; box-shadow: 0 0 6px rgba(251,191,36,0.5);">${currentYTD >= 0 ? '+' : ''}$${currentYTD.toLocaleString()} (${currentYTDPercent.toFixed(1)}%)</span>`;
+            }
+            document.getElementById('ytdDisplay').innerHTML = ytdHTML;
             document.getElementById('ytdRealizedDollars').textContent = '$' + ytdRealizedDollars.toLocaleString(undefined, {minimumFractionDigits: 0, maximumFractionDigits: 0});
             document.getElementById('ytdUnrealizedDollars').textContent = '$' + totalUnrealizedDollars.toLocaleString(undefined, {minimumFractionDigits: 0, maximumFractionDigits: 0});
             
