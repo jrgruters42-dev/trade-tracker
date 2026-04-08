@@ -2575,6 +2575,12 @@
                         qqq: document.getElementById('chkQQQ')?.checked || false,
                         ncfd: parseFloat(document.getElementById('ncfdInput')?.value) || null
                     },
+                    lastModified: new Date().toISOString()
+                };
+
+                dbRef.set(data).then(() => {
+                    console.log(`✓ Position ${symbol} saved to Firebase successfully`);
+                    resolve();
                 }).catch((error) => {
                     console.error('Save failed:', error);
                     reject(error);
