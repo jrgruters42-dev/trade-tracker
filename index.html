@@ -805,10 +805,21 @@
                             <input type="checkbox" id="chkQQQ" onchange="saveMarketConditions(); updateExposureScaling();" style="width:15px; height:15px; cursor:pointer;">
                             QQQ &gt; 21 EMA
                         </label>
+
+                        <!-- NCFD/FOMO Barometer -->
+                        <div style="display:flex; align-items:center; gap:5px; padding:4px 8px; border-radius:6px; border:1px solid #e5e7eb; background:#f9fafb;"
+                             title="FOMO ($NCFD) — Nasdaq Composite Stocks Above 5-Day Average. Used as a contrarian indicator. Above 80 = overbought, avoid new buys, look for pullbacks. 65–80 = elevated, be selective. 20–65 = normal range, conditions OK. Below 20 = fear/oversold, look to buy. Enter today's closing value from TradingView.">
+                            <span style="font-size:0.82em; font-weight:600; white-space:nowrap;">FOMO</span>
+                            <input type="number" id="ncfdInput" placeholder="—" step="0.1" min="0" max="100"
+                                   style="width:60px; padding:3px 5px; font-size:0.85em; border:2px solid #e5e7eb; border-radius:4px; text-align:center; font-weight:700;"
+                                   oninput="updateNcfdBarometer()" onchange="saveMarketConditions();"
+                                   title="$NCFD closing price from TradingView. Contrarian: &gt;80 = overbought (avoid buys), &lt;20 = fear (look to buy).">
+                            <span id="ncfdBaro" style="font-size:0.78em; font-weight:700; color:#6b7280; white-space:nowrap;"></span>
+                        </div>
                     </div>
                 </div>
 
-                <!-- Right: recommended level + open risk -->
+                <!-- Right: recommended level + snapshot button -->
                 <div style="display:flex; flex-direction:column; align-items:flex-end; gap:6px; min-width:160px;">
                     <div style="text-align:right;">
                         <div style="font-size:0.68em; color:#9ca3af; text-transform:uppercase; letter-spacing:0.4px;"
@@ -818,6 +829,11 @@
                         <div id="recommendedRisk" style="font-size:1.6em; font-weight:800; color:#6b7280;">—</div>
                         <div id="recommendedRiskReason" style="font-size:0.68em; color:#9ca3af; margin-top:1px;"></div>
                     </div>
+                    <button onclick="quickSnapshotFromMain()" class="btn-success"
+                            style="padding:5px 12px; font-size:0.8em; font-weight:700; white-space:nowrap;"
+                            title="Save today's snapshot: logs account value, NCFD, exposure, and drawdown to your equity curve. No popup needed — just update account values and NCFD above, then press this.">
+                        ⚡ Log Today
+                    </button>
                 </div>
             </div>
         </div>
@@ -1053,36 +1069,6 @@
         </div>
 
 
-        <!-- Stock 3 Tab -->
-        <div id="stock3" class="tab-content">
-            <div class="card">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-                    <h2 id="stock3Title">Stock Risk Profile</h2>
-                    <div style="display: flex; gap: 10px; align-items: center;">
-                        <input type="text" id="stock3SymbolInput" placeholder="Symbol" style="width: 100px; padding: 8px;">
-                        <input type="number" id="stock3Price" placeholder="Price" step="0.01" style="width: 120px; padding: 8px;">
-                        <input type="number" id="stock3Stop" placeholder="Stop" step="0.01" style="width: 120px; padding: 8px;">
-                        <button onclick="updateStockProfile(3)" class="btn-success">Update</button>
-                    </div>
-                </div>
-                <div id="stock3Profile"></div>
-            </div>
-        </div>
-
-        <!-- Stock 4 Tab -->
-        <div id="stock4" class="tab-content">
-            <div class="card">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-                    <h2 id="stock4Title">Stock Risk Profile</h2>
-                    <div style="display: flex; gap: 10px; align-items: center;">
-                        <input type="text" id="stock4SymbolInput" placeholder="Symbol" style="width: 100px; padding: 8px;">
-                        <input type="number" id="stock4Price" placeholder="Price" step="0.01" style="width: 120px; padding: 8px;">
-                        <input type="number" id="stock4Stop" placeholder="Stop" step="0.01" style="width: 120px; padding: 8px;">
-                        <button onclick="updateStockProfile(4)" class="btn-success">Update</button>
-                    </div>
-                </div>
-                <div id="stock4Profile"></div>
-            </div>
         </div>
 
         <!-- What If Calculator Tab -->
@@ -1472,6 +1458,38 @@
             </div>
                 </div>
             </div>
+
+        <!-- Stock 3 Tab -->
+        <div id="stock3" class="tab-content">
+            <div class="card">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                    <h2 id="stock3Title">Stock Risk Profile</h2>
+                    <div style="display: flex; gap: 10px; align-items: center;">
+                        <input type="text" id="stock3SymbolInput" placeholder="Symbol" style="width: 100px; padding: 8px;">
+                        <input type="number" id="stock3Price" placeholder="Price" step="0.01" style="width: 120px; padding: 8px;">
+                        <input type="number" id="stock3Stop" placeholder="Stop" step="0.01" style="width: 120px; padding: 8px;">
+                        <button onclick="updateStockProfile(3)" class="btn-success">Update</button>
+                    </div>
+                </div>
+                <div id="stock3Profile"></div>
+            </div>
+        </div>
+
+        <!-- Stock 4 Tab -->
+        <div id="stock4" class="tab-content">
+            <div class="card">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                    <h2 id="stock4Title">Stock Risk Profile</h2>
+                    <div style="display: flex; gap: 10px; align-items: center;">
+                        <input type="text" id="stock4SymbolInput" placeholder="Symbol" style="width: 100px; padding: 8px;">
+                        <input type="number" id="stock4Price" placeholder="Price" step="0.01" style="width: 120px; padding: 8px;">
+                        <input type="number" id="stock4Stop" placeholder="Stop" step="0.01" style="width: 120px; padding: 8px;">
+                        <button onclick="updateStockProfile(4)" class="btn-success">Update</button>
+                    </div>
+                </div>
+                <div id="stock4Profile"></div>
+            </div>
+
         <!-- Stock 5 Tab -->
         <div id="stock5" class="tab-content">
             <div class="card">
@@ -2146,7 +2164,8 @@
                 marketConditions: {
                     netNewHighs: document.getElementById('chkNetNewHighs')?.checked || false,
                     jnk: document.getElementById('chkJNK')?.checked || false,
-                    qqq: document.getElementById('chkQQQ')?.checked || false
+                    qqq: document.getElementById('chkQQQ')?.checked || false,
+                    ncfd: parseFloat(document.getElementById('ncfdInput')?.value) || null
                 },
                 lastModified: new Date().toISOString()
             };
@@ -2389,9 +2408,11 @@
                 const el1 = document.getElementById('chkNetNewHighs');
                 const el2 = document.getElementById('chkJNK');
                 const el3 = document.getElementById('chkQQQ');
+                const elN = document.getElementById('ncfdInput');
                 if (el1) el1.checked = data.marketConditions.netNewHighs || false;
                 if (el2) el2.checked = data.marketConditions.jnk || false;
                 if (el3) el3.checked = data.marketConditions.qqq || false;
+                if (elN && data.marketConditions.ncfd != null) elN.value = data.marketConditions.ncfd;
             }
             document.getElementById('apiKey').value = data.apiKey || '';
             
@@ -2415,6 +2436,7 @@
 
             updateAllDisplays();
             updateExposureScaling();
+            updateNcfdBarometer();
             console.log('Data loaded from Firebase successfully');
         }
 
@@ -2550,14 +2572,9 @@
                     marketConditions: {
                         netNewHighs: document.getElementById('chkNetNewHighs')?.checked || false,
                         jnk: document.getElementById('chkJNK')?.checked || false,
-                        qqq: document.getElementById('chkQQQ')?.checked || false
+                        qqq: document.getElementById('chkQQQ')?.checked || false,
+                        ncfd: parseFloat(document.getElementById('ncfdInput')?.value) || null
                     },
-                    lastModified: new Date().toISOString()
-                };
-
-                dbRef.set(data).then(() => {
-                    console.log(`✓ Position ${symbol} saved to Firebase successfully`);
-                    resolve();
                 }).catch((error) => {
                     console.error('Save failed:', error);
                     reject(error);
@@ -5368,6 +5385,74 @@
             saveToFirebase();
         }
 
+        function updateNcfdBarometer() {
+            const val = parseFloat(document.getElementById('ncfdInput')?.value);
+            const baro = document.getElementById('ncfdBaro');
+            const input = document.getElementById('ncfdInput');
+            if (!baro) return;
+            if (isNaN(val)) { baro.textContent = ''; if (input) { input.style.borderColor = '#e5e7eb'; input.style.color = ''; } return; }
+
+            let label, color, borderColor;
+            if (val >= 80)      { label = '🔴 Overbought — avoid buys'; color = '#dc2626'; borderColor = '#fca5a5'; }
+            else if (val >= 65) { label = '🟠 Elevated — be selective';  color = '#d97706'; borderColor = '#fde68a'; }
+            else if (val >= 20) { label = '🟢 Normal range';             color = '#15803d'; borderColor = '#86efac'; }
+            else                { label = '💡 Fear — look to buy';       color = '#0369a1'; borderColor = '#93c5fd'; }
+
+            baro.textContent = label;
+            baro.style.color = color;
+            if (input) { input.style.borderColor = borderColor; input.style.color = color; input.style.fontWeight = '800'; }
+        }
+
+        // Quick snapshot from main page — no popup, uses ncfdInput value directly
+        async function quickSnapshotFromMain() {
+            const today = getTodayLocal();
+            const ncfdVal = parseFloat(document.getElementById('ncfdInput')?.value);
+
+            if (isNaN(ncfdVal) || ncfdVal === 0) {
+                if (!confirm('$NCFD value is empty. Save snapshot without it?')) return;
+            }
+
+            // Check if entry already exists for today
+            const existingEntry = dailyEquityEntries.find(entry => entry.date === today);
+            if (existingEntry) {
+                if (!confirm(`A snapshot for ${today} already exists. Replace it?`)) return;
+                const idx = dailyEquityEntries.findIndex(e => e.date === today);
+                dailyEquityEntries.splice(idx, 1);
+            }
+
+            const accountSize = getAccountSize();
+            let totalExposure = 0, totalDrawdown = 0;
+            openPositions.forEach(pos => {
+                const metrics = calculatePositionMetrics(pos);
+                totalExposure += metrics.accountWeight;
+                totalDrawdown += metrics.portfolioDrawdown;
+            });
+
+            const newEntry = {
+                date: today,
+                accountValue: accountSize,
+                drawdown: totalDrawdown,
+                exposure: totalExposure,
+                fomo: isNaN(ncfdVal) ? '' : ncfdVal,
+                notes: 'Daily snapshot',
+                dailyChange: 0
+            };
+
+            dailyEquityEntries.push(newEntry);
+            dailyEquityEntries.sort((a, b) => new Date(b.date) - new Date(a.date));
+            recalculateDailyChanges();
+            saveToFirebase();
+            saveDailySnapshot();
+            updateDailyEquityTable();
+
+            // Brief confirmation toast (no blocking alert)
+            const toast = document.createElement('div');
+            toast.style.cssText = 'position:fixed;bottom:30px;right:30px;background:#10b981;color:white;padding:12px 20px;border-radius:8px;font-weight:700;font-size:0.9em;z-index:9999;box-shadow:0 4px 12px rgba(0,0,0,0.2);';
+            toast.textContent = `✅ Snapshot saved — ${today}`;
+            document.body.appendChild(toast);
+            setTimeout(() => toast.remove(), 3000);
+        }
+
         function updateExposureScaling() {
             const nnh  = document.getElementById('chkNetNewHighs')?.checked || false;
             const jnk  = document.getElementById('chkJNK')?.checked || false;
@@ -5419,6 +5504,7 @@
                     totalRiskDisplayEl.parentElement.style.borderRadius = '6px';
                 }
             }
+            updateNcfdBarometer();
         }
 
         // ── Trade Quality ─────────────────────────────────────────────────────
