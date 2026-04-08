@@ -990,7 +990,7 @@
                             <input type="number" id="shares" step="1" required title="Total shares held. Use Part button to record partial sells rather than editing this manually.">
                         </div>
                         <div class="form-group">
-                            <label title="% of your total account you are risking on this trade. Formula: (Entry - Stop) × Shares ÷ Account Size × 100. Example at $250k account: 0.5% = $1,250 max loss if stopped out. Current weak market: stay at 0.125%. Scale up to 0.25 → 0.5 → 0.75 → 1% as market strengthens.">% Risk ℹ</label>
+                            <label title="RISK LEVEL: The % of your total account you are risking on this trade. Formula: (Entry - Stop) × Shares ÷ Account Size × 100. Example at $250k account: 0.5% = $1,250 max loss if stopped out. Current weak market: stay at 0.125%. Scale up to 0.25 → 0.5 → 0.75 → 1% as market strengthens.">Risk Level ℹ</label>
                             <input type="number" id="initialWeight" step="0.001" required title="Enter the % of account you are risking. Use the Stock Risk Profile tabs to calculate this precisely based on entry/stop/shares.">
                         </div>
                     </div>
@@ -1308,7 +1308,6 @@
                     <div id="distExpectancyResults"></div>
                 </div>
             </div>
-        </div>
 
             <!-- Expectancy Calculator (merged from tab) -->
             <div class="card" style="margin-top:20px;">
@@ -1439,8 +1438,6 @@
                 </div>
             </div>
         </div>
-
-        <!-- Stock Risk Profile Tabs -->
 
         <!-- Stock Risk Profile Tabs -->
         <!-- Stock 1 Tab -->
@@ -1900,7 +1897,7 @@
                         <input type="number" id="editShares" step="1" required>
                     </div>
                     <div class="form-group">
-                        <label>% Risk</label>
+                        <label title="Risk Level: % of account risked on this trade (Entry - Stop) × Shares ÷ Account Size × 100">Risk Level</label>
                         <input type="number" id="editInitialWeight" step="0.001" required>
                     </div>
                 </div>
@@ -2743,7 +2740,7 @@
                             <th onclick="sortOpenPositions('shares')" style="cursor: pointer;" title="Current number of shares held">QTY ▼</th>
                             <th onclick="sortOpenPositions('initialStop')" style="cursor: pointer;" title="Original stop loss price when position opened">Initial Stop ▼</th>
                             <th onclick="sortOpenPositions('currentStop')" style="cursor: pointer; background: #dbeafe; font-weight: 700;" title="Current stop loss price (update as position moves)">Current Stop ▼</th>
-                            <th onclick="sortOpenPositions('initialWeight')" style="cursor: pointer;" title="% of account risked when position opened">% Risk ▼</th>
+                            <th onclick="sortOpenPositions('initialWeight')" style="cursor: pointer;" title="RISK LEVEL: % of account risked when position was opened. Formula: (Entry - Initial Stop) × Shares ÷ Account Size × 100. This is your initial risk budget for the trade — it drives position sizing. 0.125% in weak markets, up to 1.0% when all 3 market conditions are green.">Risk Level ▼</th>
                             <th onclick="sortOpenPositions('accountWeight')" style="cursor: pointer;" title="Current position size as % of account">Acct Wt% ▼</th>
                             <th class="highlight-col" onclick="sortOpenPositions('pnlPercent')" style="cursor: pointer;" title="Profit/loss on this position (includes partial sells)">P&L% ▼</th>
                             <th class="highlight-col" onclick="sortOpenPositions('portfolioPnl')" style="cursor: pointer;" title="P&L as % of total account">Port P&L% ▼</th>
@@ -3375,7 +3372,7 @@
                             <th>Entry</th>
                             <th>Exit</th>
                             <th title="Account Weight%: Size of this position as a % of total account at the time of the trade. Used to calculate portfolio-level P&L impact.">Acct Wt% ℹ</th>
-                            <th title="% of total portfolio risked on this trade">% Risk</th>
+                            <th title="RISK LEVEL: % of portfolio risked on this trade at entry. Note: historical trades before mid-2025 show legacy position size % (e.g. 9% = 9% position), not % risk. Newer trades show actual % risk per trade (e.g. 0.5%).">Risk Level</th>
                             <th>P&L%</th>
                             <th title="Portfolio P&L%: This trade's gain or loss as a % of your total account (not just the position). A 20% gain on a 10% position = 2% portfolio P&L. This is what actually matters for account growth.">Port P&L% ℹ</th>
                             <th title="R-Multiple: How many times your initial risk you made or lost. 1R = broke even on risk. 2R = made 2x your risk. -1R = lost your full risk amount. Formula: Total P&L ÷ Initial Risk Dollars. This is the core metric — it normalizes all trades to be comparable regardless of position size.">R Multiple ℹ</th>
