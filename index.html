@@ -1418,6 +1418,46 @@
                     </ul>
                 </div>
             </div>
+
+            <!-- ── Compound Interest Calculator ── -->
+            <div class="card" style="margin-top:20px;">
+                <h2 style="margin-bottom:4px;" title="COMPOUND INTEREST CALCULATOR: See how your account grows over time given a consistent monthly return. Compounds monthly. Use this to set realistic long-term goals — small consistent edges compound into life-changing numbers.">📈 Compound Growth Calculator ℹ</h2>
+                <p style="font-size:0.85em; color:#666; margin-bottom:16px;">How much will your account be worth if you compound a consistent monthly return?</p>
+
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:24px;">
+                    <!-- Inputs -->
+                    <div style="display:grid; gap:12px;">
+                        <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+                            <div>
+                                <label style="font-size:0.8em; font-weight:600; display:block; margin-bottom:4px;" title="Your starting account value in dollars.">Starting Balance ($)</label>
+                                <input type="number" id="ciStarting" value="250000" step="1000" oninput="calcCompoundInterest()"
+                                       style="width:100%; padding:8px; border:2px solid #e5e7eb; border-radius:6px; font-size:1em; font-weight:700;">
+                            </div>
+                            <div>
+                                <label style="font-size:0.8em; font-weight:600; display:block; margin-bottom:4px;" title="Monthly % gain you expect to achieve consistently. Your What If expectancy × risk % × trades/month gives this number.">Monthly Return (%)</label>
+                                <input type="number" id="ciMonthly" value="5" step="0.5" min="0.1" oninput="calcCompoundInterest()"
+                                       style="width:100%; padding:8px; border:2px solid #e5e7eb; border-radius:6px; font-size:1em; font-weight:700;">
+                            </div>
+                            <div>
+                                <label style="font-size:0.8em; font-weight:600; display:block; margin-bottom:4px;" title="Number of years to project forward.">Years</label>
+                                <input type="number" id="ciYears" value="10" step="1" min="1" max="40" oninput="calcCompoundInterest()"
+                                       style="width:100%; padding:8px; border:2px solid #e5e7eb; border-radius:6px; font-size:1em; font-weight:700;">
+                            </div>
+                            <div>
+                                <label style="font-size:0.8em; font-weight:600; display:block; margin-bottom:4px;" title="Optional: monthly dollar amount added to the account. Leave 0 to see pure compounding.">Monthly Contribution ($)</label>
+                                <input type="number" id="ciContrib" value="0" step="100" min="0" oninput="calcCompoundInterest()"
+                                       style="width:100%; padding:8px; border:2px solid #e5e7eb; border-radius:6px; font-size:1em; font-weight:700;">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Results -->
+                    <div id="ciResults" style="display:grid; gap:10px; align-content:start;"></div>
+                </div>
+
+                <!-- Year-by-year table -->
+                <div id="ciTable" style="margin-top:20px; overflow-x:auto;"></div>
+            </div>
         </div>
         </div>
 
@@ -2481,6 +2521,7 @@
             calcTargetExpectancy();
             updateWinDistributionBars();
             updateLossDistributionBars();
+            calcCompoundInterest();
             console.log('Data loaded from Firebase successfully');
         }
 
@@ -5407,6 +5448,83 @@
             document.getElementById('executePickHarvest').disabled = true;
         }
 
+        function calcCompoundInterest() {
+            const starting  = parseFloat(document.getElementById('ciStarting')?.value)  || 0;
+            const monthly   = parseFloat(document.getElementById('ciMonthly')?.value)   || 0;
+            const years     = parseInt(document.getElementById('ciYears')?.value)        || 10;
+            const contrib   = parseFloat(document.getElementById('ciContrib')?.value)   || 0;
+            const results   = document.getElementById('ciResults');
+            const tableDiv  = document.getElementById('ciTable');
+            if (!results || !tableDiv) return;
+
+            const r = monthly / 100;
+            const months = years * 12;
+
+            // Calculate final value
+            let balance = starting;
+            for (let m = 0; m < months; m++) {
+                balance = balance * (1 + r) + contrib;
+            }
+
+            const totalContrib  = contrib * months;
+            const totalGain     = balance - starting - totalContrib;
+            const annualR       = (Math.pow(1 + r, 12) - 1) * 100;
+
+            results.innerHTML = `
+                <div style="padding:14px; background:linear-gradient(135deg,#f0fdf4,#dcfce7); border-radius:8px; border:2px solid #86efac; text-align:center;">
+                    <div style="font-size:0.75em; color:#6b7280; text-transform:uppercase; letter-spacing:0.5px;">Final Balance</div>
+                    <div style="font-size:2em; font-weight:800; color:#15803d;">$${balance.toLocaleString(undefined,{maximumFractionDigits:0})}</div>
+                    <div style="font-size:0.8em; color:#16a34a; margin-top:2px;">after ${years} year${years>1?'s':''}</div>
+                </div>
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">
+                    <div style="padding:10px; background:#eff6ff; border-radius:8px; text-align:center;">
+                        <div style="font-size:0.72em; color:#6b7280;">Annual Return</div>
+                        <div style="font-size:1.3em; font-weight:700; color:#1d4ed8;">${annualR.toFixed(1)}%</div>
+                    </div>
+                    <div style="padding:10px; background:#fdf4ff; border-radius:8px; text-align:center;">
+                        <div style="font-size:0.72em; color:#6b7280;">Total Gain</div>
+                        <div style="font-size:1.3em; font-weight:700; color:#7e22ce;">$${totalGain.toLocaleString(undefined,{maximumFractionDigits:0})}</div>
+                    </div>
+                    <div style="padding:10px; background:#fef3c7; border-radius:8px; text-align:center;">
+                        <div style="font-size:0.72em; color:#6b7280;">× Starting</div>
+                        <div style="font-size:1.3em; font-weight:700; color:#d97706;">${(balance/starting).toFixed(1)}×</div>
+                    </div>
+                    <div style="padding:10px; background:#f0fdf4; border-radius:8px; text-align:center;">
+                        <div style="font-size:0.72em; color:#6b7280;">Contributions</div>
+                        <div style="font-size:1.3em; font-weight:700; color:#059669;">$${totalContrib.toLocaleString(undefined,{maximumFractionDigits:0})}</div>
+                    </div>
+                </div>`;
+
+            // Year-by-year table
+            let thtml = `<table style="width:100%; font-size:0.85em; border-collapse:collapse;">
+                <thead><tr style="background:#f3f4f6;">
+                    <th style="padding:6px 10px; text-align:left;">Year</th>
+                    <th style="padding:6px 10px; text-align:right;">Balance</th>
+                    <th style="padding:6px 10px; text-align:right;">Annual Gain</th>
+                    <th style="padding:6px 10px; text-align:right;">Total Growth</th>
+                    <th style="padding:6px 10px; text-align:right;">× Starting</th>
+                </tr></thead><tbody>`;
+
+            let bal = starting;
+            let prevBal = starting;
+            for (let y = 1; y <= years; y++) {
+                for (let m = 0; m < 12; m++) bal = bal * (1 + r) + contrib;
+                const annGain = bal - prevBal;
+                const totalGrowth = bal - starting - (contrib * y * 12);
+                const rowBg = y % 2 === 0 ? '#f9fafb' : 'white';
+                thtml += `<tr style="background:${rowBg};">
+                    <td style="padding:5px 10px; font-weight:600;">Year ${y}</td>
+                    <td style="padding:5px 10px; text-align:right; font-weight:700; color:#15803d;">$${bal.toLocaleString(undefined,{maximumFractionDigits:0})}</td>
+                    <td style="padding:5px 10px; text-align:right; color:#0369a1;">+$${annGain.toLocaleString(undefined,{maximumFractionDigits:0})}</td>
+                    <td style="padding:5px 10px; text-align:right; color:#7e22ce;">$${totalGrowth.toLocaleString(undefined,{maximumFractionDigits:0})}</td>
+                    <td style="padding:5px 10px; text-align:right; color:#d97706;">${(bal/starting).toFixed(2)}×</td>
+                </tr>`;
+                prevBal = bal;
+            }
+            thtml += '</tbody></table>';
+            tableDiv.innerHTML = thtml;
+        }
+
         // ── Calculator Settings Helper ────────────────────────────────────────
         function buildCalculatorSettings() {
             const ids = [
@@ -5419,6 +5537,7 @@
                 'calc1WinRate','calc1AvgWinR','calc1AvgLossR','calc1RiskPct','calc1TradesYear',
                 'calc2WinRate','calc2AvgWinR','calc2AvgLossR','calc2RiskPct','calc2TradesYear',
                 'calc3WinRate','calc3AvgWinR','calc3AvgLossR','calc3RiskPct','calc3TradesYear',
+                'ciStarting','ciMonthly','ciYears','ciContrib',
             ];
             const obj = {};
             ids.forEach(id => {
@@ -6463,7 +6582,7 @@
         };
 
         // Update Stock Profile
-        function updateStockProfile(stockNum) {
+        async function updateStockProfile(stockNum) {
             const symbol = document.getElementById(`stock${stockNum}SymbolInput`).value.toUpperCase();
             const price = parseFloat(document.getElementById(`stock${stockNum}Price`).value);
             const stop = parseFloat(document.getElementById(`stock${stockNum}Stop`).value);
@@ -6478,22 +6597,87 @@
             // Update tab label
             document.getElementById(`stock${stockNum}Symbol`).textContent = symbol;
             document.getElementById(`stock${stockNum}Title`).textContent = `${symbol} Risk Profile`;
+
+            // Show loading state
+            document.getElementById(`stock${stockNum}Profile`).innerHTML =
+                '<div style="padding:20px; color:#9ca3af; font-size:0.9em;">⏳ Fetching ADR data...</div>';
+
+            // Fetch 20-day ADR from Finnhub
+            let adrDollars = null, adrPct = null;
+            const apiKey = document.getElementById('apiKey').value;
+            if (apiKey) {
+                try {
+                    const to   = Math.floor(Date.now() / 1000);
+                    const from = to - (30 * 24 * 60 * 60); // 30 days back to ensure 20 trading days
+                    const url  = `https://finnhub.io/api/v1/stock/candle?symbol=${symbol}&resolution=D&from=${from}&to=${to}&token=${apiKey}`;
+                    const resp = await fetch(url);
+                    const data = await resp.json();
+                    if (data && data.h && data.l && data.h.length >= 5) {
+                        const days = Math.min(20, data.h.length);
+                        const ranges = [];
+                        for (let i = data.h.length - days; i < data.h.length; i++) {
+                            ranges.push(data.h[i] - data.l[i]);
+                        }
+                        adrDollars = ranges.reduce((a, b) => a + b, 0) / ranges.length;
+                        adrPct = (adrDollars / price) * 100;
+                    }
+                } catch (e) {
+                    console.warn('ADR fetch failed:', e);
+                }
+            }
             
             // Generate and display the risk profile table
-            const profileHTML = generateStockProfileTable(stockNum, symbol, price, stop);
+            const profileHTML = generateStockProfileTable(stockNum, symbol, price, stop, adrDollars, adrPct);
             document.getElementById(`stock${stockNum}Profile`).innerHTML = profileHTML;
             
             saveToFirebase();
         }
 
         // Generate Stock Profile Table
-        function generateStockProfileTable(stockNum, symbol, price, stop) {
+        // Generate Stock Profile Table
+        function generateStockProfileTable(stockNum, symbol, price, stop, adrDollars, adrPct) {
             const accountSize = getAccountSize();
             const myRoth = parseFloat(document.getElementById('myRoth').value) || 0;
             const wifeRoth = parseFloat(document.getElementById('wifeRoth').value) || 0;
             
             const riskPerShare = price - stop;
             const stockRiskPercent = (riskPerShare / price) * 100;
+
+            // ADR display block
+            let adrHtml = '';
+            if (adrDollars != null && adrPct != null) {
+                const stopVsAdr = (riskPerShare / adrDollars) * 100;
+                const adrColor = stopVsAdr < 50 ? '#d97706' : stopVsAdr <= 150 ? '#15803d' : '#d97706';
+                const adrBg    = stopVsAdr < 50 ? '#fef9c3' : stopVsAdr <= 150 ? '#dcfce7' : '#fef9c3';
+                const adrNote  = stopVsAdr < 50
+                    ? '⚠ Stop tighter than ½ ADR — vulnerable to noise'
+                    : stopVsAdr <= 100
+                        ? '✓ Stop within 1 ADR — reasonable'
+                        : stopVsAdr <= 150
+                            ? '✓ Stop ~1–1.5× ADR — wide, solid'
+                            : '⚠ Stop wider than 1.5× ADR — large risk/share';
+                adrHtml = `<div style="margin-top:12px; padding:10px; background:${adrBg}; border-radius:6px; border-left:4px solid ${adrColor};">
+                        <div style="display:grid; grid-template-columns:repeat(3,1fr); gap:10px;">
+                            <div>
+                                <div style="font-size:0.8em; color:#666;" title="Average Daily Range: mean of (High − Low) over last 20 trading days.">20-Day ADR ℹ</div>
+                                <div style="font-size:1.4em; font-weight:bold; color:${adrColor};">$${adrDollars.toFixed(2)}</div>
+                            </div>
+                            <div>
+                                <div style="font-size:0.8em; color:#666;" title="ADR as % of current price.">ADR %</div>
+                                <div style="font-size:1.4em; font-weight:bold; color:${adrColor};">${adrPct.toFixed(2)}%</div>
+                            </div>
+                            <div>
+                                <div style="font-size:0.8em; color:#666;" title="Your stop distance as % of ADR. Target 50–150%: tight enough to be meaningful, wide enough to survive normal daily movement.">Stop vs ADR</div>
+                                <div style="font-size:1.4em; font-weight:bold; color:${adrColor};">${stopVsAdr.toFixed(0)}%</div>
+                            </div>
+                        </div>
+                        <div style="margin-top:6px; font-size:0.8em; font-weight:600; color:${adrColor};">${adrNote}</div>
+                    </div>`;
+            } else if (!document.getElementById('apiKey')?.value) {
+                adrHtml = `<div style="margin-top:8px; font-size:0.8em; color:#9ca3af; font-style:italic;">Add Finnhub API key in Account Setup to see ADR</div>`;
+            } else {
+                adrHtml = `<div style="margin-top:8px; font-size:0.8em; color:#9ca3af; font-style:italic;">ADR unavailable for this symbol</div>`;
+            }
             
             const riskLevels = [
                 { label: 'Risking 1% of account', percent: 1.0, isRisk: true },
@@ -6507,6 +6691,7 @@
                 { label: '9% Position Size', percent: 9, isRisk: false }
             ];
             
+
             let html = `
                 <div style="margin-bottom: 20px; padding: 15px; background: #f9f9f9; border-radius: 8px;">
                     <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px;">
@@ -6523,6 +6708,7 @@
                             <div style="font-size: 1.5em; font-weight: bold; color: #f59e0b;">${stockRiskPercent.toFixed(2)}%</div>
                         </div>
                     </div>
+                    ${adrHtml}
                 </div>
                 
                 <table style="margin-bottom: 20px;">
@@ -6661,6 +6847,7 @@
                     updateWinDistributionBars();
                     updateLossDistributionBars();
                     calcTargetExpectancy();
+                    calcCompoundInterest();
                 }, 500);
             }
         };
