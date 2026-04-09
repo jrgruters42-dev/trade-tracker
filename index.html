@@ -2158,7 +2158,7 @@
                 lookbackPeriod: parseInt(document.getElementById('lookbackPeriod').value) || 15,
                 apiKey: document.getElementById('apiKey').value,
                 stockProfiles: stockProfiles,
-                marketConditions: {
+                calculatorSettings: buildCalculatorSettings(),
                     netNewHighs: document.getElementById('chkNetNewHighs')?.checked || false,
                     jnk: document.getElementById('chkJNK')?.checked || false,
                     qqq: document.getElementById('chkQQQ')?.checked || false,
@@ -2434,6 +2434,52 @@
             updateAllDisplays();
             updateExposureScaling();
             updateNcfdBarometer();
+            // Restore calculator settings
+            if (data.calculatorSettings) {
+                if (data.calculatorSettings['whatIfStarting'] !== undefined) { const el = document.getElementById('whatIfStarting'); if (el) el.value = data.calculatorSettings['whatIfStarting']; }
+                if (data.calculatorSettings['whatIfRiskPct'] !== undefined) { const el = document.getElementById('whatIfRiskPct'); if (el) el.value = data.calculatorSettings['whatIfRiskPct']; }
+                if (data.calculatorSettings['whatIfWinRate'] !== undefined) { const el = document.getElementById('whatIfWinRate'); if (el) el.value = data.calculatorSettings['whatIfWinRate']; }
+                if (data.calculatorSettings['whatIfSmallWin'] !== undefined) { const el = document.getElementById('whatIfSmallWin'); if (el) el.value = data.calculatorSettings['whatIfSmallWin']; }
+                if (data.calculatorSettings['whatIfMediumWin'] !== undefined) { const el = document.getElementById('whatIfMediumWin'); if (el) el.value = data.calculatorSettings['whatIfMediumWin']; }
+                if (data.calculatorSettings['whatIfLargeWin'] !== undefined) { const el = document.getElementById('whatIfLargeWin'); if (el) el.value = data.calculatorSettings['whatIfLargeWin']; }
+                if (data.calculatorSettings['whatIfHomeRun'] !== undefined) { const el = document.getElementById('whatIfHomeRun'); if (el) el.value = data.calculatorSettings['whatIfHomeRun']; }
+                if (data.calculatorSettings['whatIfNormalLoss'] !== undefined) { const el = document.getElementById('whatIfNormalLoss'); if (el) el.value = data.calculatorSettings['whatIfNormalLoss']; }
+                if (data.calculatorSettings['whatIfBadLoss'] !== undefined) { const el = document.getElementById('whatIfBadLoss'); if (el) el.value = data.calculatorSettings['whatIfBadLoss']; }
+                if (data.calculatorSettings['whatIfTradesPerMonth'] !== undefined) { const el = document.getElementById('whatIfTradesPerMonth'); if (el) el.value = data.calculatorSettings['whatIfTradesPerMonth']; }
+                if (data.calculatorSettings['whatIfGoal'] !== undefined) { const el = document.getElementById('whatIfGoal'); if (el) el.value = data.calculatorSettings['whatIfGoal']; }
+                if (data.calculatorSettings['distPctLoss'] !== undefined) { const el = document.getElementById('distPctLoss'); if (el) el.value = data.calculatorSettings['distPctLoss']; }
+                if (data.calculatorSettings['distAvgLoss'] !== undefined) { const el = document.getElementById('distAvgLoss'); if (el) el.value = data.calculatorSettings['distAvgLoss']; }
+                if (data.calculatorSettings['distPctSmall'] !== undefined) { const el = document.getElementById('distPctSmall'); if (el) el.value = data.calculatorSettings['distPctSmall']; }
+                if (data.calculatorSettings['distAvgSmall'] !== undefined) { const el = document.getElementById('distAvgSmall'); if (el) el.value = data.calculatorSettings['distAvgSmall']; }
+                if (data.calculatorSettings['distPctSolid'] !== undefined) { const el = document.getElementById('distPctSolid'); if (el) el.value = data.calculatorSettings['distPctSolid']; }
+                if (data.calculatorSettings['distAvgSolid'] !== undefined) { const el = document.getElementById('distAvgSolid'); if (el) el.value = data.calculatorSettings['distAvgSolid']; }
+                if (data.calculatorSettings['distPctStrong'] !== undefined) { const el = document.getElementById('distPctStrong'); if (el) el.value = data.calculatorSettings['distPctStrong']; }
+                if (data.calculatorSettings['distAvgStrong'] !== undefined) { const el = document.getElementById('distAvgStrong'); if (el) el.value = data.calculatorSettings['distAvgStrong']; }
+                if (data.calculatorSettings['distPctHomerun'] !== undefined) { const el = document.getElementById('distPctHomerun'); if (el) el.value = data.calculatorSettings['distPctHomerun']; }
+                if (data.calculatorSettings['distAvgHomerun'] !== undefined) { const el = document.getElementById('distAvgHomerun'); if (el) el.value = data.calculatorSettings['distAvgHomerun']; }
+                if (data.calculatorSettings['distTradesMonth'] !== undefined) { const el = document.getElementById('distTradesMonth'); if (el) el.value = data.calculatorSettings['distTradesMonth']; }
+                if (data.calculatorSettings['distRiskPct'] !== undefined) { const el = document.getElementById('distRiskPct'); if (el) el.value = data.calculatorSettings['distRiskPct']; }
+                if (data.calculatorSettings['calc1WinRate'] !== undefined) { const el = document.getElementById('calc1WinRate'); if (el) el.value = data.calculatorSettings['calc1WinRate']; }
+                if (data.calculatorSettings['calc1AvgWinR'] !== undefined) { const el = document.getElementById('calc1AvgWinR'); if (el) el.value = data.calculatorSettings['calc1AvgWinR']; }
+                if (data.calculatorSettings['calc1AvgLossR'] !== undefined) { const el = document.getElementById('calc1AvgLossR'); if (el) el.value = data.calculatorSettings['calc1AvgLossR']; }
+                if (data.calculatorSettings['calc1RiskPct'] !== undefined) { const el = document.getElementById('calc1RiskPct'); if (el) el.value = data.calculatorSettings['calc1RiskPct']; }
+                if (data.calculatorSettings['calc1TradesYear'] !== undefined) { const el = document.getElementById('calc1TradesYear'); if (el) el.value = data.calculatorSettings['calc1TradesYear']; }
+                if (data.calculatorSettings['calc2WinRate'] !== undefined) { const el = document.getElementById('calc2WinRate'); if (el) el.value = data.calculatorSettings['calc2WinRate']; }
+                if (data.calculatorSettings['calc2AvgWinR'] !== undefined) { const el = document.getElementById('calc2AvgWinR'); if (el) el.value = data.calculatorSettings['calc2AvgWinR']; }
+                if (data.calculatorSettings['calc2AvgLossR'] !== undefined) { const el = document.getElementById('calc2AvgLossR'); if (el) el.value = data.calculatorSettings['calc2AvgLossR']; }
+                if (data.calculatorSettings['calc2RiskPct'] !== undefined) { const el = document.getElementById('calc2RiskPct'); if (el) el.value = data.calculatorSettings['calc2RiskPct']; }
+                if (data.calculatorSettings['calc2TradesYear'] !== undefined) { const el = document.getElementById('calc2TradesYear'); if (el) el.value = data.calculatorSettings['calc2TradesYear']; }
+                if (data.calculatorSettings['calc3WinRate'] !== undefined) { const el = document.getElementById('calc3WinRate'); if (el) el.value = data.calculatorSettings['calc3WinRate']; }
+                if (data.calculatorSettings['calc3AvgWinR'] !== undefined) { const el = document.getElementById('calc3AvgWinR'); if (el) el.value = data.calculatorSettings['calc3AvgWinR']; }
+                if (data.calculatorSettings['calc3AvgLossR'] !== undefined) { const el = document.getElementById('calc3AvgLossR'); if (el) el.value = data.calculatorSettings['calc3AvgLossR']; }
+                if (data.calculatorSettings['calc3RiskPct'] !== undefined) { const el = document.getElementById('calc3RiskPct'); if (el) el.value = data.calculatorSettings['calc3RiskPct']; }
+                if (data.calculatorSettings['calc3TradesYear'] !== undefined) { const el = document.getElementById('calc3TradesYear'); if (el) el.value = data.calculatorSettings['calc3TradesYear']; }
+            }
+            // Re-run calculators with restored values
+            calculateWhatIf();
+            calcTargetExpectancy();
+            updateWinDistributionBars();
+            updateLossDistributionBars();
             console.log('Data loaded from Firebase successfully');
         }
 
@@ -2566,6 +2612,7 @@
                     wifeRothJan1: parseFloat(document.getElementById('wifeRothJan1').value),
                     apiKey: document.getElementById('apiKey').value,
                     stockProfiles: stockProfiles,
+                    calculatorSettings: buildCalculatorSettings(),
                     marketConditions: {
                         netNewHighs: document.getElementById('chkNetNewHighs')?.checked || false,
                         jnk: document.getElementById('chkJNK')?.checked || false,
@@ -5357,6 +5404,27 @@
             document.getElementById('pickSharesToSell2').value = '';
             document.getElementById('pickMyOwnPreview').innerHTML = '<em>Select at least one position and enter shares to see preview...</em>';
             document.getElementById('executePickHarvest').disabled = true;
+        }
+
+        // ── Calculator Settings Helper ────────────────────────────────────────
+        function buildCalculatorSettings() {
+            const ids = [
+                'whatIfStarting','whatIfRiskPct','whatIfWinRate',
+                'whatIfSmallWin','whatIfMediumWin','whatIfLargeWin','whatIfHomeRun',
+                'whatIfNormalLoss','whatIfBadLoss','whatIfTradesPerMonth','whatIfGoal',
+                'distPctLoss','distAvgLoss','distPctSmall','distAvgSmall',
+                'distPctSolid','distAvgSolid','distPctStrong','distAvgStrong',
+                'distPctHomerun','distAvgHomerun','distTradesMonth','distRiskPct',
+                'calc1WinRate','calc1AvgWinR','calc1AvgLossR','calc1RiskPct','calc1TradesYear',
+                'calc2WinRate','calc2AvgWinR','calc2AvgLossR','calc2RiskPct','calc2TradesYear',
+                'calc3WinRate','calc3AvgWinR','calc3AvgLossR','calc3RiskPct','calc3TradesYear',
+            ];
+            const obj = {};
+            ids.forEach(id => {
+                const el = document.getElementById(id);
+                if (el) obj[id] = parseFloat(el.value) || 0;
+            });
+            return obj;
         }
 
         // ── UI Toggle Functions ───────────────────────────────────────────────
