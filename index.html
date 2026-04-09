@@ -6729,7 +6729,21 @@
                     ${adrHtml}
                 </div>
                 
-                <table style="margin-bottom: 20px;">
+                <table style="margin-bottom: 20px;">`;
+
+            const riskLevels = [
+                { label: 'Risking 1% of account',     percent: 1.0,   isRisk: true },
+                { label: 'Risking 0.75% of account',  percent: 0.75,  isRisk: true },
+                { label: 'Risking 0.5% of account',   percent: 0.5,   isRisk: true },
+                { label: 'Risking 0.25% of account',  percent: 0.25,  isRisk: true },
+                { label: 'Risking 0.125% of account', percent: 0.125, isRisk: true },
+                { label: '25% Position Size',         percent: 25,    isRisk: false },
+                { label: '15% Position Size',         percent: 15,    isRisk: false },
+                { label: '12% Position Size',         percent: 12,    isRisk: false },
+                { label: '9% Position Size',          percent: 9,     isRisk: false }
+            ];
+
+            html += `<table style="margin-bottom: 20px;">
                     <thead>
                         <tr>
                             <th>Risk/Position Level</th>
