@@ -632,10 +632,14 @@
                 </div>
                 
                 <!-- API Key and Buttons -->
-                <div style="display: grid; grid-template-columns: 1fr auto auto auto auto auto auto; gap: 6px; align-items: end; margin-bottom: 6px;">
+                <div style="display: grid; grid-template-columns: 1fr 1fr auto auto auto auto auto auto; gap: 6px; align-items: end; margin-bottom: 6px;">
                     <div class="form-group" style="margin-bottom: 0;">
-                        <label style="font-size: 10px;">Finnhub API Key</label>
+                        <label style="font-size: 10px;" title="Finnhub API key for real-time price updates. Free at finnhub.io">Finnhub API Key</label>
                         <input type="text" id="apiKey" placeholder="Optional" style="padding: 4px; font-size: 11px;">
+                    </div>
+                    <div class="form-group" style="margin-bottom: 0;">
+                        <label style="font-size: 10px;" title="Alpha Vantage API key for 20-day ADR on position sizing tabs. Free at alphavantage.co — 25 requests/day limit. ADR results cached 24hrs per symbol.">Alpha Vantage Key</label>
+                        <input type="text" id="alphaVantageKey" placeholder="Optional" style="padding: 4px; font-size: 11px;" onchange="saveToFirebase();">
                     </div>
                     <div class="form-group" style="margin-bottom: 0;">
                         <label style="font-size: 10px;">SPY Jan 2</label>
@@ -2197,6 +2201,7 @@
                 spyJan1: parseFloat(document.getElementById('spyJan1').value),
                 lookbackPeriod: parseInt(document.getElementById('lookbackPeriod').value) || 15,
                 apiKey: document.getElementById('apiKey').value,
+                alphaVantageKey: document.getElementById('alphaVantageKey')?.value || '',
                 stockProfiles: stockProfiles,
                 calculatorSettings: buildCalculatorSettings(),
                 marketConditions: {
@@ -2453,6 +2458,7 @@
                 if (elN && data.marketConditions.ncfd != null) elN.value = data.marketConditions.ncfd;
             }
             document.getElementById('apiKey').value = data.apiKey || '';
+            if (data.alphaVantageKey) document.getElementById('alphaVantageKey').value = data.alphaVantageKey;
             
             // Load stock profiles
             if (data.stockProfiles) {
@@ -2653,6 +2659,7 @@
                     wifeRoth: parseFloat(document.getElementById('wifeRoth').value),
                     wifeRothJan1: parseFloat(document.getElementById('wifeRothJan1').value),
                     apiKey: document.getElementById('apiKey').value,
+                alphaVantageKey: document.getElementById('alphaVantageKey')?.value || '',
                     stockProfiles: stockProfiles,
                     calculatorSettings: buildCalculatorSettings(),
                     marketConditions: {
@@ -5525,6 +5532,61 @@
             tableDiv.innerHTML = thtml;
         }
 
+        // ── 20-Day ADR via Alpha Vantage (free tier, 25 req/day) ─────────────
+        async function fetchADR(symbol) {
+            const avKey = document.getElementById('alphaVantageKey')?.value?.trim();
+            if (!avKey) return null;
+
+            // Check Firebase cache first — only re-fetch if older than 24hrs
+            try {
+                const cacheRef = firebase.database().ref(`adrCache/${symbol.toUpperCase()}`);
+                const snap = await cacheRef.once('value');
+                const cached = snap.val();
+                if (cached && cached.adrPct && cached.timestamp) {
+                    const ageHrs = (Date.now() - cached.timestamp) / (1000 * 60 * 60);
+                    if (ageHrs < 24) {
+                        console.log(`ADR cache hit for ${symbol}: ${cached.adrPct.toFixed(2)}% (${ageHrs.toFixed(1)}hrs old)`);
+                        return cached.adrPct;
+                    }
+                }
+            } catch(e) { /* cache miss, fetch fresh */ }
+
+            // Fetch daily OHLC from Alpha Vantage
+            try {
+                const url = `https://www.alphavantage.co/query?function=TIME_SERIES_DAILY&symbol=${symbol}&outputsize=compact&apikey=${avKey}`;
+                const resp = await fetch(url);
+                const data = await resp.json();
+
+                if (data['Note'] || data['Information']) {
+                    console.warn('Alpha Vantage rate limit hit:', data['Note'] || data['Information']);
+                    return null;
+                }
+
+                const series = data['Time Series (Daily)'];
+                if (!series) return null;
+
+                const dates = Object.keys(series).sort().reverse().slice(0, 20);
+                if (dates.length < 5) return null;
+
+                const ranges = dates.map(d => parseFloat(series[d]['2. high']) - parseFloat(series[d]['3. low']));
+                const adrDollars = ranges.reduce((a, b) => a + b, 0) / ranges.length;
+                const latestClose = parseFloat(series[dates[0]]['4. close']);
+                const adrPct = (adrDollars / latestClose) * 100;
+
+                // Cache result in Firebase
+                try {
+                    await firebase.database().ref(`adrCache/${symbol.toUpperCase()}`).set({
+                        adrPct, adrDollars, timestamp: Date.now()
+                    });
+                } catch(e) { /* cache write failed, not critical */ }
+
+                return adrPct;
+            } catch(e) {
+                console.warn('ADR fetch failed:', e);
+                return null;
+            }
+        }
+
         // ── Calculator Settings Helper ────────────────────────────────────────
         function buildCalculatorSettings() {
             const ids = [
@@ -6600,45 +6662,20 @@
 
             // Show loading state
             document.getElementById(`stock${stockNum}Profile`).innerHTML =
-                '<div style="padding:20px; color:#9ca3af; font-size:0.9em;">⏳ Fetching ADR data...</div>';
+                '<div style="padding:20px; color:#9ca3af; font-size:0.9em;">⏳ Loading...</div>';
 
-            // Fetch 20-day ADR from Finnhub
-            let adrDollars = null, adrPct = null;
-            const apiKey = document.getElementById('apiKey').value;
-            if (apiKey) {
-                try {
-                    const to   = Math.floor(Date.now() / 1000);
-                    const from = to - (35 * 24 * 60 * 60); // 35 days back to ensure 20 trading days
-                    const url  = `https://finnhub.io/api/v1/stock/candle?symbol=${symbol}&resolution=D&from=${from}&to=${to}&token=${apiKey}`;
-                    const resp = await fetch(url);
-                    const data = await resp.json();
-                    console.log(`ADR fetch for ${symbol}:`, data);
-                    if (data && data.s === 'ok' && data.h && data.l && data.h.length >= 5) {
-                        const days = Math.min(20, data.h.length);
-                        const ranges = [];
-                        for (let i = data.h.length - days; i < data.h.length; i++) {
-                            ranges.push(data.h[i] - data.l[i]);
-                        }
-                        adrDollars = ranges.reduce((a, b) => a + b, 0) / ranges.length;
-                        adrPct = (adrDollars / price) * 100;
-                    } else if (data && data.s === 'no_data') {
-                        console.warn(`ADR: no candle data for ${symbol} — may require paid Finnhub plan`);
-                    }
-                } catch (e) {
-                    console.warn('ADR fetch failed:', e);
-                }
-            }
-            
+            // Fetch 20-day ADR from Alpha Vantage (cached 24hrs in Firebase)
+            const adrPct = await fetchADR(symbol);
+
             // Generate and display the risk profile table
-            const profileHTML = generateStockProfileTable(stockNum, symbol, price, stop, adrDollars, adrPct);
+            const profileHTML = generateStockProfileTable(stockNum, symbol, price, stop, adrPct);
             document.getElementById(`stock${stockNum}Profile`).innerHTML = profileHTML;
             
             saveToFirebase();
         }
 
         // Generate Stock Profile Table
-        // Generate Stock Profile Table
-        function generateStockProfileTable(stockNum, symbol, price, stop, adrDollars, adrPct) {
+        function generateStockProfileTable(stockNum, symbol, price, stop, adrPct) {
             const accountSize = getAccountSize();
             const myRoth = parseFloat(document.getElementById('myRoth').value) || 0;
             const wifeRoth = parseFloat(document.getElementById('wifeRoth').value) || 0;
@@ -6646,54 +6683,32 @@
             const riskPerShare = price - stop;
             const stockRiskPercent = (riskPerShare / price) * 100;
 
-            // ADR display block
+            // ADR% pill
             let adrHtml = '';
-            if (adrDollars != null && adrPct != null) {
-                const stopVsAdr = (riskPerShare / adrDollars) * 100;
-                const adrColor = stopVsAdr < 50 ? '#d97706' : stopVsAdr <= 150 ? '#15803d' : '#d97706';
-                const adrBg    = stopVsAdr < 50 ? '#fef9c3' : stopVsAdr <= 150 ? '#dcfce7' : '#fef9c3';
-                const adrNote  = stopVsAdr < 50
-                    ? '⚠ Stop tighter than ½ ADR — vulnerable to noise'
-                    : stopVsAdr <= 100
-                        ? '✓ Stop within 1 ADR — reasonable'
-                        : stopVsAdr <= 150
-                            ? '✓ Stop ~1–1.5× ADR — wide, solid'
-                            : '⚠ Stop wider than 1.5× ADR — large risk/share';
-                adrHtml = `<div style="margin-top:12px; padding:10px; background:${adrBg}; border-radius:6px; border-left:4px solid ${adrColor};">
-                        <div style="display:grid; grid-template-columns:repeat(3,1fr); gap:10px;">
-                            <div>
-                                <div style="font-size:0.8em; color:#666;" title="Average Daily Range: mean of (High − Low) over last 20 trading days.">20-Day ADR ℹ</div>
-                                <div style="font-size:1.4em; font-weight:bold; color:${adrColor};">$${adrDollars.toFixed(2)}</div>
+            if (adrPct != null) {
+                const stopVsAdr = (riskPerShare / price * 100) / adrPct; // stop% / ADR%
+                const color = stopVsAdr < 0.5 ? '#d97706' : stopVsAdr <= 1.5 ? '#15803d' : '#d97706';
+                const bg    = stopVsAdr < 0.5 ? '#fef9c3' : stopVsAdr <= 1.5 ? '#dcfce7' : '#fef9c3';
+                const note  = stopVsAdr < 0.5 ? '⚠ Stop < ½ ADR — tight'
+                            : stopVsAdr <= 1.0 ? '✓ Stop ≤ 1 ADR'
+                            : stopVsAdr <= 1.5 ? '✓ Stop ~1–1.5× ADR'
+                            : '⚠ Stop > 1.5× ADR — wide';
+                adrHtml = `
+                        <div style="padding:10px; background:${bg}; border-radius:6px; border-left:4px solid ${color};">
+                            <div style="display:flex; align-items:center; gap:16px; flex-wrap:wrap;">
+                                <div>
+                                    <div style="font-size:0.8em; color:#666;" title="20-Day Average Daily Range as % of price. Fetched from Alpha Vantage, cached 24hrs.">20-Day ADR%</div>
+                                    <div style="font-size:1.5em; font-weight:bold; color:${color};">${adrPct.toFixed(2)}%</div>
+                                </div>
+                                <div style="font-size:0.85em; font-weight:600; color:${color};">${note}</div>
                             </div>
-                            <div>
-                                <div style="font-size:0.8em; color:#666;" title="ADR as % of current price.">ADR %</div>
-                                <div style="font-size:1.4em; font-weight:bold; color:${adrColor};">${adrPct.toFixed(2)}%</div>
-                            </div>
-                            <div>
-                                <div style="font-size:0.8em; color:#666;" title="Your stop distance as % of ADR. Target 50–150%: tight enough to be meaningful, wide enough to survive normal daily movement.">Stop vs ADR</div>
-                                <div style="font-size:1.4em; font-weight:bold; color:${adrColor};">${stopVsAdr.toFixed(0)}%</div>
-                            </div>
-                        </div>
-                        <div style="margin-top:6px; font-size:0.8em; font-weight:600; color:${adrColor};">${adrNote}</div>
-                    </div>`;
-            } else if (!document.getElementById('apiKey')?.value) {
-                adrHtml = `<div style="margin-top:8px; font-size:0.8em; color:#9ca3af; font-style:italic;">Add Finnhub API key in Account Setup to see ADR</div>`;
+                        </div>`;
+            } else if (document.getElementById('alphaVantageKey')?.value?.trim()) {
+                adrHtml = `<div style="padding:8px; font-size:0.8em; color:#9ca3af; font-style:italic;">ADR unavailable for this symbol</div>`;
             } else {
-                adrHtml = `<div style="margin-top:8px; font-size:0.8em; color:#9ca3af; font-style:italic;">ADR unavailable for this symbol</div>`;
+                adrHtml = `<div style="padding:8px; font-size:0.8em; color:#9ca3af; font-style:italic;">Add Alpha Vantage key in Account Setup for 20-day ADR</div>`;
             }
-            
-            const riskLevels = [
-                { label: 'Risking 1% of account', percent: 1.0, isRisk: true },
-                { label: 'Risking 0.75% of account', percent: 0.75, isRisk: true },
-                { label: 'Risking 0.5% of account', percent: 0.5, isRisk: true },
-                { label: 'Risking 0.25% of account', percent: 0.25, isRisk: true },
-                { label: 'Risking 0.125% of account', percent: 0.125, isRisk: true },
-                { label: '25% Position Size', percent: 25, isRisk: false },
-                { label: '15% Position Size', percent: 15, isRisk: false },
-                { label: '12% Position Size', percent: 12, isRisk: false },
-                { label: '9% Position Size', percent: 9, isRisk: false }
-            ];
-            
+
 
             let html = `
                 <div style="margin-bottom: 20px; padding: 15px; background: #f9f9f9; border-radius: 8px;">
