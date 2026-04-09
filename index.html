@@ -796,15 +796,23 @@
                             Net New Highs (Nasdaq)
                         </label>
                         <label style="display:flex; align-items:center; gap:5px; cursor:pointer; font-size:0.82em; font-weight:600; padding:4px 8px; border-radius:6px; background:#f9fafb; border:1px solid #e5e7eb;"
-                               title="JNK ABOVE 20 SMA: JNK is the high-yield bond ETF. When it's above its 20-day moving average, credit markets are healthy and risk appetite is strong — institutions are buying risky assets. Below = credit stress, risk-off environment.">
+                               title="JNK ABOVE 20 SMA: Auto-updated via Alpha Vantage when key is set. JNK is the high-yield bond ETF — above its 20-day SMA means credit markets are healthy. Below = credit stress, risk-off.">
                             <input type="checkbox" id="chkJNK" onchange="saveMarketConditions(); updateExposureScaling();" style="width:15px; height:15px; cursor:pointer;">
                             JNK &gt; 20 SMA
+                            <span id="jnkStatus" style="font-size:0.75em; color:#9ca3af; font-weight:400;"></span>
                         </label>
                         <label style="display:flex; align-items:center; gap:5px; cursor:pointer; font-size:0.82em; font-weight:600; padding:4px 8px; border-radius:6px; background:#f9fafb; border:1px solid #e5e7eb;"
-                               title="QQQ ABOVE 21 EMA: Nasdaq 100 ETF above its 21-day exponential moving average. This confirms the tech-heavy market leaders are in an uptrend. Below = market is in a correction or downtrend, not a safe environment to be aggressive.">
+                               title="QQQ ABOVE 21 EMA: Auto-updated via Alpha Vantage when key is set. QQQ above its 21-day EMA confirms Nasdaq leaders are in uptrend. Below = correction, not safe to be aggressive.">
                             <input type="checkbox" id="chkQQQ" onchange="saveMarketConditions(); updateExposureScaling();" style="width:15px; height:15px; cursor:pointer;">
                             QQQ &gt; 21 EMA
+                            <span id="qqqStatus" style="font-size:0.75em; color:#9ca3af; font-weight:400;"></span>
                         </label>
+                        <button onclick="autoUpdateMarketConditions(true)" 
+                                id="maUpdateBtn"
+                                style="padding:3px 8px; font-size:0.75em; font-weight:600; border-radius:6px; border:1px solid #d1d5db; background:#f9fafb; cursor:pointer; color:#6b7280; display:none;"
+                                title="Re-fetch JNK and QQQ vs their moving averages from Alpha Vantage. Cached daily — only uses an API call if data is older than 24hrs.">
+                            🔄 Update MA
+                        </button>
 
                         <!-- NCFD/FOMO Barometer -->
                         <div style="display:flex; align-items:center; gap:5px; padding:4px 8px; border-radius:6px; border:1px solid #e5e7eb; background:#f9fafb;"
@@ -2481,6 +2489,8 @@
             updateAllDisplays();
             updateExposureScaling();
             updateNcfdBarometer();
+            // Auto-update JNK/QQQ checkboxes if Alpha Vantage key is present
+            setTimeout(() => autoUpdateMarketConditions(false), 1500);
             // Restore calculator settings
             if (data.calculatorSettings) {
                 if (data.calculatorSettings['whatIfStarting'] !== undefined) { const el = document.getElementById('whatIfStarting'); if (el) el.value = data.calculatorSettings['whatIfStarting']; }
@@ -5530,6 +5540,103 @@
             }
             thtml += '</tbody></table>';
             tableDiv.innerHTML = thtml;
+        }
+
+        // ── Auto-update JNK > 20 SMA and QQQ > 21 EMA via Alpha Vantage ─────
+        async function autoUpdateMarketConditions(forceRefresh = false) {
+            const avKey = document.getElementById('alphaVantageKey')?.value?.trim();
+            if (!avKey) return;
+
+            const btn = document.getElementById('maUpdateBtn');
+            if (btn) btn.style.display = 'inline-block';
+
+            const jnkStatus = document.getElementById('jnkStatus');
+            const qqqStatus = document.getElementById('qqqStatus');
+            if (jnkStatus) jnkStatus.textContent = ' ⏳';
+            if (qqqStatus) qqqStatus.textContent = ' ⏳';
+
+            // Check Firebase cache
+            const cacheKey = 'maConditionsCache';
+            if (!forceRefresh) {
+                try {
+                    const snap = await firebase.database().ref(cacheKey).once('value');
+                    const cached = snap.val();
+                    if (cached && cached.timestamp && (Date.now() - cached.timestamp) < 24 * 60 * 60 * 1000) {
+                        applyMAConditions(cached);
+                        return;
+                    }
+                } catch(e) { /* cache miss, fetch fresh */ }
+            }
+
+            async function fetchAV(params) {
+                const qs = new URLSearchParams({ ...params, apikey: avKey }).toString();
+                const r = await fetch(`https://www.alphavantage.co/query?${qs}`);
+                return r.json();
+            }
+
+            try {
+                const [jnkQuote, jnkSMA, qqqQuote, qqqEMA] = await Promise.all([
+                    fetchAV({ function: 'GLOBAL_QUOTE', symbol: 'JNK' }),
+                    fetchAV({ function: 'SMA', symbol: 'JNK', interval: 'daily', time_period: '20', series_type: 'close' }),
+                    fetchAV({ function: 'GLOBAL_QUOTE', symbol: 'QQQ' }),
+                    fetchAV({ function: 'EMA', symbol: 'QQQ', interval: 'daily', time_period: '21', series_type: 'close' }),
+                ]);
+
+                const jnkPrice  = parseFloat(jnkQuote?.['Global Quote']?.['05. price']);
+                const jnkSmaVal = parseFloat(Object.values(jnkSMA?.['Technical Analysis: SMA'] || {})[0]?.SMA);
+                const qqqPrice  = parseFloat(qqqQuote?.['Global Quote']?.['05. price']);
+                const qqqEmaVal = parseFloat(Object.values(qqqEMA?.['Technical Analysis: EMA'] || {})[0]?.EMA);
+
+                if (!jnkPrice || !jnkSmaVal || !qqqPrice || !qqqEmaVal) {
+                    console.warn('MA conditions: incomplete data', { jnkPrice, jnkSmaVal, qqqPrice, qqqEmaVal });
+                    if (jnkStatus) jnkStatus.textContent = ' ⚠';
+                    if (qqqStatus) qqqStatus.textContent = ' ⚠';
+                    return;
+                }
+
+                const result = {
+                    jnkAboveSMA: jnkPrice > jnkSmaVal,
+                    qqqAboveEMA: qqqPrice > qqqEmaVal,
+                    jnkPrice, jnkSmaVal, qqqPrice, qqqEmaVal,
+                    timestamp: Date.now()
+                };
+
+                try { await firebase.database().ref(cacheKey).set(result); } catch(e) {}
+                applyMAConditions(result);
+
+            } catch(e) {
+                console.warn('autoUpdateMarketConditions failed:', e);
+                if (jnkStatus) jnkStatus.textContent = ' ⚠';
+                if (qqqStatus) qqqStatus.textContent = ' ⚠';
+            }
+        }
+
+        function applyMAConditions(data) {
+            const jnkChk    = document.getElementById('chkJNK');
+            const qqqChk    = document.getElementById('chkQQQ');
+            const jnkStatus = document.getElementById('jnkStatus');
+            const qqqStatus = document.getElementById('qqqStatus');
+
+            if (jnkChk && data.jnkAboveSMA !== undefined) {
+                jnkChk.checked = data.jnkAboveSMA;
+                const diff  = ((data.jnkPrice - data.jnkSmaVal) / data.jnkSmaVal * 100).toFixed(2);
+                const sign  = data.jnkAboveSMA ? '+' : '';
+                const color = data.jnkAboveSMA ? '#15803d' : '#dc2626';
+                if (jnkStatus) jnkStatus.innerHTML = ` <span style="color:${color};">${sign}${diff}%</span>`;
+            }
+
+            if (qqqChk && data.qqqAboveEMA !== undefined) {
+                qqqChk.checked = data.qqqAboveEMA;
+                const diff  = ((data.qqqPrice - data.qqqEmaVal) / data.qqqEmaVal * 100).toFixed(2);
+                const sign  = data.qqqAboveEMA ? '+' : '';
+                const color = data.qqqAboveEMA ? '#15803d' : '#dc2626';
+                if (qqqStatus) qqqStatus.innerHTML = ` <span style="color:${color};">${sign}${diff}%</span>`;
+            }
+
+            saveMarketConditions();
+            updateExposureScaling();
+            const btn = document.getElementById('maUpdateBtn');
+            if (btn) btn.style.display = 'inline-block';
         }
 
         // ── 20-Day ADR via Alpha Vantage (free tier, 25 req/day) ─────────────
