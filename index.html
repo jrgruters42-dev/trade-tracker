@@ -743,10 +743,6 @@
                         <div style="font-size: 0.65em; opacity: 0.7;">Open P&L</div>
                         <div style="font-size: 1em; font-weight: 600;" id="openPnlCompact">$0 (0%)</div>
                     </div>
-                    <div style="cursor: help; text-align: center;" title="Expected value per trade in R: (Win Rate × Avg Win R) - (Loss Rate × Avg Loss R)">
-                        <div style="font-size: 0.65em; opacity: 0.7;">Expectancy</div>
-                        <div style="font-size: 1em; font-weight: 600;" id="expectancyCompact">0.00R</div>
-                    </div>
                     <div style="cursor: help; text-align: center;" title="My Roth YTD performance. Gold outline if beating SPY.">
                         <div style="font-size: 0.65em; opacity: 0.7;">My Roth</div>
                         <div style="font-size: 1em; font-weight: 600;" id="myRothCompact">0.0%</div>
@@ -771,7 +767,7 @@
                         <div style="font-size: 0.65em; opacity: 0.7;">Avg Loss</div>
                         <div style="font-size: 1em; font-weight: 600; color: #dc2626;" id="avgLossCompact">0R</div>
                     </div>
-                    <div style="cursor: help; text-align: center;" title="Expected R-multiple per trade: (Win Rate × Avg Win R) - (Loss Rate × Avg Loss R)">
+                    <div style="cursor: help; text-align: center;" title="EXPECTANCY: (Win Rate × Avg Win R) - (Loss Rate × Avg Loss R). Based on all closed trades. This is your edge per trade — positive means your system is mathematically profitable over a large sample.">
                         <div style="font-size: 0.65em; opacity: 0.7;">Expectancy</div>
                         <div style="font-size: 1em; font-weight: 600;" id="expectancyPctCompact">0R</div>
                     </div>
@@ -3261,12 +3257,7 @@
             document.getElementById('openPnlCompact').textContent = `$${totalOpenPnlDollars.toLocaleString()} (${totalOpenPnl.toFixed(1)}%)`;
             document.getElementById('cashAvailableCompact').textContent = '$' + (accountSize - (totalExposure / 100) * accountSize).toLocaleString(undefined, {minimumFractionDigits: 0, maximumFractionDigits: 0});
             
-            // Update expectancy in compact display
-            if (closedTrades.length > 0) {
-                const stats = calculateTradeStats(closedTrades);
-                const expectancyR = stats.winRate > 0 ? ((stats.winRate / 100) * stats.avgR) : 0;
-                document.getElementById('expectancyCompact').textContent = expectancyR.toFixed(2) + 'R';
-            }
+            // expectancyCompact removed from UI — expectancyPctCompact in performance row is the correct one
             
             // Update My Roth compact display
             const myRoth = parseFloat(document.getElementById('myRoth').value) || 0;
@@ -5552,18 +5543,21 @@
             const losses  = last10.filter(e => e.r < 0);
             const twoRHit = last10.filter(e => e.r >= 2);
             const winRate    = (wins.length / last10.length) * 100;
+            const avgGainR   = wins.length > 0 ? wins.reduce((s,e) => s + e.r, 0) / wins.length : 0;
             const avgLossR   = losses.length > 0 ? losses.reduce((s,e) => s + e.r, 0) / losses.length : 0;
             const twoRRate   = (twoRHit.length / last10.length) * 100;
             const expectancy = last10.reduce((s,e) => s + e.r, 0) / last10.length;
 
             const metrics = [
-                { label: 'Win Rate',    value: winRate.toFixed(0)+'%',    tip: 'Target: 40%+. % of last 10 events positive R. Open positions count at current R.',
-                  ok: winRate >= 40,    warn: winRate >= 25 },
-                { label: 'Avg Loss',    value: avgLossR !== 0 ? avgLossR.toFixed(2)+'R' : 'N/A', tip: 'Target: near -1R. If worse than -1.5R, stop discipline may be slipping.',
+                { label: 'Win Rate',   value: winRate.toFixed(0)+'%',                        tip: 'Target: 40%+. % of last 10 events positive R. Open positions count at current R.',
+                  ok: winRate >= 40,   warn: winRate >= 25 },
+                { label: 'Avg Gain',   value: avgGainR > 0 ? avgGainR.toFixed(2)+'R' : 'N/A', tip: 'Average R on winning events in last 10. Target: >3R. Low here means you\'re banking small wins and not letting runners run.',
+                  ok: avgGainR >= 3,   warn: avgGainR >= 1.5 },
+                { label: 'Avg Loss',   value: avgLossR !== 0 ? avgLossR.toFixed(2)+'R' : 'N/A', tip: 'Target: near -1R. If worse than -1.5R, stop discipline may be slipping.',
                   ok: avgLossR >= -1.2, warn: avgLossR >= -1.5 },
-                { label: '2R+ Rate',    value: twoRRate.toFixed(0)+'%',   tip: 'Target: 20%+. What % of last 10 reached 2R or better. Low = cutting winners early.',
-                  ok: twoRRate >= 20,   warn: twoRRate >= 10 },
-                { label: 'Expectancy',  value: expectancy.toFixed(2)+'R', tip: 'Target: >0.5R. Average R per event. Positive = system working.',
+                { label: '2R+ Rate',   value: twoRRate.toFixed(0)+'%',                       tip: 'Target: 20%+. What % of last 10 reached 2R or better. Low = cutting winners early.',
+                  ok: twoRRate >= 20,  warn: twoRRate >= 10 },
+                { label: 'Expectancy', value: expectancy.toFixed(2)+'R',                     tip: 'Target: >0.5R. Average R per event. Positive = system working.',
                   ok: expectancy >= 0.5, warn: expectancy >= 0 }
             ];
 
@@ -5574,7 +5568,7 @@
                 else                  { badge.textContent = '⚠ Review Execution'; badge.style.background = '#fee2e2'; badge.style.color = '#dc2626'; }
             }
 
-            let html = '<div style="display:grid; grid-template-columns:repeat(4,1fr); gap:8px; margin-bottom:12px;">';
+            let html = '<div style="display:grid; grid-template-columns:repeat(5,1fr); gap:8px; margin-bottom:12px;">';
             metrics.forEach(m => {
                 const bg    = m.ok ? '#dcfce7' : m.warn ? '#fef9c3' : '#fee2e2';
                 const color = m.ok ? '#15803d' : m.warn ? '#b45309' : '#dc2626';
