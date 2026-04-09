@@ -6608,11 +6608,12 @@
             if (apiKey) {
                 try {
                     const to   = Math.floor(Date.now() / 1000);
-                    const from = to - (30 * 24 * 60 * 60); // 30 days back to ensure 20 trading days
+                    const from = to - (35 * 24 * 60 * 60); // 35 days back to ensure 20 trading days
                     const url  = `https://finnhub.io/api/v1/stock/candle?symbol=${symbol}&resolution=D&from=${from}&to=${to}&token=${apiKey}`;
                     const resp = await fetch(url);
                     const data = await resp.json();
-                    if (data && data.h && data.l && data.h.length >= 5) {
+                    console.log(`ADR fetch for ${symbol}:`, data);
+                    if (data && data.s === 'ok' && data.h && data.l && data.h.length >= 5) {
                         const days = Math.min(20, data.h.length);
                         const ranges = [];
                         for (let i = data.h.length - days; i < data.h.length; i++) {
@@ -6620,6 +6621,8 @@
                         }
                         adrDollars = ranges.reduce((a, b) => a + b, 0) / ranges.length;
                         adrPct = (adrDollars / price) * 100;
+                    } else if (data && data.s === 'no_data') {
+                        console.warn(`ADR: no candle data for ${symbol} — may require paid Finnhub plan`);
                     }
                 } catch (e) {
                     console.warn('ADR fetch failed:', e);
