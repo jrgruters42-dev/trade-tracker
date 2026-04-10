@@ -682,7 +682,7 @@
                     </div>
                     
                     <!-- Metrics Grid -->
-                    <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px;">
+                    <div style="display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px;">
                         <div style="cursor: help;" title="Your year-to-date performance. Green = profitable, Red = negative">
                             <div style="font-size: 0.65em; opacity: 0.7;">YTD</div>
                             <div style="font-size: 1.1em; font-weight: 700;" id="ytdDisplay">+$0 (0.0%)</div>
@@ -724,6 +724,11 @@
                         <div style="cursor: help;" title="What % of all your P&L activity is still unrealized (at risk). Shows Unrealized / (Unrealized + Realized). >60% means most gains are still exposed to drawdowns.">
                             <div style="font-size: 0.65em; opacity: 0.7;">Unrealized Risk %</div>
                             <div style="font-size: 1.1em; font-weight: 700;" id="bufferPercent">0%</div>
+                        </div>
+
+                        <div style="cursor: help;" title="CLOSED CURVE DRAWDOWN: The peak-to-trough decline in your cumulative closed trade P&L%. Measures only realized trades — open positions excluded. Green = within 2% of peak. Yellow = 2–5% drawdown. Red = 5%+ drawdown (execution warning signal). A deepening drawdown here means your realized performance is deteriorating, not just an open position going against you.">
+                            <div style="font-size: 0.65em; opacity: 0.7;">Closed DD from Peak</div>
+                            <div style="font-size: 1.1em; font-weight: 700;" id="closedCurveDD">--</div>
                         </div>
                     </div>
                 </div>
@@ -4859,6 +4864,33 @@
             // Display Buffer %
             const bufferColor = bufferPct > 60 ? '#ef4444' : bufferPct > 40 ? '#f59e0b' : '#10b981';
             document.getElementById('bufferPercent').innerHTML = `<span style="color: ${bufferColor};">${bufferPct.toFixed(0)}%</span>`;
+
+            // Closed Curve Drawdown — peak-to-trough on cumulative closed P&L%
+            const closedDDEl = document.getElementById('closedCurveDD');
+            if (closedDDEl) {
+                if (closedTrades.length === 0) {
+                    closedDDEl.textContent = '--';
+                } else {
+                    // Build cumulative closed P&L curve sorted by exit date
+                    const sorted = [...closedTrades].sort((a, b) => new Date(a.exitDate) - new Date(b.exitDate));
+                    let cum = 0, peak = 0, maxDD = 0;
+                    sorted.forEach(t => {
+                        cum += (t.portfolioPnlPercent || 0);
+                        if (cum > peak) peak = cum;
+                        const dd = cum - peak;
+                        if (dd < maxDD) maxDD = dd;
+                    });
+                    // Current drawdown from peak
+                    const currentDD = cum - peak;
+                    const ddColor  = currentDD > -2  ? '#15803d'
+                                   : currentDD > -5  ? '#d97706'
+                                   : '#dc2626';
+                    const ddLabel  = currentDD === 0
+                        ? `<span style="color:#15803d;">At Peak ✓</span>`
+                        : `<span style="color:${ddColor};">${currentDD.toFixed(2)}%</span>`;
+                    closedDDEl.innerHTML = ddLabel;
+                }
+            }
             
             // Determine Safety Status
             let safetyLevel = 'HEALTHY';
@@ -5577,15 +5609,28 @@
             try {
                 const [jnkQuote, jnkSMA, qqqQuote, qqqEMA] = await Promise.all([
                     fetchAV({ function: 'GLOBAL_QUOTE', symbol: 'JNK' }),
-                    fetchAV({ function: 'SMA', symbol: 'JNK', interval: 'daily', time_period: '20', series_type: 'close' }),
+                    fetchAV({ function: 'SMA', symbol: 'JNK', interval: 'daily', time_period: 20, series_type: 'close' }),
                     fetchAV({ function: 'GLOBAL_QUOTE', symbol: 'QQQ' }),
-                    fetchAV({ function: 'EMA', symbol: 'QQQ', interval: 'daily', time_period: '21', series_type: 'close' }),
+                    fetchAV({ function: 'EMA', symbol: 'QQQ', interval: 'daily', time_period: 21, series_type: 'close' }),
                 ]);
 
+                console.log('JNK Quote:', jnkQuote);
+                console.log('JNK SMA:', jnkSMA);
+                console.log('QQQ Quote:', qqqQuote);
+                console.log('QQQ EMA:', qqqEMA);
+
                 const jnkPrice  = parseFloat(jnkQuote?.['Global Quote']?.['05. price']);
-                const jnkSmaVal = parseFloat(Object.values(jnkSMA?.['Technical Analysis: SMA'] || {})[0]?.SMA);
+                // Get most recent SMA value — sort dates descending and take first
+                const jnkSMAData = jnkSMA?.['Technical Analysis: SMA'] || {};
+                const jnkLatestDate = Object.keys(jnkSMAData).sort().reverse()[0];
+                const jnkSmaVal = parseFloat(jnkSMAData[jnkLatestDate]?.SMA);
+
                 const qqqPrice  = parseFloat(qqqQuote?.['Global Quote']?.['05. price']);
-                const qqqEmaVal = parseFloat(Object.values(qqqEMA?.['Technical Analysis: EMA'] || {})[0]?.EMA);
+                const qqqEMAData = qqqEMA?.['Technical Analysis: EMA'] || {};
+                const qqqLatestDate = Object.keys(qqqEMAData).sort().reverse()[0];
+                const qqqEmaVal = parseFloat(qqqEMAData[qqqLatestDate]?.EMA);
+
+                console.log('Parsed:', { jnkPrice, jnkSmaVal, qqqPrice, qqqEmaVal });
 
                 if (!jnkPrice || !jnkSmaVal || !qqqPrice || !qqqEmaVal) {
                     console.warn('MA conditions: incomplete data', { jnkPrice, jnkSmaVal, qqqPrice, qqqEmaVal });
