@@ -3067,10 +3067,7 @@
                                 <button class="btn-secondary" style="padding: 3px 6px; font-size: 0.75em; white-space: nowrap;" onclick="openEditPositionModal(${pos.id})">Edit</button>
                                 <button class="btn-success" style="padding: 3px 6px; font-size: 0.75em; white-space: nowrap;" onclick="openPartialSellModal(${pos.id})">Part</button>
                                 <button class="btn-secondary" style="padding: 3px 6px; font-size: 0.75em; white-space: nowrap;" onclick="openUpdateStopModal(${pos.id})">Stop</button>
-                                <button class="btn-secondary" style="padding: 3px 6px; font-size: 0.75em; white-space: nowrap; background:#7c3aed; color:white;" 
-                                    onclick="openHedgeModal(${pos.id})"
-                                    title="${pos.hedges && pos.hedges.length > 0 ? 'Hedges: ' + pos.hedges.map(h => (h.action === \'buy\' ? \'Buy\' : \'Sell\') + \'  $\' + h.premium + \'  (\' + h.date + \')\').join(\'  |  \') + \'  |  Net: $\' + pos.hedges.reduce((s,h) => s + (h.action === \'buy\' ? h.premium : -h.premium), 0).toFixed(2) : \'No hedges logged\'}">
-                                    Hedge${pos.hedges && pos.hedges.length > 0 ? ' 🛡' : ''}</button>
+                                <button class="btn-secondary" style="padding: 3px 6px; font-size: 0.75em; white-space: nowrap; background:#7c3aed; color:white;" onclick="openHedgeModal(${pos.id})" title="${getHedgeTooltip(pos)}">${pos.hedges && pos.hedges.length > 0 ? 'Hedge 🛡' : 'Hedge'}</button>
                                 <button class="btn-danger" style="padding: 3px 6px; font-size: 0.75em; white-space: nowrap;" onclick="openClosePositionModal(${pos.id})">Close</button>
                                 <button class="btn-danger" style="padding: 3px 6px; font-size: 0.75em; white-space: nowrap;" onclick="deletePosition(${pos.id})">Del</button>
                             </div>
@@ -5831,6 +5828,13 @@
                 console.warn('ADR fetch failed:', e);
                 return null;
             }
+        }
+
+        function getHedgeTooltip(pos) {
+            if (!pos.hedges || pos.hedges.length === 0) return 'No hedges logged — click to add a put hedge';
+            const net = pos.hedges.reduce((s, h) => s + (h.action === 'buy' ? h.premium : -h.premium), 0);
+            const lines = pos.hedges.map(h => (h.action === 'buy' ? 'Buy' : 'Sell') + ' $' + h.premium + ' (' + h.date + ')');
+            return 'Hedges: ' + lines.join(' | ') + ' | Net cost: $' + net.toFixed(2);
         }
 
         // ── Cash Flows (Deposits / Withdrawals) ──────────────────────────────
