@@ -654,9 +654,16 @@
                     <button onclick="testFirebaseConnection()" class="btn-success btn-small" style="padding: 5px 10px; font-size: 10px;">🔄</button>
                     <span id="lastSnapshot" style="color: #666; font-size: 10px; font-style: italic; white-space: nowrap;"></span>
                 </div>
+                <!-- Cash Flows (Deposits / Withdrawals) -->
+                <div style="border-top: 1px solid #e0e0e0; padding-top: 8px; margin-top: 4px;">
+                    <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:6px;">
+                        <div style="font-size:0.78em; font-weight:700; color:#667eea;" title="Log any money you move in or out of this account. These are excluded from YTD% so your performance reflects pure trading returns only.">💸 Deposits / Withdrawals ℹ</div>
+                        <button onclick="addCashFlow()" class="btn-success" style="padding:3px 8px; font-size:10px;">+ Add</button>
+                    </div>
+                    <div id="cashFlowList" style="font-size:0.78em; color:#6b7280; max-height:80px; overflow-y:auto;"></div>
+                    <div style="font-size:0.75em; color:#9ca3af; margin-top:3px;">Net flows: <span id="netCashFlows" style="font-weight:600; color:#374151;">$0</span> — excluded from YTD%</div>
+                </div>
             </div>
-            
-            <!-- Account Info (Compact) -->
             <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; padding-top: 6px; border-top: 1px solid #e0e0e0; margin-bottom: 8px;">
                 <div style="padding: 4px; text-align: center; font-size: 0.75em;">
                     <div style="opacity: 0.7;">Account Size</div>
@@ -2034,12 +2041,81 @@
         </div>
     </div>
 
+    <!-- Hedge Modal -->
+    <div id="hedgeModal" class="modal">
+        <div class="modal-content" style="max-width:420px;">
+            <div class="modal-header">
+                <h2>🛡️ Log Put Hedge</h2>
+                <span class="close" onclick="closeModal('hedgeModal')">&times;</span>
+            </div>
+            <p style="font-size:0.85em; color:#6b7280; margin-bottom:14px;">Log a put option bought or sold as a hedge for this position. The net cost/proceeds adjust the position's effective entry price and P&L.</p>
+            <input type="hidden" id="hedgePosId">
+            <div class="form-grid" style="grid-template-columns:1fr 1fr; gap:10px;">
+                <div class="form-group">
+                    <label>Action</label>
+                    <select id="hedgeAction" style="padding:8px; width:100%; border:2px solid #e5e7eb; border-radius:6px;">
+                        <option value="buy">Buy Put (cost — increases basis)</option>
+                        <option value="sell">Sell/Expire Put (proceeds — reduces cost or locks profit)</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Total Premium ($)</label>
+                    <input type="number" id="hedgePremium" placeholder="e.g. 250" step="0.01" min="0" style="padding:8px; width:100%; border:2px solid #e5e7eb; border-radius:6px;">
+                </div>
+                <div class="form-group">
+                    <label>Date</label>
+                    <input type="date" id="hedgeDate" style="padding:8px; width:100%; border:2px solid #e5e7eb; border-radius:6px;">
+                </div>
+                <div class="form-group">
+                    <label>Notes (optional)</label>
+                    <input type="text" id="hedgeNotes" placeholder="e.g. 5 contracts @ $50" style="padding:8px; width:100%; border:2px solid #e5e7eb; border-radius:6px;">
+                </div>
+            </div>
+            <div id="hedgePreview" style="margin:10px 0; padding:10px; background:#f0f9ff; border-radius:6px; font-size:0.85em;"></div>
+            <button onclick="saveHedge()" class="btn-success" style="width:100%; padding:10px; font-size:1em; font-weight:700;">Save Hedge</button>
+        </div>
+    </div>
+
+    <!-- Cash Flow Modal -->
+    <div id="cashFlowModal" class="modal">
+        <div class="modal-content" style="max-width:380px;">
+            <div class="modal-header">
+                <h2>💸 Log Cash Flow</h2>
+                <span class="close" onclick="closeModal('cashFlowModal')">&times;</span>
+            </div>
+            <p style="font-size:0.85em; color:#6b7280; margin-bottom:14px;">Log a deposit or withdrawal. This adjusts the account balance but is excluded from YTD% so your performance reflects pure trading returns only.</p>
+            <div class="form-grid" style="grid-template-columns:1fr 1fr; gap:10px;">
+                <div class="form-group">
+                    <label>Type</label>
+                    <select id="cashFlowType" style="padding:8px; width:100%; border:2px solid #e5e7eb; border-radius:6px;">
+                        <option value="deposit">Deposit (added money)</option>
+                        <option value="withdrawal">Withdrawal (removed money)</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Amount ($)</label>
+                    <input type="number" id="cashFlowAmount" placeholder="e.g. 10000" step="100" min="0" style="padding:8px; width:100%; border:2px solid #e5e7eb; border-radius:6px;">
+                </div>
+                <div class="form-group">
+                    <label>Date</label>
+                    <input type="date" id="cashFlowDate" style="padding:8px; width:100%; border:2px solid #e5e7eb; border-radius:6px;">
+                </div>
+                <div class="form-group">
+                    <label>Notes (optional)</label>
+                    <input type="text" id="cashFlowNotes" placeholder="e.g. moved from savings" style="padding:8px; width:100%; border:2px solid #e5e7eb; border-radius:6px;">
+                </div>
+            </div>
+            <button onclick="saveCashFlow()" class="btn-success" style="width:100%; padding:10px; font-size:1em; font-weight:700;">Save</button>
+        </div>
+    </div>
+
     <script>
         // Firebase and data variables
         let db = null;
         let dbRef = null;
         let firebaseConfig = null;
         let isFirebaseInitialized = false;
+        let cashFlows = [];  // [{id, type, amount, date, notes}]
         
         // Configuration
         // Get recovery status lookback period from user input
@@ -2202,6 +2278,7 @@
             const data = {
                 openPositions,
                 closedTrades,
+                cashFlows,
                 dailyEquity,
                 dailyEquityEntries,
                 positionIdCounter,
@@ -2386,6 +2463,7 @@
 
             openPositions = data.openPositions || [];
             closedTrades = data.closedTrades || [];
+            cashFlows = data.cashFlows || [];
             dailyEquity = data.dailyEquity || [];
             dailyEquityEntries = data.dailyEquityEntries || [];
             positionIdCounter = data.positionIdCounter || 1;
@@ -2494,6 +2572,7 @@
             updateAllDisplays();
             updateExposureScaling();
             updateNcfdBarometer();
+            updateCashFlowList();
             // Auto-update JNK/QQQ checkboxes if Alpha Vantage key is present
             setTimeout(() => autoUpdateMarketConditions(false), 1500);
             // Restore calculator settings
@@ -2583,8 +2662,17 @@
                 }
             }
             
+            // Calculate hedge net cost (buys increase cost, sells reduce it)
+            let hedgeNetCost = 0;
+            if (pos.hedges && pos.hedges.length > 0) {
+                hedgeNetCost = pos.hedges.reduce((sum, h) => {
+                    return sum + (h.action === 'buy' ? h.premium : -h.premium);
+                }, 0);
+            }
+
             const positionValue = pos.currentPrice * pos.shares;
-            const unrealizedPnL = (pos.currentPrice - adjustedPrice) * pos.shares;
+            // Hedge cost reduces overall P&L (put premium increases effective cost)
+            const unrealizedPnL = (pos.currentPrice - adjustedPrice) * pos.shares - hedgeNetCost;
             const totalPnL = realizedPnL + unrealizedPnL;
             const totalCost = pos.entryPrice * pos.initialShares;
             
@@ -2646,6 +2734,7 @@
                 initialWeight: parseFloat(document.getElementById('initialWeight').value),
                 entryDate: getTodayLocal(),
                 partialSells: [],
+                hedges: [],
                 peakR: 0
             };
 
@@ -2664,6 +2753,7 @@
                 const data = {
                     openPositions,
                     closedTrades,
+                    cashFlows,
                     dailyEquity,
                     dailyEquityEntries,
                     positionIdCounter,
@@ -2977,6 +3067,10 @@
                                 <button class="btn-secondary" style="padding: 3px 6px; font-size: 0.75em; white-space: nowrap;" onclick="openEditPositionModal(${pos.id})">Edit</button>
                                 <button class="btn-success" style="padding: 3px 6px; font-size: 0.75em; white-space: nowrap;" onclick="openPartialSellModal(${pos.id})">Part</button>
                                 <button class="btn-secondary" style="padding: 3px 6px; font-size: 0.75em; white-space: nowrap;" onclick="openUpdateStopModal(${pos.id})">Stop</button>
+                                <button class="btn-secondary" style="padding: 3px 6px; font-size: 0.75em; white-space: nowrap; background:#7c3aed; color:white;" 
+                                    onclick="openHedgeModal(${pos.id})"
+                                    title="${pos.hedges && pos.hedges.length > 0 ? 'Hedges: ' + pos.hedges.map(h => (h.action === \'buy\' ? \'Buy\' : \'Sell\') + \'  $\' + h.premium + \'  (\' + h.date + \')\').join(\'  |  \') + \'  |  Net: $\' + pos.hedges.reduce((s,h) => s + (h.action === \'buy\' ? h.premium : -h.premium), 0).toFixed(2) : \'No hedges logged\'}">
+                                    Hedge${pos.hedges && pos.hedges.length > 0 ? ' 🛡' : ''}</button>
                                 <button class="btn-danger" style="padding: 3px 6px; font-size: 0.75em; white-space: nowrap;" onclick="openClosePositionModal(${pos.id})">Close</button>
                                 <button class="btn-danger" style="padding: 3px 6px; font-size: 0.75em; white-space: nowrap;" onclick="deletePosition(${pos.id})">Del</button>
                             </div>
@@ -3003,7 +3097,7 @@
             const closedPnlPercent = (totalClosedPnlDollars / startingAccount) * 100;
             
             // Calculate Trading YTD P&L %
-            const tradingYTD = ((accountSize - startingAccount) / startingAccount) * 100;
+            const tradingYTD = getAdjustedYTDPercent(accountSize, startingAccount);
             
             // Calculate Roth YTD P&L %
             const myRoth = parseFloat(document.getElementById('myRoth').value) || 0;
@@ -4784,8 +4878,8 @@
             });
             
             // Calculate YTD metrics
-            const currentYTD = accountSize - startingAccount;
-            const currentYTDPercent = (currentYTD / startingAccount) * 100;
+            const currentYTD = getAdjustedYTDDollars(accountSize, startingAccount);
+            const currentYTDPercent = getAdjustedYTDPercent(accountSize, startingAccount);
             const ytdRealizedDollars = totalRealizedDollars + totalPartialRealizedDollars;
             const ytdFloorDollars = currentYTD - totalUnrealizedDollars;
             const ytdFloorPercent = (ytdFloorDollars / startingAccount) * 100;
@@ -5333,7 +5427,7 @@
                 }
             });
             
-            const currentYTD = accountSize - startingAccount;
+            const currentYTD = getAdjustedYTDDollars(accountSize, startingAccount);
             const currentNetRealized = currentTotalRealized + currentTotalPartialRealized;
             const currentYTDFloor = currentYTD - currentTotalUnrealized;
             const currentYTDLosses = Math.abs(Math.min(0, currentNetRealized));
@@ -5737,6 +5831,119 @@
                 console.warn('ADR fetch failed:', e);
                 return null;
             }
+        }
+
+        // ── Cash Flows (Deposits / Withdrawals) ──────────────────────────────
+        function getNetCashFlows() {
+            return cashFlows.reduce((sum, cf) => {
+                return sum + (cf.type === 'deposit' ? cf.amount : -cf.amount);
+            }, 0);
+        }
+
+        function getAdjustedYTDPercent(accountSize, startingAccount) {
+            const netFlows = getNetCashFlows();
+            // Adjusted gain = (current - starting - netFlows) / starting
+            return ((accountSize - startingAccount - netFlows) / startingAccount) * 100;
+        }
+
+        function getAdjustedYTDDollars(accountSize, startingAccount) {
+            return accountSize - startingAccount - getNetCashFlows();
+        }
+
+        function addCashFlow() {
+            document.getElementById('cashFlowDate').value = new Date().toISOString().split('T')[0];
+            document.getElementById('cashFlowAmount').value = '';
+            document.getElementById('cashFlowNotes').value = '';
+            document.getElementById('cashFlowType').value = 'deposit';
+            document.getElementById('cashFlowModal').style.display = 'block';
+        }
+
+        function saveCashFlow() {
+            const type   = document.getElementById('cashFlowType').value;
+            const amount = parseFloat(document.getElementById('cashFlowAmount').value);
+            const date   = document.getElementById('cashFlowDate').value;
+            const notes  = document.getElementById('cashFlowNotes').value;
+            if (!amount || !date) { alert('Please enter amount and date'); return; }
+            cashFlows.push({ id: Date.now(), type, amount, date, notes });
+            cashFlows.sort((a, b) => new Date(a.date) - new Date(b.date));
+            closeModal('cashFlowModal');
+            saveToFirebase();
+            updateCashFlowList();
+            updateAllDisplays();
+        }
+
+        function deleteCashFlow(id) {
+            cashFlows = cashFlows.filter(cf => cf.id !== id);
+            saveToFirebase();
+            updateCashFlowList();
+            updateAllDisplays();
+        }
+
+        function updateCashFlowList() {
+            const el = document.getElementById('cashFlowList');
+            const netEl = document.getElementById('netCashFlows');
+            if (!el) return;
+            if (cashFlows.length === 0) {
+                el.innerHTML = '<span style="color:#9ca3af; font-style:italic;">None logged</span>';
+            } else {
+                el.innerHTML = cashFlows.map(cf => {
+                    const sign   = cf.type === 'deposit' ? '+' : '-';
+                    const color  = cf.type === 'deposit' ? '#15803d' : '#dc2626';
+                    const label  = cf.type === 'deposit' ? '↑ Deposit' : '↓ Withdrawal';
+                    return `<div style="display:flex; justify-content:space-between; align-items:center; padding:2px 0; border-bottom:1px solid #f3f4f6;">
+                        <span>${cf.date} — <span style="color:${color}; font-weight:600;">${label} ${sign}$${cf.amount.toLocaleString()}</span>${cf.notes ? ' <span style="color:#9ca3af;">(' + cf.notes + ')</span>' : ''}</span>
+                        <button onclick="deleteCashFlow(${cf.id})" style="background:none; border:none; color:#ef4444; cursor:pointer; font-size:0.9em; padding:0 4px;">✕</button>
+                    </div>`;
+                }).join('');
+            }
+            if (netEl) {
+                const net = getNetCashFlows();
+                netEl.textContent = (net >= 0 ? '+' : '') + '$' + net.toLocaleString();
+                netEl.style.color = net > 0 ? '#15803d' : net < 0 ? '#dc2626' : '#374151';
+            }
+        }
+
+        // ── Hedge (Put Options) ───────────────────────────────────────────────
+        function openHedgeModal(posId) {
+            const pos = openPositions.find(p => p.id === posId);
+            if (!pos) return;
+            document.getElementById('hedgePosId').value = posId;
+            document.getElementById('hedgeDate').value = new Date().toISOString().split('T')[0];
+            document.getElementById('hedgePremium').value = '';
+            document.getElementById('hedgeNotes').value = '';
+            document.getElementById('hedgeAction').value = 'buy';
+            updateHedgePreview(pos);
+            document.getElementById('hedgeModal').style.display = 'block';
+        }
+
+        function updateHedgePreview(pos) {
+            if (!pos) return;
+            const preview = document.getElementById('hedgePreview');
+            if (!preview) return;
+            const totalHedgeCost = (pos.hedges || []).reduce((sum, h) => {
+                return sum + (h.action === 'buy' ? h.premium : -h.premium);
+            }, 0);
+            const effectiveEntry = pos.entryPrice + (totalHedgeCost / pos.initialShares);
+            preview.innerHTML = `<strong>${pos.symbol}</strong> — Entry: $${pos.entryPrice.toFixed(2)} | 
+                Net hedge cost so far: <strong style="color:${totalHedgeCost > 0 ? '#dc2626' : '#15803d'};">$${totalHedgeCost.toFixed(2)}</strong> | 
+                Effective entry: <strong>$${effectiveEntry.toFixed(2)}</strong> (${totalHedgeCost > 0 ? '+' : ''}${(totalHedgeCost / pos.initialShares).toFixed(2)}/share)`;
+        }
+
+        function saveHedge() {
+            const posId   = parseInt(document.getElementById('hedgePosId').value);
+            const action  = document.getElementById('hedgeAction').value;
+            const premium = parseFloat(document.getElementById('hedgePremium').value);
+            const date    = document.getElementById('hedgeDate').value;
+            const notes   = document.getElementById('hedgeNotes').value;
+            if (!premium || !date) { alert('Please enter premium and date'); return; }
+
+            const pos = openPositions.find(p => p.id === posId);
+            if (!pos) return;
+            if (!pos.hedges) pos.hedges = [];
+            pos.hedges.push({ id: Date.now(), action, premium, date, notes });
+            closeModal('hedgeModal');
+            saveToFirebase();
+            updateAllDisplays();
         }
 
         // ── Calculator Settings Helper ────────────────────────────────────────
@@ -6481,7 +6688,7 @@
                 }
             });
             
-            const currentYTD = accountSize - startingAccount;
+            const currentYTD = getAdjustedYTDDollars(accountSize, startingAccount);
             const netRealized = totalRealized + totalPartialRealized;
             const ytdFloor = currentYTD - totalUnrealized;
             const totalPnL = Math.abs(totalUnrealized + netRealized);
