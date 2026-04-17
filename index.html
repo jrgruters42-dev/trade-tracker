@@ -632,14 +632,10 @@
                 </div>
                 
                 <!-- API Key and Buttons -->
-                <div style="display: grid; grid-template-columns: 1fr 1fr auto auto auto auto auto auto; gap: 6px; align-items: end; margin-bottom: 6px;">
+                <div style="display: grid; grid-template-columns: 1fr auto auto auto auto auto auto; gap: 6px; align-items: end; margin-bottom: 6px;">
                     <div class="form-group" style="margin-bottom: 0;">
-                        <label style="font-size: 10px;" title="Finnhub API key for real-time price updates. Free at finnhub.io">Finnhub API Key</label>
+                        <label style="font-size: 10px;">Finnhub API Key</label>
                         <input type="text" id="apiKey" placeholder="Optional" style="padding: 4px; font-size: 11px;">
-                    </div>
-                    <div class="form-group" style="margin-bottom: 0;">
-                        <label style="font-size: 10px;" title="Alpha Vantage API key for 20-day ADR on position sizing tabs. Free at alphavantage.co — 25 requests/day limit. ADR results cached 24hrs per symbol.">Alpha Vantage Key</label>
-                        <input type="text" id="alphaVantageKey" placeholder="Optional" style="padding: 4px; font-size: 11px;" onchange="saveToFirebase();">
                     </div>
                     <div class="form-group" style="margin-bottom: 0;">
                         <label style="font-size: 10px;">SPY Jan 2</label>
@@ -654,16 +650,9 @@
                     <button onclick="testFirebaseConnection()" class="btn-success btn-small" style="padding: 5px 10px; font-size: 10px;">🔄</button>
                     <span id="lastSnapshot" style="color: #666; font-size: 10px; font-style: italic; white-space: nowrap;"></span>
                 </div>
-                <!-- Cash Flows (Deposits / Withdrawals) -->
-                <div style="border-top: 1px solid #e0e0e0; padding-top: 8px; margin-top: 4px;">
-                    <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:6px;">
-                        <div style="font-size:0.78em; font-weight:700; color:#667eea;" title="Log any money you move in or out of this account. These are excluded from YTD% so your performance reflects pure trading returns only.">💸 Deposits / Withdrawals ℹ</div>
-                        <button onclick="addCashFlow()" class="btn-success" style="padding:3px 8px; font-size:10px;">+ Add</button>
-                    </div>
-                    <div id="cashFlowList" style="font-size:0.78em; color:#6b7280; max-height:80px; overflow-y:auto;"></div>
-                    <div style="font-size:0.75em; color:#9ca3af; margin-top:3px;">Net flows: <span id="netCashFlows" style="font-weight:600; color:#374151;">$0</span> — excluded from YTD%</div>
-                </div>
             </div>
+            
+            <!-- Account Info (Compact) -->
             <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; padding-top: 6px; border-top: 1px solid #e0e0e0; margin-bottom: 8px;">
                 <div style="padding: 4px; text-align: center; font-size: 0.75em;">
                     <div style="opacity: 0.7;">Account Size</div>
@@ -689,7 +678,7 @@
                     </div>
                     
                     <!-- Metrics Grid -->
-                    <div style="display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px;">
+                    <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px;">
                         <div style="cursor: help;" title="Your year-to-date performance. Green = profitable, Red = negative">
                             <div style="font-size: 0.65em; opacity: 0.7;">YTD</div>
                             <div style="font-size: 1.1em; font-weight: 700;" id="ytdDisplay">+$0 (0.0%)</div>
@@ -731,11 +720,6 @@
                         <div style="cursor: help;" title="What % of all your P&L activity is still unrealized (at risk). Shows Unrealized / (Unrealized + Realized). >60% means most gains are still exposed to drawdowns.">
                             <div style="font-size: 0.65em; opacity: 0.7;">Unrealized Risk %</div>
                             <div style="font-size: 1.1em; font-weight: 700;" id="bufferPercent">0%</div>
-                        </div>
-
-                        <div style="cursor: help;" title="CLOSED CURVE DRAWDOWN: The peak-to-trough decline in your cumulative closed trade P&L%. Measures only realized trades — open positions excluded. Green = within 2% of peak. Yellow = 2–5% drawdown. Red = 5%+ drawdown (execution warning signal). A deepening drawdown here means your realized performance is deteriorating, not just an open position going against you.">
-                            <div style="font-size: 0.65em; opacity: 0.7;">Closed DD from Peak</div>
-                            <div style="font-size: 1.1em; font-weight: 700;" id="closedCurveDD">--</div>
                         </div>
                     </div>
                 </div>
@@ -808,23 +792,15 @@
                             Net New Highs (Nasdaq)
                         </label>
                         <label style="display:flex; align-items:center; gap:5px; cursor:pointer; font-size:0.82em; font-weight:600; padding:4px 8px; border-radius:6px; background:#f9fafb; border:1px solid #e5e7eb;"
-                               title="JNK ABOVE 20 SMA: Auto-updated via Alpha Vantage when key is set. JNK is the high-yield bond ETF — above its 20-day SMA means credit markets are healthy. Below = credit stress, risk-off.">
+                               title="JNK ABOVE 20 SMA: JNK is the high-yield bond ETF. When it's above its 20-day moving average, credit markets are healthy and risk appetite is strong — institutions are buying risky assets. Below = credit stress, risk-off environment.">
                             <input type="checkbox" id="chkJNK" onchange="saveMarketConditions(); updateExposureScaling();" style="width:15px; height:15px; cursor:pointer;">
                             JNK &gt; 20 SMA
-                            <span id="jnkStatus" style="font-size:0.75em; color:#9ca3af; font-weight:400;"></span>
                         </label>
                         <label style="display:flex; align-items:center; gap:5px; cursor:pointer; font-size:0.82em; font-weight:600; padding:4px 8px; border-radius:6px; background:#f9fafb; border:1px solid #e5e7eb;"
-                               title="QQQ ABOVE 21 EMA: Auto-updated via Alpha Vantage when key is set. QQQ above its 21-day EMA confirms Nasdaq leaders are in uptrend. Below = correction, not safe to be aggressive.">
+                               title="QQQ ABOVE 21 EMA: Nasdaq 100 ETF above its 21-day exponential moving average. This confirms the tech-heavy market leaders are in an uptrend. Below = market is in a correction or downtrend, not a safe environment to be aggressive.">
                             <input type="checkbox" id="chkQQQ" onchange="saveMarketConditions(); updateExposureScaling();" style="width:15px; height:15px; cursor:pointer;">
                             QQQ &gt; 21 EMA
-                            <span id="qqqStatus" style="font-size:0.75em; color:#9ca3af; font-weight:400;"></span>
                         </label>
-                        <button onclick="autoUpdateMarketConditions(true)" 
-                                id="maUpdateBtn"
-                                style="padding:3px 8px; font-size:0.75em; font-weight:600; border-radius:6px; border:1px solid #d1d5db; background:#f9fafb; cursor:pointer; color:#6b7280; display:none;"
-                                title="Re-fetch JNK and QQQ vs their moving averages from Alpha Vantage. Cached daily — only uses an API call if data is older than 24hrs.">
-                            🔄 Update MA
-                        </button>
 
                         <!-- NCFD/FOMO Barometer -->
                         <div style="display:flex; align-items:center; gap:5px; padding:4px 8px; border-radius:6px; border:1px solid #e5e7eb; background:#f9fafb;"
@@ -1442,46 +1418,6 @@
                     </ul>
                 </div>
             </div>
-
-            <!-- ── Compound Interest Calculator ── -->
-            <div class="card" style="margin-top:20px;">
-                <h2 style="margin-bottom:4px;" title="COMPOUND INTEREST CALCULATOR: See how your account grows over time given a consistent monthly return. Compounds monthly. Use this to set realistic long-term goals — small consistent edges compound into life-changing numbers.">📈 Compound Growth Calculator ℹ</h2>
-                <p style="font-size:0.85em; color:#666; margin-bottom:16px;">How much will your account be worth if you compound a consistent monthly return?</p>
-
-                <div style="display:grid; grid-template-columns:1fr 1fr; gap:24px;">
-                    <!-- Inputs -->
-                    <div style="display:grid; gap:12px;">
-                        <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
-                            <div>
-                                <label style="font-size:0.8em; font-weight:600; display:block; margin-bottom:4px;" title="Your starting account value in dollars.">Starting Balance ($)</label>
-                                <input type="number" id="ciStarting" value="250000" step="1000" oninput="calcCompoundInterest()"
-                                       style="width:100%; padding:8px; border:2px solid #e5e7eb; border-radius:6px; font-size:1em; font-weight:700;">
-                            </div>
-                            <div>
-                                <label style="font-size:0.8em; font-weight:600; display:block; margin-bottom:4px;" title="Monthly % gain you expect to achieve consistently. Your What If expectancy × risk % × trades/month gives this number.">Monthly Return (%)</label>
-                                <input type="number" id="ciMonthly" value="5" step="0.5" min="0.1" oninput="calcCompoundInterest()"
-                                       style="width:100%; padding:8px; border:2px solid #e5e7eb; border-radius:6px; font-size:1em; font-weight:700;">
-                            </div>
-                            <div>
-                                <label style="font-size:0.8em; font-weight:600; display:block; margin-bottom:4px;" title="Number of years to project forward.">Years</label>
-                                <input type="number" id="ciYears" value="10" step="1" min="1" max="40" oninput="calcCompoundInterest()"
-                                       style="width:100%; padding:8px; border:2px solid #e5e7eb; border-radius:6px; font-size:1em; font-weight:700;">
-                            </div>
-                            <div>
-                                <label style="font-size:0.8em; font-weight:600; display:block; margin-bottom:4px;" title="Optional: monthly dollar amount added to the account. Leave 0 to see pure compounding.">Monthly Contribution ($)</label>
-                                <input type="number" id="ciContrib" value="0" step="100" min="0" oninput="calcCompoundInterest()"
-                                       style="width:100%; padding:8px; border:2px solid #e5e7eb; border-radius:6px; font-size:1em; font-weight:700;">
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Results -->
-                    <div id="ciResults" style="display:grid; gap:10px; align-content:start;"></div>
-                </div>
-
-                <!-- Year-by-year table -->
-                <div id="ciTable" style="margin-top:20px; overflow-x:auto;"></div>
-            </div>
         </div>
         </div>
 
@@ -2041,81 +1977,12 @@
         </div>
     </div>
 
-    <!-- Hedge Modal -->
-    <div id="hedgeModal" class="modal">
-        <div class="modal-content" style="max-width:420px;">
-            <div class="modal-header">
-                <h2>🛡️ Log Put Hedge</h2>
-                <span class="close" onclick="closeModal('hedgeModal')">&times;</span>
-            </div>
-            <p style="font-size:0.85em; color:#6b7280; margin-bottom:14px;">Log a put option bought or sold as a hedge for this position. The net cost/proceeds adjust the position's effective entry price and P&L.</p>
-            <input type="hidden" id="hedgePosId">
-            <div class="form-grid" style="grid-template-columns:1fr 1fr; gap:10px;">
-                <div class="form-group">
-                    <label>Action</label>
-                    <select id="hedgeAction" style="padding:8px; width:100%; border:2px solid #e5e7eb; border-radius:6px;">
-                        <option value="buy">Buy Put (cost — increases basis)</option>
-                        <option value="sell">Sell/Expire Put (proceeds — reduces cost or locks profit)</option>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label>Total Premium ($)</label>
-                    <input type="number" id="hedgePremium" placeholder="e.g. 250" step="0.01" min="0" style="padding:8px; width:100%; border:2px solid #e5e7eb; border-radius:6px;">
-                </div>
-                <div class="form-group">
-                    <label>Date</label>
-                    <input type="date" id="hedgeDate" style="padding:8px; width:100%; border:2px solid #e5e7eb; border-radius:6px;">
-                </div>
-                <div class="form-group">
-                    <label>Notes (optional)</label>
-                    <input type="text" id="hedgeNotes" placeholder="e.g. 5 contracts @ $50" style="padding:8px; width:100%; border:2px solid #e5e7eb; border-radius:6px;">
-                </div>
-            </div>
-            <div id="hedgePreview" style="margin:10px 0; padding:10px; background:#f0f9ff; border-radius:6px; font-size:0.85em;"></div>
-            <button onclick="saveHedge()" class="btn-success" style="width:100%; padding:10px; font-size:1em; font-weight:700;">Save Hedge</button>
-        </div>
-    </div>
-
-    <!-- Cash Flow Modal -->
-    <div id="cashFlowModal" class="modal">
-        <div class="modal-content" style="max-width:380px;">
-            <div class="modal-header">
-                <h2>💸 Log Cash Flow</h2>
-                <span class="close" onclick="closeModal('cashFlowModal')">&times;</span>
-            </div>
-            <p style="font-size:0.85em; color:#6b7280; margin-bottom:14px;">Log a deposit or withdrawal. This adjusts the account balance but is excluded from YTD% so your performance reflects pure trading returns only.</p>
-            <div class="form-grid" style="grid-template-columns:1fr 1fr; gap:10px;">
-                <div class="form-group">
-                    <label>Type</label>
-                    <select id="cashFlowType" style="padding:8px; width:100%; border:2px solid #e5e7eb; border-radius:6px;">
-                        <option value="deposit">Deposit (added money)</option>
-                        <option value="withdrawal">Withdrawal (removed money)</option>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label>Amount ($)</label>
-                    <input type="number" id="cashFlowAmount" placeholder="e.g. 10000" step="100" min="0" style="padding:8px; width:100%; border:2px solid #e5e7eb; border-radius:6px;">
-                </div>
-                <div class="form-group">
-                    <label>Date</label>
-                    <input type="date" id="cashFlowDate" style="padding:8px; width:100%; border:2px solid #e5e7eb; border-radius:6px;">
-                </div>
-                <div class="form-group">
-                    <label>Notes (optional)</label>
-                    <input type="text" id="cashFlowNotes" placeholder="e.g. moved from savings" style="padding:8px; width:100%; border:2px solid #e5e7eb; border-radius:6px;">
-                </div>
-            </div>
-            <button onclick="saveCashFlow()" class="btn-success" style="width:100%; padding:10px; font-size:1em; font-weight:700;">Save</button>
-        </div>
-    </div>
-
     <script>
         // Firebase and data variables
         let db = null;
         let dbRef = null;
         let firebaseConfig = null;
         let isFirebaseInitialized = false;
-        let cashFlows = [];  // [{id, type, amount, date, notes}]
         
         // Configuration
         // Get recovery status lookback period from user input
@@ -2278,7 +2145,6 @@
             const data = {
                 openPositions,
                 closedTrades,
-                cashFlows,
                 dailyEquity,
                 dailyEquityEntries,
                 positionIdCounter,
@@ -2291,7 +2157,6 @@
                 spyJan1: parseFloat(document.getElementById('spyJan1').value),
                 lookbackPeriod: parseInt(document.getElementById('lookbackPeriod').value) || 15,
                 apiKey: document.getElementById('apiKey').value,
-                alphaVantageKey: document.getElementById('alphaVantageKey')?.value || '',
                 stockProfiles: stockProfiles,
                 calculatorSettings: buildCalculatorSettings(),
                 marketConditions: {
@@ -2463,7 +2328,6 @@
 
             openPositions = data.openPositions || [];
             closedTrades = data.closedTrades || [];
-            cashFlows = data.cashFlows || [];
             dailyEquity = data.dailyEquity || [];
             dailyEquityEntries = data.dailyEquityEntries || [];
             positionIdCounter = data.positionIdCounter || 1;
@@ -2484,37 +2348,16 @@
                     exitDate: trade.exitDate || '',
                     notes: trade.notes || '',
                     hadPartials: trade.hadPartials === true ? true : false,
-                    partialSells: trade.partialSells || []
+                    partialSells: trade.partialSells || [],
+                    initialShares: trade.initialShares || null
                 };
             });
             
-            // Auto-fix R-multiples for all closed trades on load
-            // This ensures old trades with incorrect R-multiples get fixed automatically
-            const accountSize = parseFloat(document.getElementById('accountSize').value) || 250000;
-            let autoFixed = 0;
-            
-            closedTrades.forEach(trade => {
-                // Calculate original shares from P&L data
-                if (trade.pnlPercent !== 0 && trade.entryPrice > 0 && trade.initialStop > 0) {
-                    const originalShares = (trade.portfolioPnlPercent * accountSize) / (trade.pnlPercent * trade.entryPrice);
-                    
-                    // Calculate total P&L in dollars
-                    const totalPnLDollars = (trade.portfolioPnlPercent / 100) * accountSize;
-                    
-                    // Calculate initial risk in dollars using entry-stop distance
-                    const initialRiskDollars = (trade.entryPrice - trade.initialStop) * originalShares;
-                    
-                    // Recalculate R-multiple if it's incorrect
-                    if (initialRiskDollars > 0) {
-                        const correctRMultiple = totalPnLDollars / initialRiskDollars;
-                        // Only update if significantly different (more than 0.1 R difference)
-                        if (Math.abs(trade.rMultiple - correctRMultiple) > 0.1) {
-                            trade.rMultiple = correctRMultiple;
-                            autoFixed++;
-                        }
-                    }
-                }
-            });
+            // Auto-fix on load disabled — was causing incorrect corrections for trades
+            // closed prior to stop (pnlPercent was wrong, so share derivation was wrong).
+            // Use the "Recalculate R-Multiples" button in Closed Trades tab instead,
+            // which now uses stored initialShares directly when available.
+            const autoFixed = 0;
             
             if (autoFixed > 0) {
                 console.log(`🔧 Auto-fixed ${autoFixed} R-multiples on load`);
@@ -2549,7 +2392,6 @@
                 if (elN && data.marketConditions.ncfd != null) elN.value = data.marketConditions.ncfd;
             }
             document.getElementById('apiKey').value = data.apiKey || '';
-            if (data.alphaVantageKey) document.getElementById('alphaVantageKey').value = data.alphaVantageKey;
             
             // Load stock profiles
             if (data.stockProfiles) {
@@ -2572,9 +2414,6 @@
             updateAllDisplays();
             updateExposureScaling();
             updateNcfdBarometer();
-            updateCashFlowList();
-            // Auto-update JNK/QQQ checkboxes if Alpha Vantage key is present
-            setTimeout(() => autoUpdateMarketConditions(false), 1500);
             // Restore calculator settings
             if (data.calculatorSettings) {
                 if (data.calculatorSettings['whatIfStarting'] !== undefined) { const el = document.getElementById('whatIfStarting'); if (el) el.value = data.calculatorSettings['whatIfStarting']; }
@@ -2621,7 +2460,6 @@
             calcTargetExpectancy();
             updateWinDistributionBars();
             updateLossDistributionBars();
-            calcCompoundInterest();
             console.log('Data loaded from Firebase successfully');
         }
 
@@ -2662,17 +2500,8 @@
                 }
             }
             
-            // Calculate hedge net cost (buys increase cost, sells reduce it)
-            let hedgeNetCost = 0;
-            if (pos.hedges && pos.hedges.length > 0) {
-                hedgeNetCost = pos.hedges.reduce((sum, h) => {
-                    return sum + (h.action === 'buy' ? h.premium : -h.premium);
-                }, 0);
-            }
-
             const positionValue = pos.currentPrice * pos.shares;
-            // Hedge cost reduces overall P&L (put premium increases effective cost)
-            const unrealizedPnL = (pos.currentPrice - adjustedPrice) * pos.shares - hedgeNetCost;
+            const unrealizedPnL = (pos.currentPrice - adjustedPrice) * pos.shares;
             const totalPnL = realizedPnL + unrealizedPnL;
             const totalCost = pos.entryPrice * pos.initialShares;
             
@@ -2734,7 +2563,6 @@
                 initialWeight: parseFloat(document.getElementById('initialWeight').value),
                 entryDate: getTodayLocal(),
                 partialSells: [],
-                hedges: [],
                 peakR: 0
             };
 
@@ -2753,7 +2581,6 @@
                 const data = {
                     openPositions,
                     closedTrades,
-                    cashFlows,
                     dailyEquity,
                     dailyEquityEntries,
                     positionIdCounter,
@@ -2764,7 +2591,6 @@
                     wifeRoth: parseFloat(document.getElementById('wifeRoth').value),
                     wifeRothJan1: parseFloat(document.getElementById('wifeRothJan1').value),
                     apiKey: document.getElementById('apiKey').value,
-                alphaVantageKey: document.getElementById('alphaVantageKey')?.value || '',
                     stockProfiles: stockProfiles,
                     calculatorSettings: buildCalculatorSettings(),
                     marketConditions: {
@@ -3067,7 +2893,6 @@
                                 <button class="btn-secondary" style="padding: 3px 6px; font-size: 0.75em; white-space: nowrap;" onclick="openEditPositionModal(${pos.id})">Edit</button>
                                 <button class="btn-success" style="padding: 3px 6px; font-size: 0.75em; white-space: nowrap;" onclick="openPartialSellModal(${pos.id})">Part</button>
                                 <button class="btn-secondary" style="padding: 3px 6px; font-size: 0.75em; white-space: nowrap;" onclick="openUpdateStopModal(${pos.id})">Stop</button>
-                                <button class="btn-secondary" style="padding: 3px 6px; font-size: 0.75em; white-space: nowrap; background:#7c3aed; color:white;" onclick="openHedgeModal(${pos.id})" title="${getHedgeTooltip(pos)}">${pos.hedges && pos.hedges.length > 0 ? 'Hedge 🛡' : 'Hedge'}</button>
                                 <button class="btn-danger" style="padding: 3px 6px; font-size: 0.75em; white-space: nowrap;" onclick="openClosePositionModal(${pos.id})">Close</button>
                                 <button class="btn-danger" style="padding: 3px 6px; font-size: 0.75em; white-space: nowrap;" onclick="deletePosition(${pos.id})">Del</button>
                             </div>
@@ -3094,7 +2919,7 @@
             const closedPnlPercent = (totalClosedPnlDollars / startingAccount) * 100;
             
             // Calculate Trading YTD P&L %
-            const tradingYTD = getAdjustedYTDPercent(accountSize, startingAccount);
+            const tradingYTD = ((accountSize - startingAccount) / startingAccount) * 100;
             
             // Calculate Roth YTD P&L %
             const myRoth = parseFloat(document.getElementById('myRoth').value) || 0;
@@ -4559,32 +4384,47 @@
             closedTrades.forEach((trade, index) => {
                 console.log(`\nTrade ${index + 1}: ${trade.symbol} (${trade.exitDate})`);
                 console.log('  Entry:', trade.entryPrice, 'Exit:', trade.exitPrice, 'Stop:', trade.initialStop);
-                console.log('  Portfolio P&L%:', trade.portfolioPnlPercent);
-                console.log('  Position P&L%:', trade.pnlPercent);
                 console.log('  OLD R-Multiple:', trade.rMultiple);
-                
-                // Calculate original shares from P&L data
-                if (trade.pnlPercent !== 0) {
-                    const originalShares = (trade.portfolioPnlPercent * accountSize) / (trade.pnlPercent * trade.entryPrice);
-                    console.log('  Calculated Original Shares:', originalShares);
-                    
-                    // Calculate total P&L in dollars
-                    const totalPnLDollars = (trade.portfolioPnlPercent / 100) * accountSize;
-                    console.log('  Total P&L $:', totalPnLDollars);
-                    
-                    // Calculate initial risk in dollars
+
+                if (trade.entryPrice > 0 && trade.initialStop > 0 && trade.exitPrice > 0) {
+                    // Use stored initialShares if available — most reliable
+                    let originalShares = trade.initialShares || null;
+
+                    // Fallback: derive from partialSells + remaining shares approximation
+                    if (!originalShares && trade.pnlPercent !== 0) {
+                        originalShares = (trade.portfolioPnlPercent * accountSize) / (trade.pnlPercent * trade.entryPrice);
+                    }
+
+                    if (!originalShares || originalShares <= 0) {
+                        console.log('  SKIPPED — cannot determine share count');
+                        return;
+                    }
+
+                    // Recalculate total P&L from first principles using stored prices
+                    let totalPnLDollars = (trade.exitPrice - trade.entryPrice) * originalShares;
+                    // Add partial sell P&L if any
+                    if (trade.partialSells && trade.partialSells.length > 0) {
+                        trade.partialSells.forEach(sell => {
+                            totalPnLDollars += (sell.price - trade.entryPrice) * sell.shares;
+                            // Subtract the final close portion since we included all shares above
+                            totalPnLDollars -= (trade.exitPrice - trade.entryPrice) * sell.shares;
+                        });
+                    }
+
                     const initialRiskDollars = (trade.entryPrice - trade.initialStop) * originalShares;
-                    console.log('  Initial Risk $:', initialRiskDollars);
-                    
-                    // Recalculate R-multiple
+                    const originalCost = trade.entryPrice * originalShares;
+
+                    console.log('  Shares:', originalShares, '| P&L $:', totalPnLDollars.toFixed(2), '| Risk $:', initialRiskDollars.toFixed(2));
+
                     if (initialRiskDollars > 0) {
-                        const newRMultiple = totalPnLDollars / initialRiskDollars;
-                        console.log('  NEW R-Multiple:', newRMultiple);
-                        trade.rMultiple = newRMultiple;
+                        trade.rMultiple = totalPnLDollars / initialRiskDollars;
+                        trade.portfolioPnlPercent = (totalPnLDollars / accountSize) * 100;
+                        trade.pnlPercent = (totalPnLDollars / originalCost) * 100;
+                        console.log('  NEW R-Multiple:', trade.rMultiple.toFixed(2));
                         recalculated++;
                     }
                 } else {
-                    console.log('  SKIPPED (pnlPercent is 0)');
+                    console.log('  SKIPPED — missing price data');
                 }
             });
             
@@ -4706,8 +4546,9 @@
                     entryPrice: pos.entryPrice,
                     exitPrice: exitPrice,
                     initialStop: pos.initialStop,
+                    initialShares: originalShares,
                     adjustedPrice: metrics.adjustedPrice,
-                    accountWeight: pos.initialWeight || metrics.accountWeight, // Use ORIGINAL weight if available
+                    accountWeight: pos.initialWeight || metrics.accountWeight,
                     pnlPercent: pnlPercent,
                     portfolioPnlPercent: portfolioPnlPercent,
                     initialRiskPercent: metrics.initialRiskPercent,
@@ -4875,8 +4716,8 @@
             });
             
             // Calculate YTD metrics
-            const currentYTD = getAdjustedYTDDollars(accountSize, startingAccount);
-            const currentYTDPercent = getAdjustedYTDPercent(accountSize, startingAccount);
+            const currentYTD = accountSize - startingAccount;
+            const currentYTDPercent = (currentYTD / startingAccount) * 100;
             const ytdRealizedDollars = totalRealizedDollars + totalPartialRealizedDollars;
             const ytdFloorDollars = currentYTD - totalUnrealizedDollars;
             const ytdFloorPercent = (ytdFloorDollars / startingAccount) * 100;
@@ -4955,33 +4796,6 @@
             // Display Buffer %
             const bufferColor = bufferPct > 60 ? '#ef4444' : bufferPct > 40 ? '#f59e0b' : '#10b981';
             document.getElementById('bufferPercent').innerHTML = `<span style="color: ${bufferColor};">${bufferPct.toFixed(0)}%</span>`;
-
-            // Closed Curve Drawdown — peak-to-trough on cumulative closed P&L%
-            const closedDDEl = document.getElementById('closedCurveDD');
-            if (closedDDEl) {
-                if (closedTrades.length === 0) {
-                    closedDDEl.textContent = '--';
-                } else {
-                    // Build cumulative closed P&L curve sorted by exit date
-                    const sorted = [...closedTrades].sort((a, b) => new Date(a.exitDate) - new Date(b.exitDate));
-                    let cum = 0, peak = 0, maxDD = 0;
-                    sorted.forEach(t => {
-                        cum += (t.portfolioPnlPercent || 0);
-                        if (cum > peak) peak = cum;
-                        const dd = cum - peak;
-                        if (dd < maxDD) maxDD = dd;
-                    });
-                    // Current drawdown from peak
-                    const currentDD = cum - peak;
-                    const ddColor  = currentDD > -2  ? '#15803d'
-                                   : currentDD > -5  ? '#d97706'
-                                   : '#dc2626';
-                    const ddLabel  = currentDD === 0
-                        ? `<span style="color:#15803d;">At Peak ✓</span>`
-                        : `<span style="color:${ddColor};">${currentDD.toFixed(2)}%</span>`;
-                    closedDDEl.innerHTML = ddLabel;
-                }
-            }
             
             // Determine Safety Status
             let safetyLevel = 'HEALTHY';
@@ -5424,7 +5238,7 @@
                 }
             });
             
-            const currentYTD = getAdjustedYTDDollars(accountSize, startingAccount);
+            const currentYTD = accountSize - startingAccount;
             const currentNetRealized = currentTotalRealized + currentTotalPartialRealized;
             const currentYTDFloor = currentYTD - currentTotalUnrealized;
             const currentYTDLosses = Math.abs(Math.min(0, currentNetRealized));
@@ -5588,368 +5402,6 @@
             document.getElementById('executePickHarvest').disabled = true;
         }
 
-        function calcCompoundInterest() {
-            const starting  = parseFloat(document.getElementById('ciStarting')?.value)  || 0;
-            const monthly   = parseFloat(document.getElementById('ciMonthly')?.value)   || 0;
-            const years     = parseInt(document.getElementById('ciYears')?.value)        || 10;
-            const contrib   = parseFloat(document.getElementById('ciContrib')?.value)   || 0;
-            const results   = document.getElementById('ciResults');
-            const tableDiv  = document.getElementById('ciTable');
-            if (!results || !tableDiv) return;
-
-            const r = monthly / 100;
-            const months = years * 12;
-
-            // Calculate final value
-            let balance = starting;
-            for (let m = 0; m < months; m++) {
-                balance = balance * (1 + r) + contrib;
-            }
-
-            const totalContrib  = contrib * months;
-            const totalGain     = balance - starting - totalContrib;
-            const annualR       = (Math.pow(1 + r, 12) - 1) * 100;
-
-            results.innerHTML = `
-                <div style="padding:14px; background:linear-gradient(135deg,#f0fdf4,#dcfce7); border-radius:8px; border:2px solid #86efac; text-align:center;">
-                    <div style="font-size:0.75em; color:#6b7280; text-transform:uppercase; letter-spacing:0.5px;">Final Balance</div>
-                    <div style="font-size:2em; font-weight:800; color:#15803d;">$${balance.toLocaleString(undefined,{maximumFractionDigits:0})}</div>
-                    <div style="font-size:0.8em; color:#16a34a; margin-top:2px;">after ${years} year${years>1?'s':''}</div>
-                </div>
-                <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">
-                    <div style="padding:10px; background:#eff6ff; border-radius:8px; text-align:center;">
-                        <div style="font-size:0.72em; color:#6b7280;">Annual Return</div>
-                        <div style="font-size:1.3em; font-weight:700; color:#1d4ed8;">${annualR.toFixed(1)}%</div>
-                    </div>
-                    <div style="padding:10px; background:#fdf4ff; border-radius:8px; text-align:center;">
-                        <div style="font-size:0.72em; color:#6b7280;">Total Gain</div>
-                        <div style="font-size:1.3em; font-weight:700; color:#7e22ce;">$${totalGain.toLocaleString(undefined,{maximumFractionDigits:0})}</div>
-                    </div>
-                    <div style="padding:10px; background:#fef3c7; border-radius:8px; text-align:center;">
-                        <div style="font-size:0.72em; color:#6b7280;">× Starting</div>
-                        <div style="font-size:1.3em; font-weight:700; color:#d97706;">${(balance/starting).toFixed(1)}×</div>
-                    </div>
-                    <div style="padding:10px; background:#f0fdf4; border-radius:8px; text-align:center;">
-                        <div style="font-size:0.72em; color:#6b7280;">Contributions</div>
-                        <div style="font-size:1.3em; font-weight:700; color:#059669;">$${totalContrib.toLocaleString(undefined,{maximumFractionDigits:0})}</div>
-                    </div>
-                </div>`;
-
-            // Year-by-year table
-            let thtml = `<table style="width:100%; font-size:0.85em; border-collapse:collapse;">
-                <thead><tr style="background:#f3f4f6;">
-                    <th style="padding:6px 10px; text-align:left;">Year</th>
-                    <th style="padding:6px 10px; text-align:right;">Balance</th>
-                    <th style="padding:6px 10px; text-align:right;">Annual Gain</th>
-                    <th style="padding:6px 10px; text-align:right;">Total Growth</th>
-                    <th style="padding:6px 10px; text-align:right;">× Starting</th>
-                </tr></thead><tbody>`;
-
-            let bal = starting;
-            let prevBal = starting;
-            for (let y = 1; y <= years; y++) {
-                for (let m = 0; m < 12; m++) bal = bal * (1 + r) + contrib;
-                const annGain = bal - prevBal;
-                const totalGrowth = bal - starting - (contrib * y * 12);
-                const rowBg = y % 2 === 0 ? '#f9fafb' : 'white';
-                thtml += `<tr style="background:${rowBg};">
-                    <td style="padding:5px 10px; font-weight:600;">Year ${y}</td>
-                    <td style="padding:5px 10px; text-align:right; font-weight:700; color:#15803d;">$${bal.toLocaleString(undefined,{maximumFractionDigits:0})}</td>
-                    <td style="padding:5px 10px; text-align:right; color:#0369a1;">+$${annGain.toLocaleString(undefined,{maximumFractionDigits:0})}</td>
-                    <td style="padding:5px 10px; text-align:right; color:#7e22ce;">$${totalGrowth.toLocaleString(undefined,{maximumFractionDigits:0})}</td>
-                    <td style="padding:5px 10px; text-align:right; color:#d97706;">${(bal/starting).toFixed(2)}×</td>
-                </tr>`;
-                prevBal = bal;
-            }
-            thtml += '</tbody></table>';
-            tableDiv.innerHTML = thtml;
-        }
-
-        // ── Auto-update JNK > 20 SMA and QQQ > 21 EMA via Alpha Vantage ─────
-        async function autoUpdateMarketConditions(forceRefresh = false) {
-            const avKey = document.getElementById('alphaVantageKey')?.value?.trim();
-            if (!avKey) return;
-
-            const btn = document.getElementById('maUpdateBtn');
-            if (btn) btn.style.display = 'inline-block';
-
-            const jnkStatus = document.getElementById('jnkStatus');
-            const qqqStatus = document.getElementById('qqqStatus');
-            if (jnkStatus) jnkStatus.textContent = ' ⏳';
-            if (qqqStatus) qqqStatus.textContent = ' ⏳';
-
-            // Check Firebase cache
-            const cacheKey = 'maConditionsCache';
-            if (!forceRefresh) {
-                try {
-                    const snap = await firebase.database().ref(cacheKey).once('value');
-                    const cached = snap.val();
-                    if (cached && cached.timestamp && (Date.now() - cached.timestamp) < 24 * 60 * 60 * 1000) {
-                        applyMAConditions(cached);
-                        return;
-                    }
-                } catch(e) { /* cache miss, fetch fresh */ }
-            }
-
-            async function fetchAV(params) {
-                const qs = new URLSearchParams({ ...params, apikey: avKey }).toString();
-                const r = await fetch(`https://www.alphavantage.co/query?${qs}`);
-                return r.json();
-            }
-
-            try {
-                const [jnkQuote, jnkSMA, qqqQuote, qqqEMA] = await Promise.all([
-                    fetchAV({ function: 'GLOBAL_QUOTE', symbol: 'JNK' }),
-                    fetchAV({ function: 'SMA', symbol: 'JNK', interval: 'daily', time_period: 20, series_type: 'close' }),
-                    fetchAV({ function: 'GLOBAL_QUOTE', symbol: 'QQQ' }),
-                    fetchAV({ function: 'EMA', symbol: 'QQQ', interval: 'daily', time_period: 21, series_type: 'close' }),
-                ]);
-
-                console.log('JNK Quote:', jnkQuote);
-                console.log('JNK SMA:', jnkSMA);
-                console.log('QQQ Quote:', qqqQuote);
-                console.log('QQQ EMA:', qqqEMA);
-
-                const jnkPrice  = parseFloat(jnkQuote?.['Global Quote']?.['05. price']);
-                // Get most recent SMA value — sort dates descending and take first
-                const jnkSMAData = jnkSMA?.['Technical Analysis: SMA'] || {};
-                const jnkLatestDate = Object.keys(jnkSMAData).sort().reverse()[0];
-                const jnkSmaVal = parseFloat(jnkSMAData[jnkLatestDate]?.SMA);
-
-                const qqqPrice  = parseFloat(qqqQuote?.['Global Quote']?.['05. price']);
-                const qqqEMAData = qqqEMA?.['Technical Analysis: EMA'] || {};
-                const qqqLatestDate = Object.keys(qqqEMAData).sort().reverse()[0];
-                const qqqEmaVal = parseFloat(qqqEMAData[qqqLatestDate]?.EMA);
-
-                console.log('Parsed:', { jnkPrice, jnkSmaVal, qqqPrice, qqqEmaVal });
-
-                if (!jnkPrice || !jnkSmaVal || !qqqPrice || !qqqEmaVal) {
-                    console.warn('MA conditions: incomplete data', { jnkPrice, jnkSmaVal, qqqPrice, qqqEmaVal });
-                    if (jnkStatus) jnkStatus.textContent = ' ⚠';
-                    if (qqqStatus) qqqStatus.textContent = ' ⚠';
-                    return;
-                }
-
-                const result = {
-                    jnkAboveSMA: jnkPrice > jnkSmaVal,
-                    qqqAboveEMA: qqqPrice > qqqEmaVal,
-                    jnkPrice, jnkSmaVal, qqqPrice, qqqEmaVal,
-                    timestamp: Date.now()
-                };
-
-                try { await firebase.database().ref(cacheKey).set(result); } catch(e) {}
-                applyMAConditions(result);
-
-            } catch(e) {
-                console.warn('autoUpdateMarketConditions failed:', e);
-                if (jnkStatus) jnkStatus.textContent = ' ⚠';
-                if (qqqStatus) qqqStatus.textContent = ' ⚠';
-            }
-        }
-
-        function applyMAConditions(data) {
-            const jnkChk    = document.getElementById('chkJNK');
-            const qqqChk    = document.getElementById('chkQQQ');
-            const jnkStatus = document.getElementById('jnkStatus');
-            const qqqStatus = document.getElementById('qqqStatus');
-
-            if (jnkChk && data.jnkAboveSMA !== undefined) {
-                jnkChk.checked = data.jnkAboveSMA;
-                const diff  = ((data.jnkPrice - data.jnkSmaVal) / data.jnkSmaVal * 100).toFixed(2);
-                const sign  = data.jnkAboveSMA ? '+' : '';
-                const color = data.jnkAboveSMA ? '#15803d' : '#dc2626';
-                if (jnkStatus) jnkStatus.innerHTML = ` <span style="color:${color};">${sign}${diff}%</span>`;
-            }
-
-            if (qqqChk && data.qqqAboveEMA !== undefined) {
-                qqqChk.checked = data.qqqAboveEMA;
-                const diff  = ((data.qqqPrice - data.qqqEmaVal) / data.qqqEmaVal * 100).toFixed(2);
-                const sign  = data.qqqAboveEMA ? '+' : '';
-                const color = data.qqqAboveEMA ? '#15803d' : '#dc2626';
-                if (qqqStatus) qqqStatus.innerHTML = ` <span style="color:${color};">${sign}${diff}%</span>`;
-            }
-
-            saveMarketConditions();
-            updateExposureScaling();
-            const btn = document.getElementById('maUpdateBtn');
-            if (btn) btn.style.display = 'inline-block';
-        }
-
-        // ── 20-Day ADR via Alpha Vantage (free tier, 25 req/day) ─────────────
-        async function fetchADR(symbol) {
-            const avKey = document.getElementById('alphaVantageKey')?.value?.trim();
-            if (!avKey) return null;
-
-            // Check Firebase cache first — only re-fetch if older than 24hrs
-            try {
-                const cacheRef = firebase.database().ref(`adrCache/${symbol.toUpperCase()}`);
-                const snap = await cacheRef.once('value');
-                const cached = snap.val();
-                if (cached && cached.adrPct && cached.timestamp) {
-                    const ageHrs = (Date.now() - cached.timestamp) / (1000 * 60 * 60);
-                    if (ageHrs < 24) {
-                        console.log(`ADR cache hit for ${symbol}: ${cached.adrPct.toFixed(2)}% (${ageHrs.toFixed(1)}hrs old)`);
-                        return cached.adrPct;
-                    }
-                }
-            } catch(e) { /* cache miss, fetch fresh */ }
-
-            // Fetch daily OHLC from Alpha Vantage
-            try {
-                const url = `https://www.alphavantage.co/query?function=TIME_SERIES_DAILY&symbol=${symbol}&outputsize=compact&apikey=${avKey}`;
-                const resp = await fetch(url);
-                const data = await resp.json();
-
-                if (data['Note'] || data['Information']) {
-                    console.warn('Alpha Vantage rate limit hit:', data['Note'] || data['Information']);
-                    return null;
-                }
-
-                const series = data['Time Series (Daily)'];
-                if (!series) return null;
-
-                const dates = Object.keys(series).sort().reverse().slice(0, 20);
-                if (dates.length < 5) return null;
-
-                const ranges = dates.map(d => parseFloat(series[d]['2. high']) - parseFloat(series[d]['3. low']));
-                const adrDollars = ranges.reduce((a, b) => a + b, 0) / ranges.length;
-                const latestClose = parseFloat(series[dates[0]]['4. close']);
-                const adrPct = (adrDollars / latestClose) * 100;
-
-                // Cache result in Firebase
-                try {
-                    await firebase.database().ref(`adrCache/${symbol.toUpperCase()}`).set({
-                        adrPct, adrDollars, timestamp: Date.now()
-                    });
-                } catch(e) { /* cache write failed, not critical */ }
-
-                return adrPct;
-            } catch(e) {
-                console.warn('ADR fetch failed:', e);
-                return null;
-            }
-        }
-
-        function getHedgeTooltip(pos) {
-            if (!pos.hedges || pos.hedges.length === 0) return 'No hedges logged — click to add a put hedge';
-            const net = pos.hedges.reduce((s, h) => s + (h.action === 'buy' ? h.premium : -h.premium), 0);
-            const lines = pos.hedges.map(h => (h.action === 'buy' ? 'Buy' : 'Sell') + ' $' + h.premium + ' (' + h.date + ')');
-            return 'Hedges: ' + lines.join(' | ') + ' | Net cost: $' + net.toFixed(2);
-        }
-
-        // ── Cash Flows (Deposits / Withdrawals) ──────────────────────────────
-        function getNetCashFlows() {
-            return cashFlows.reduce((sum, cf) => {
-                return sum + (cf.type === 'deposit' ? cf.amount : -cf.amount);
-            }, 0);
-        }
-
-        function getAdjustedYTDPercent(accountSize, startingAccount) {
-            const netFlows = getNetCashFlows();
-            // Adjusted gain = (current - starting - netFlows) / starting
-            return ((accountSize - startingAccount - netFlows) / startingAccount) * 100;
-        }
-
-        function getAdjustedYTDDollars(accountSize, startingAccount) {
-            return accountSize - startingAccount - getNetCashFlows();
-        }
-
-        function addCashFlow() {
-            document.getElementById('cashFlowDate').value = new Date().toISOString().split('T')[0];
-            document.getElementById('cashFlowAmount').value = '';
-            document.getElementById('cashFlowNotes').value = '';
-            document.getElementById('cashFlowType').value = 'deposit';
-            document.getElementById('cashFlowModal').style.display = 'block';
-        }
-
-        function saveCashFlow() {
-            const type   = document.getElementById('cashFlowType').value;
-            const amount = parseFloat(document.getElementById('cashFlowAmount').value);
-            const date   = document.getElementById('cashFlowDate').value;
-            const notes  = document.getElementById('cashFlowNotes').value;
-            if (!amount || !date) { alert('Please enter amount and date'); return; }
-            cashFlows.push({ id: Date.now(), type, amount, date, notes });
-            cashFlows.sort((a, b) => new Date(a.date) - new Date(b.date));
-            closeModal('cashFlowModal');
-            saveToFirebase();
-            updateCashFlowList();
-            updateAllDisplays();
-        }
-
-        function deleteCashFlow(id) {
-            cashFlows = cashFlows.filter(cf => cf.id !== id);
-            saveToFirebase();
-            updateCashFlowList();
-            updateAllDisplays();
-        }
-
-        function updateCashFlowList() {
-            const el = document.getElementById('cashFlowList');
-            const netEl = document.getElementById('netCashFlows');
-            if (!el) return;
-            if (cashFlows.length === 0) {
-                el.innerHTML = '<span style="color:#9ca3af; font-style:italic;">None logged</span>';
-            } else {
-                el.innerHTML = cashFlows.map(cf => {
-                    const sign   = cf.type === 'deposit' ? '+' : '-';
-                    const color  = cf.type === 'deposit' ? '#15803d' : '#dc2626';
-                    const label  = cf.type === 'deposit' ? '↑ Deposit' : '↓ Withdrawal';
-                    return `<div style="display:flex; justify-content:space-between; align-items:center; padding:2px 0; border-bottom:1px solid #f3f4f6;">
-                        <span>${cf.date} — <span style="color:${color}; font-weight:600;">${label} ${sign}$${cf.amount.toLocaleString()}</span>${cf.notes ? ' <span style="color:#9ca3af;">(' + cf.notes + ')</span>' : ''}</span>
-                        <button onclick="deleteCashFlow(${cf.id})" style="background:none; border:none; color:#ef4444; cursor:pointer; font-size:0.9em; padding:0 4px;">✕</button>
-                    </div>`;
-                }).join('');
-            }
-            if (netEl) {
-                const net = getNetCashFlows();
-                netEl.textContent = (net >= 0 ? '+' : '') + '$' + net.toLocaleString();
-                netEl.style.color = net > 0 ? '#15803d' : net < 0 ? '#dc2626' : '#374151';
-            }
-        }
-
-        // ── Hedge (Put Options) ───────────────────────────────────────────────
-        function openHedgeModal(posId) {
-            const pos = openPositions.find(p => p.id === posId);
-            if (!pos) return;
-            document.getElementById('hedgePosId').value = posId;
-            document.getElementById('hedgeDate').value = new Date().toISOString().split('T')[0];
-            document.getElementById('hedgePremium').value = '';
-            document.getElementById('hedgeNotes').value = '';
-            document.getElementById('hedgeAction').value = 'buy';
-            updateHedgePreview(pos);
-            document.getElementById('hedgeModal').style.display = 'block';
-        }
-
-        function updateHedgePreview(pos) {
-            if (!pos) return;
-            const preview = document.getElementById('hedgePreview');
-            if (!preview) return;
-            const totalHedgeCost = (pos.hedges || []).reduce((sum, h) => {
-                return sum + (h.action === 'buy' ? h.premium : -h.premium);
-            }, 0);
-            const effectiveEntry = pos.entryPrice + (totalHedgeCost / pos.initialShares);
-            preview.innerHTML = `<strong>${pos.symbol}</strong> — Entry: $${pos.entryPrice.toFixed(2)} | 
-                Net hedge cost so far: <strong style="color:${totalHedgeCost > 0 ? '#dc2626' : '#15803d'};">$${totalHedgeCost.toFixed(2)}</strong> | 
-                Effective entry: <strong>$${effectiveEntry.toFixed(2)}</strong> (${totalHedgeCost > 0 ? '+' : ''}${(totalHedgeCost / pos.initialShares).toFixed(2)}/share)`;
-        }
-
-        function saveHedge() {
-            const posId   = parseInt(document.getElementById('hedgePosId').value);
-            const action  = document.getElementById('hedgeAction').value;
-            const premium = parseFloat(document.getElementById('hedgePremium').value);
-            const date    = document.getElementById('hedgeDate').value;
-            const notes   = document.getElementById('hedgeNotes').value;
-            if (!premium || !date) { alert('Please enter premium and date'); return; }
-
-            const pos = openPositions.find(p => p.id === posId);
-            if (!pos) return;
-            if (!pos.hedges) pos.hedges = [];
-            pos.hedges.push({ id: Date.now(), action, premium, date, notes });
-            closeModal('hedgeModal');
-            saveToFirebase();
-            updateAllDisplays();
-        }
-
         // ── Calculator Settings Helper ────────────────────────────────────────
         function buildCalculatorSettings() {
             const ids = [
@@ -5962,7 +5414,6 @@
                 'calc1WinRate','calc1AvgWinR','calc1AvgLossR','calc1RiskPct','calc1TradesYear',
                 'calc2WinRate','calc2AvgWinR','calc2AvgLossR','calc2RiskPct','calc2TradesYear',
                 'calc3WinRate','calc3AvgWinR','calc3AvgLossR','calc3RiskPct','calc3TradesYear',
-                'ciStarting','ciMonthly','ciYears','ciContrib',
             ];
             const obj = {};
             ids.forEach(id => {
@@ -6692,7 +6143,7 @@
                 }
             });
             
-            const currentYTD = getAdjustedYTDDollars(accountSize, startingAccount);
+            const currentYTD = accountSize - startingAccount;
             const netRealized = totalRealized + totalPartialRealized;
             const ytdFloor = currentYTD - totalUnrealized;
             const totalPnL = Math.abs(totalUnrealized + netRealized);
@@ -7007,7 +6458,7 @@
         };
 
         // Update Stock Profile
-        async function updateStockProfile(stockNum) {
+        function updateStockProfile(stockNum) {
             const symbol = document.getElementById(`stock${stockNum}SymbolInput`).value.toUpperCase();
             const price = parseFloat(document.getElementById(`stock${stockNum}Price`).value);
             const stop = parseFloat(document.getElementById(`stock${stockNum}Stop`).value);
@@ -7022,57 +6473,35 @@
             // Update tab label
             document.getElementById(`stock${stockNum}Symbol`).textContent = symbol;
             document.getElementById(`stock${stockNum}Title`).textContent = `${symbol} Risk Profile`;
-
-            // Show loading state
-            document.getElementById(`stock${stockNum}Profile`).innerHTML =
-                '<div style="padding:20px; color:#9ca3af; font-size:0.9em;">⏳ Loading...</div>';
-
-            // Fetch 20-day ADR from Alpha Vantage (cached 24hrs in Firebase)
-            const adrPct = await fetchADR(symbol);
-
+            
             // Generate and display the risk profile table
-            const profileHTML = generateStockProfileTable(stockNum, symbol, price, stop, adrPct);
+            const profileHTML = generateStockProfileTable(stockNum, symbol, price, stop);
             document.getElementById(`stock${stockNum}Profile`).innerHTML = profileHTML;
             
             saveToFirebase();
         }
 
         // Generate Stock Profile Table
-        function generateStockProfileTable(stockNum, symbol, price, stop, adrPct) {
+        function generateStockProfileTable(stockNum, symbol, price, stop) {
             const accountSize = getAccountSize();
             const myRoth = parseFloat(document.getElementById('myRoth').value) || 0;
             const wifeRoth = parseFloat(document.getElementById('wifeRoth').value) || 0;
             
             const riskPerShare = price - stop;
             const stockRiskPercent = (riskPerShare / price) * 100;
-
-            // ADR% pill
-            let adrHtml = '';
-            if (adrPct != null) {
-                const stopVsAdr = (riskPerShare / price * 100) / adrPct; // stop% / ADR%
-                const color = stopVsAdr < 0.5 ? '#d97706' : stopVsAdr <= 1.5 ? '#15803d' : '#d97706';
-                const bg    = stopVsAdr < 0.5 ? '#fef9c3' : stopVsAdr <= 1.5 ? '#dcfce7' : '#fef9c3';
-                const note  = stopVsAdr < 0.5 ? '⚠ Stop < ½ ADR — tight'
-                            : stopVsAdr <= 1.0 ? '✓ Stop ≤ 1 ADR'
-                            : stopVsAdr <= 1.5 ? '✓ Stop ~1–1.5× ADR'
-                            : '⚠ Stop > 1.5× ADR — wide';
-                adrHtml = `
-                        <div style="padding:10px; background:${bg}; border-radius:6px; border-left:4px solid ${color};">
-                            <div style="display:flex; align-items:center; gap:16px; flex-wrap:wrap;">
-                                <div>
-                                    <div style="font-size:0.8em; color:#666;" title="20-Day Average Daily Range as % of price. Fetched from Alpha Vantage, cached 24hrs.">20-Day ADR%</div>
-                                    <div style="font-size:1.5em; font-weight:bold; color:${color};">${adrPct.toFixed(2)}%</div>
-                                </div>
-                                <div style="font-size:0.85em; font-weight:600; color:${color};">${note}</div>
-                            </div>
-                        </div>`;
-            } else if (document.getElementById('alphaVantageKey')?.value?.trim()) {
-                adrHtml = `<div style="padding:8px; font-size:0.8em; color:#9ca3af; font-style:italic;">ADR unavailable for this symbol</div>`;
-            } else {
-                adrHtml = `<div style="padding:8px; font-size:0.8em; color:#9ca3af; font-style:italic;">Add Alpha Vantage key in Account Setup for 20-day ADR</div>`;
-            }
-
-
+            
+            const riskLevels = [
+                { label: 'Risking 1% of account', percent: 1.0, isRisk: true },
+                { label: 'Risking 0.75% of account', percent: 0.75, isRisk: true },
+                { label: 'Risking 0.5% of account', percent: 0.5, isRisk: true },
+                { label: 'Risking 0.25% of account', percent: 0.25, isRisk: true },
+                { label: 'Risking 0.125% of account', percent: 0.125, isRisk: true },
+                { label: '25% Position Size', percent: 25, isRisk: false },
+                { label: '15% Position Size', percent: 15, isRisk: false },
+                { label: '12% Position Size', percent: 12, isRisk: false },
+                { label: '9% Position Size', percent: 9, isRisk: false }
+            ];
+            
             let html = `
                 <div style="margin-bottom: 20px; padding: 15px; background: #f9f9f9; border-radius: 8px;">
                     <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px;">
@@ -7089,24 +6518,9 @@
                             <div style="font-size: 1.5em; font-weight: bold; color: #f59e0b;">${stockRiskPercent.toFixed(2)}%</div>
                         </div>
                     </div>
-                    ${adrHtml}
                 </div>
                 
-                <table style="margin-bottom: 20px;">`;
-
-            const riskLevels = [
-                { label: 'Risking 1% of account',     percent: 1.0,   isRisk: true },
-                { label: 'Risking 0.75% of account',  percent: 0.75,  isRisk: true },
-                { label: 'Risking 0.5% of account',   percent: 0.5,   isRisk: true },
-                { label: 'Risking 0.25% of account',  percent: 0.25,  isRisk: true },
-                { label: 'Risking 0.125% of account', percent: 0.125, isRisk: true },
-                { label: '25% Position Size',         percent: 25,    isRisk: false },
-                { label: '15% Position Size',         percent: 15,    isRisk: false },
-                { label: '12% Position Size',         percent: 12,    isRisk: false },
-                { label: '9% Position Size',          percent: 9,     isRisk: false }
-            ];
-
-            html += `<table style="margin-bottom: 20px;">
+                <table style="margin-bottom: 20px;">
                     <thead>
                         <tr>
                             <th>Risk/Position Level</th>
@@ -7242,7 +6656,6 @@
                     updateWinDistributionBars();
                     updateLossDistributionBars();
                     calcTargetExpectancy();
-                    calcCompoundInterest();
                 }, 500);
             }
         };
