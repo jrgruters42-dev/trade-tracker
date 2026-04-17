@@ -1947,6 +1947,10 @@
                         <input type="number" id="editClosedInitialStop" step="0.01" required>
                     </div>
                     <div class="form-group">
+                        <label title="Original shares at entry (before any partials). Used to recalculate R from first principles.">Original Shares ℹ</label>
+                        <input type="number" id="editClosedInitialShares" step="1" min="1" placeholder="e.g. 257">
+                    </div>
+                    <div class="form-group">
                         <label>Exit Date</label>
                         <input type="date" id="editClosedExitDate" required>
                     </div>
@@ -1963,14 +1967,14 @@
                         <input type="number" id="editClosedRMultiple" step="0.01" required>
                     </div>
                 </div>
+                <div style="background: #f0f9ff; padding: 10px; border-radius: 6px; margin-bottom: 10px; font-size: 0.9em;">
+                    <strong>💡 Enter Original Shares above then click:</strong>
+                    <button type="button" onclick="recalcSingleClosedTrade()" class="btn-success" style="margin-left:8px; padding:4px 10px; font-size:0.9em;">⚡ Recalc R & P&L from prices</button>
+                    <div id="recalcPreview" style="margin-top:6px; color:#059669; font-weight:600;"></div>
+                </div>
                 <div class="form-group">
                     <label>Notes</label>
                     <textarea id="editClosedNotes" rows="3"></textarea>
-                </div>
-                <div style="background: #f0f9ff; padding: 10px; border-radius: 6px; margin-bottom: 15px; font-size: 0.9em;">
-                    <strong>💡 Tip:</strong> If this trade had partial exits, manually calculate:
-                    <br>• Portfolio P&L % = (Total $ P&L) / (Account Size) × 100
-                    <br>• R-Multiple = (Total $ P&L) / (Original $ Risk)
                 </div>
                 <button type="submit">Save Changes</button>
             </form>
@@ -4330,12 +4334,60 @@
             document.getElementById('editClosedEntryPrice').value = trade.entryPrice;
             document.getElementById('editClosedExitPrice').value = trade.exitPrice;
             document.getElementById('editClosedInitialStop').value = trade.initialStop || trade.entryPrice * 0.97;
+            document.getElementById('editClosedInitialShares').value = trade.initialShares || '';
             document.getElementById('editClosedExitDate').value = trade.exitDate;
             document.getElementById('editClosedAccountWeight').value = trade.accountWeight;
             document.getElementById('editClosedPortfolioPnl').value = trade.portfolioPnlPercent || 0;
             document.getElementById('editClosedRMultiple').value = trade.rMultiple || 0;
             document.getElementById('editClosedNotes').value = trade.notes || '';
+            document.getElementById('recalcPreview').textContent = '';
             document.getElementById('editClosedTradeModal').style.display = 'block';
+        }
+
+        function recalcSingleClosedTrade() {
+            const index    = parseInt(document.getElementById('editClosedTradeIndex').value);
+            const trade    = closedTrades[index];
+            const entry    = parseFloat(document.getElementById('editClosedEntryPrice').value);
+            const exit     = parseFloat(document.getElementById('editClosedExitPrice').value);
+            const stop     = parseFloat(document.getElementById('editClosedInitialStop').value);
+            const shares   = parseFloat(document.getElementById('editClosedInitialShares').value);
+            const preview  = document.getElementById('recalcPreview');
+
+            if (!entry || !exit || !stop || !shares) {
+                preview.style.color = '#dc2626';
+                preview.textContent = 'Enter all fields (entry, exit, stop, shares) to recalculate.';
+                return;
+            }
+
+            // Reconstruct total P&L including any partials stored on trade
+            let totalPnL = (exit - entry) * shares;
+            const partials = trade?.partialSells || [];
+            if (partials.length > 0) {
+                partials.forEach(sell => {
+                    totalPnL += (sell.price - entry) * sell.shares;
+                    totalPnL -= (exit - entry) * sell.shares; // remove exit portion for partial shares
+                });
+            }
+
+            const riskDollars = (entry - stop) * shares;
+            const accountSize = getAccountSize();
+
+            if (riskDollars <= 0) {
+                preview.style.color = '#dc2626';
+                preview.textContent = 'Stop must be below entry price.';
+                return;
+            }
+
+            const newR      = totalPnL / riskDollars;
+            const newPortPnl = (totalPnL / accountSize) * 100;
+            const newPnlPct  = (totalPnL / (entry * shares)) * 100;
+
+            // Write into the fields
+            document.getElementById('editClosedRMultiple').value = newR.toFixed(3);
+            document.getElementById('editClosedPortfolioPnl').value = newPortPnl.toFixed(4);
+
+            preview.style.color = newR >= 0 ? '#15803d' : '#dc2626';
+            preview.textContent = `✓ Recalculated: R = ${newR.toFixed(2)}R | Port P&L = ${newPortPnl.toFixed(2)}% | P&L = ${newPnlPct.toFixed(2)}% | Total $${totalPnL.toFixed(2)}`;
         }
 
         function closeModal(modalId) {
@@ -4400,16 +4452,20 @@
                         return;
                     }
 
-                    // Recalculate total P&L from first principles using stored prices
-                    let totalPnLDollars = (trade.exitPrice - trade.entryPrice) * originalShares;
-                    // Add partial sell P&L if any
+                    // Calculate total P&L from first principles
+                    let totalPnLDollars = 0;
+                    let sharesAtFinalClose = originalShares;
+
                     if (trade.partialSells && trade.partialSells.length > 0) {
+                        // Add P&L from each partial sell
                         trade.partialSells.forEach(sell => {
                             totalPnLDollars += (sell.price - trade.entryPrice) * sell.shares;
-                            // Subtract the final close portion since we included all shares above
-                            totalPnLDollars -= (trade.exitPrice - trade.entryPrice) * sell.shares;
+                            sharesAtFinalClose -= sell.shares;
                         });
                     }
+
+                    // Add P&L from final close on remaining shares
+                    totalPnLDollars += (trade.exitPrice - trade.entryPrice) * sharesAtFinalClose;
 
                     const initialRiskDollars = (trade.entryPrice - trade.initialStop) * originalShares;
                     const originalCost = trade.entryPrice * originalShares;
@@ -4617,6 +4673,7 @@
                 const accountWeight = parseFloat(document.getElementById('editClosedAccountWeight').value);
                 const portfolioPnl = parseFloat(document.getElementById('editClosedPortfolioPnl').value);
                 const rMultiple = parseFloat(document.getElementById('editClosedRMultiple').value);
+                const initialShares = parseFloat(document.getElementById('editClosedInitialShares').value) || trade.initialShares || null;
                 
                 trade.symbol = document.getElementById('editClosedSymbol').value.toUpperCase();
                 trade.entryPrice = entryPrice;
@@ -4625,21 +4682,28 @@
                 trade.exitDate = document.getElementById('editClosedExitDate').value;
                 trade.accountWeight = accountWeight;
                 trade.notes = document.getElementById('editClosedNotes').value;
+                if (initialShares) trade.initialShares = initialShares;
                 
-                // Use manually entered values for Portfolio P&L and R-Multiple
+                // Use manually entered / recalculated values
                 trade.portfolioPnlPercent = portfolioPnl;
                 trade.rMultiple = rMultiple;
                 
-                // Calculate position P&L % from portfolio P&L
-                trade.pnlPercent = accountWeight > 0 ? (portfolioPnl / accountWeight) * 100 : 0;
-                
-                // Calculate initial risk %
-                trade.initialRiskPercent = ((entryPrice - initialStop) / entryPrice) * 100;
-                
-                // Keep adjusted price if it exists
-                if (!trade.adjustedPrice) {
-                    trade.adjustedPrice = entryPrice;
+                // Recalculate pnlPercent from first principles if we have shares
+                if (initialShares && entryPrice > 0) {
+                    let totalPnL = (exitPrice - entryPrice) * initialShares;
+                    if (trade.partialSells && trade.partialSells.length > 0) {
+                        trade.partialSells.forEach(sell => {
+                            totalPnL += (sell.price - entryPrice) * sell.shares;
+                            totalPnL -= (exitPrice - entryPrice) * sell.shares;
+                        });
+                    }
+                    trade.pnlPercent = (totalPnL / (entryPrice * initialShares)) * 100;
+                } else {
+                    trade.pnlPercent = accountWeight > 0 ? (portfolioPnl / accountWeight) * 100 : 0;
                 }
+                
+                trade.initialRiskPercent = ((entryPrice - initialStop) / entryPrice) * 100;
+                if (!trade.adjustedPrice) trade.adjustedPrice = entryPrice;
                 
                 saveToFirebase();
                 updateAllDisplays();
