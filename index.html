@@ -4641,32 +4641,67 @@
             }).join('');
             document.getElementById('harvestLadder').innerHTML = ladder;
 
-            // ── Plan selection logic ───────────────────────────────────────
-            const posRiskPct    = pos.initialWeight || 0;
-            const usePlanB      = stopPct > 5 || (posRiskPct * stopPct / 100) >= 0.75;
-            const triggerReason = stopPct > 5
-                ? `Stop distance ${stopPct.toFixed(1)}% > 5% threshold`
-                : (posRiskPct * stopPct / 100) >= 0.75
-                    ? `Position risk ${posRiskPct}% × stop ${stopPct.toFixed(1)}% = ${(posRiskPct * stopPct / 100).toFixed(2)}% ≥ 0.75% threshold`
-                    : `Stop ${stopPct.toFixed(1)}% ≤ 5% and blended risk ${(posRiskPct*stopPct/100).toFixed(2)}% < 0.75%`;
-
+            // ── Plan selection logic (async — fetch ADR from Firebase cache) ──
             const bannerEl2 = document.getElementById('harvestPlanBanner');
-            if (usePlanB) {
-                bannerEl2.style.background = '#fdf4ff';
-                bannerEl2.style.borderLeft = '4px solid #7c3aed';
-                bannerEl2.style.color = '#4c1d95';
-                bannerEl2.innerHTML = `⚡ <strong>Plan B recommended</strong> — ${triggerReason}`;
-            } else {
-                bannerEl2.style.background = '#eff6ff';
-                bannerEl2.style.borderLeft = '4px solid #3b82f6';
-                bannerEl2.style.color = '#1e40af';
-                bannerEl2.innerHTML = `✅ <strong>Plan A recommended</strong> — ${triggerReason}`;
-            }
+            bannerEl2.style.background = '#f3f4f6';
+            bannerEl2.style.borderLeft = '4px solid #9ca3af';
+            bannerEl2.style.color = '#6b7280';
+            bannerEl2.innerHTML = '⏳ Checking ADR...';
 
-            // ── Plan A ─────────────────────────────────────────────────────
-            const planAShares   = Math.round(remaining * 0.33);
-            const planAPrice    = entry + 2 * riskPerShare;
-            const planABanked   = 2 * riskPerShare * planAShares;
+            // Render plans immediately with a default, then update banner once ADR loads
+            let usePlanB = false; // default, updated async below
+            renderHarvestPlans(pos, entry, stop, currentStop, riskPerShare, initialShares, remaining, initialRisk$, usePlanB);
+
+            // Try to get ADR from Firebase cache (already fetched by position sizing tabs)
+            (async () => {
+                let adrPct = null;
+                let adrSource = 'no ADR data';
+                try {
+                    const snap = await firebase.database().ref(`adrCache/${pos.symbol.toUpperCase()}`).once('value');
+                    const cached = snap.val();
+                    if (cached && cached.adrPct) {
+                        adrPct = cached.adrPct;
+                        adrSource = `${adrPct.toFixed(2)}% ADR (cached)`;
+                    }
+                } catch(e) { /* no cache */ }
+
+                if (adrPct !== null) {
+                    usePlanB = adrPct > 5;
+                    const triggerReason = usePlanB
+                        ? `20-day ADR ${adrPct.toFixed(2)}% > 5% threshold`
+                        : `20-day ADR ${adrPct.toFixed(2)}% ≤ 5% threshold`;
+                    if (usePlanB) {
+                        bannerEl2.style.background = '#fdf4ff';
+                        bannerEl2.style.borderLeft = '4px solid #7c3aed';
+                        bannerEl2.style.color = '#4c1d95';
+                        bannerEl2.innerHTML = `⚡ <strong>Plan B recommended</strong> — ${triggerReason}`;
+                    } else {
+                        bannerEl2.style.background = '#eff6ff';
+                        bannerEl2.style.borderLeft = '4px solid #3b82f6';
+                        bannerEl2.style.color = '#1e40af';
+                        bannerEl2.innerHTML = `✅ <strong>Plan A recommended</strong> — ${triggerReason}`;
+                    }
+                } else {
+                    bannerEl2.style.background = '#fef9c3';
+                    bannerEl2.style.borderLeft = '4px solid #d97706';
+                    bannerEl2.style.color = '#92400e';
+                    bannerEl2.innerHTML = `⚠️ <strong>No ADR available</strong> — run a Stock tab for ${pos.symbol} first to cache ADR. Defaulting to Plan A.`;
+                }
+                // Re-render plans with correct recommendation badge
+                renderHarvestPlans(pos, entry, stop, currentStop, riskPerShare, initialShares, remaining, initialRisk$, usePlanB);
+            })();
+
+            // ── Plan B ─────────────────────────────────────────────────────
+            // ── Notes ──────────────────────────────────────────────────────
+            document.getElementById('harvestNotes').value = pos.notes || '';
+            document.getElementById('harvestCalcModal').style.display = 'block';
+        }
+
+        function renderHarvestPlans(pos, entry, stop, currentStop, riskPerShare, initialShares, remaining, initialRisk$, usePlanB) {
+            // ── Plan A ────────────────────────────────────────────────────
+            const planAShares    = Math.round(remaining * 0.33);
+            const planAPrice     = entry + 2 * riskPerShare;
+            const planABanked    = 2 * riskPerShare * planAShares;
             const planARemaining = remaining - planAShares;
             const planAWorstPnL  = planABanked + (currentStop - entry) * planARemaining;
             const planAWorstR    = initialRisk$ > 0 ? planAWorstPnL / initialRisk$ : 0;
@@ -4674,7 +4709,7 @@
             const planA8R        = initialRisk$ > 0 ? planA8RPnL / initialRisk$ : 0;
 
             document.getElementById('harvestPlanA').innerHTML = `
-                <div style="font-size:0.85em; font-weight:800; color:#1e40af; margin-bottom:10px; display:flex; align-items:center; gap:6px;">
+                <div style="font-size:0.85em; font-weight:800; color:#1e40af; margin-bottom:10px; display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
                     <span style="background:#3b82f6; color:white; padding:2px 8px; border-radius:10px; font-size:0.85em;">Plan A</span>
                     Standard
                     ${!usePlanB ? '<span style="background:#dcfce7; color:#15803d; padding:2px 6px; border-radius:8px; font-size:0.8em;">← Recommended</span>' : ''}
@@ -4688,11 +4723,11 @@
                     <div>At 8R outcome: <strong style="color:#7c3aed;">${planA8R.toFixed(2)}R</strong></div>
                 </div>`;
 
-            // ── Plan B ─────────────────────────────────────────────────────
+            // ── Plan B ────────────────────────────────────────────────────
             const planB1Shares   = Math.round(initialShares * 0.15);
             const planB2Shares   = Math.round(initialShares * 0.18);
-            const planB1Price    = entry + riskPerShare;        // 1R
-            const planB2Price    = entry + 3 * riskPerShare;    // 3R
+            const planB1Price    = entry + riskPerShare;
+            const planB2Price    = entry + 3 * riskPerShare;
             const planB1Banked   = riskPerShare * planB1Shares;
             const planB2Banked   = 3 * riskPerShare * planB2Shares;
             const planBRem1      = remaining - planB1Shares;
@@ -4705,7 +4740,7 @@
             const planB8R        = initialRisk$ > 0 ? planB8RPnL / initialRisk$ : 0;
 
             document.getElementById('harvestPlanB').innerHTML = `
-                <div style="font-size:0.85em; font-weight:800; color:#4c1d95; margin-bottom:10px; display:flex; align-items:center; gap:6px;">
+                <div style="font-size:0.85em; font-weight:800; color:#4c1d95; margin-bottom:10px; display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
                     <span style="background:#7c3aed; color:white; padding:2px 8px; border-radius:10px; font-size:0.85em;">Plan B</span>
                     High ATR / Large Position
                     ${usePlanB ? '<span style="background:#dcfce7; color:#15803d; padding:2px 6px; border-radius:8px; font-size:0.8em;">← Recommended</span>' : ''}
@@ -4719,11 +4754,6 @@
                     <div style="padding-left:8px; color:#6b7280; font-size:0.9em;">→ Bank $${planB2Banked.toFixed(0)} | ${Math.max(0,planBRem2)} remain | worst ${planBWorst2R.toFixed(2)}R</div>
                     <div style="border-top:1px solid #e9d5ff; margin-top:4px; padding-top:4px;">At 8R outcome: <strong style="color:#7c3aed;">${planB8R.toFixed(2)}R</strong></div>
                 </div>`;
-
-            // ── Notes ──────────────────────────────────────────────────────
-            document.getElementById('harvestNotes').value = pos.notes || '';
-
-            document.getElementById('harvestCalcModal').style.display = 'block';
         }
 
         function saveHarvestNotes() {
