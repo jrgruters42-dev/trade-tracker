@@ -4324,16 +4324,19 @@
             const pos = openPositions.find(p => p.id === posId);
             if (!pos) return;
 
-            const accountSize = getAccountSize();
             const riskPerShare = pos.entryPrice - pos.initialStop;
             if (riskPerShare <= 0) return;
 
             const initialShares = pos.initialShares || pos.shares;
-            const shares = pos.shares; // remaining shares
+            const shares = pos.shares; // remaining shares after any partials
             const initialRiskDollars = riskPerShare * initialShares;
-            const riskPctAccount = (initialRiskDollars / accountSize) * 100;
             const stopPctOfEntry = (riskPerShare / pos.entryPrice) * 100;
             const currentR = (pos.currentPrice - pos.entryPrice) / riskPerShare;
+
+            // Fixed risk % of account at entry time — uses only stored values so it never drifts
+            // Formula: initial position weight × stop distance %
+            // e.g. 25% weight × 4% stop = 1.0% of account at risk
+            const initialRiskPctFixed = pos.initialWeight * (stopPctOfEntry / 100);
 
             // R-level prices
             const price1R = pos.entryPrice + riskPerShare;
@@ -4341,8 +4344,8 @@
             const price3R = pos.entryPrice + 3 * riskPerShare;
             const price4R = pos.entryPrice + 4 * riskPerShare;
 
-            // Determine plan
-            const isPlanB = stopPctOfEntry > 5 || riskPctAccount >= 0.75;
+            // Determine plan — both criteria use fixed-at-entry values only
+            const isPlanB = stopPctOfEntry > 5 || initialRiskPctFixed >= 0.75;
 
             // Already banked from partial sells
             let alreadyBankedDollars = 0;
@@ -4376,12 +4379,14 @@
             const pA_8R     = (pA_banked + pA_rem * 8 * riskPerShare) / initialRiskDollars;
 
             // ── PLAN B: 15% at 1R → 18% at 3R ────────────────────────
-            const pB_sell1  = Math.round(shares * 0.15);
-            const pB_sell2  = Math.round(shares * 0.18);
-            const pB_rem    = shares - pB_sell1 - pB_sell2;
+            // Both quantities locked to initialShares so the 3R target never
+            // shrinks after the 1R partial sell is executed
+            const pB_sell1  = Math.round(initialShares * 0.15);
+            const pB_sell2  = Math.round(initialShares * 0.18);
+            const pB_rem    = initialShares - pB_sell1 - pB_sell2;
             const pB_bank1  = pB_sell1 * 1 * riskPerShare;
             const pB_bank2  = pB_sell2 * 3 * riskPerShare;
-            const pB_wc1    = (pB_bank1 - (shares - pB_sell1) * riskPerShare) / initialRiskDollars;
+            const pB_wc1    = (pB_bank1 - (initialShares - pB_sell1) * riskPerShare) / initialRiskDollars;
             const pB_wcBoth = (pB_bank1 + pB_bank2 - pB_rem * riskPerShare) / initialRiskDollars;
             const pB_8R     = (pB_bank1 + pB_bank2 + pB_rem * 8 * riskPerShare) / initialRiskDollars;
 
@@ -4401,10 +4406,10 @@
 
             const planBReason = isPlanB
                 ? `<div style="font-size:0.82em;color:#92400e;background:#fef3c7;border-radius:6px;padding:6px 10px;margin-bottom:14px;">
-                    ⚡ Plan B triggered: ${stopPctOfEntry > 5 ? `stop distance ${stopPctOfEntry.toFixed(1)}% &gt; 5% (high ATR)` : ''}${stopPctOfEntry > 5 && riskPctAccount >= 0.75 ? ' · ' : ''}${riskPctAccount >= 0.75 ? `initial risk ${riskPctAccount.toFixed(2)}% of account ≥ 0.75%` : ''}
+                    ⚡ Plan B triggered: ${stopPctOfEntry > 5 ? `stop distance ${stopPctOfEntry.toFixed(1)}% &gt; 5% (high ATR)` : ''}${stopPctOfEntry > 5 && initialRiskPctFixed >= 0.75 ? ' · ' : ''}${initialRiskPctFixed >= 0.75 ? `entry risk ${initialRiskPctFixed.toFixed(2)}% of account ≥ 0.75% (${pos.initialWeight.toFixed(1)}% weight × ${stopPctOfEntry.toFixed(1)}% stop)` : ''}
                   </div>`
                 : `<div style="font-size:0.82em;color:#166534;background:#f0fdf4;border-radius:6px;padding:6px 10px;margin-bottom:14px;">
-                    ✅ Plan A applies: stop distance ${stopPctOfEntry.toFixed(1)}% ≤ 5% · initial risk ${riskPctAccount.toFixed(2)}% of account &lt; 0.75%
+                    ✅ Plan A applies: stop distance ${stopPctOfEntry.toFixed(1)}% ≤ 5% · entry risk ${initialRiskPctFixed.toFixed(2)}% of account &lt; 0.75% (${pos.initialWeight.toFixed(1)}% weight × ${stopPctOfEntry.toFixed(1)}% stop)
                   </div>`;
 
             const html = `
@@ -4501,7 +4506,7 @@
                 </div>
 
                 <div style="margin-top:12px;font-size:0.78em;color:#9ca3af;text-align:center;">
-                    Plan B triggers when stop distance &gt; 5% of entry OR initial risk ≥ 0.75% of account · Calculations use remaining shares · Original stop assumed throughout
+                    Plan B triggers when stop distance &gt; 5% of entry OR entry risk ≥ 0.75% of account (initial weight × stop %) · Plan B shares locked to original position size · Plan A uses remaining shares
                 </div>
 
                 <!-- Notes -->
