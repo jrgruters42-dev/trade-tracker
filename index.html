@@ -4643,50 +4643,59 @@
 
             // ── Plan selection logic (async — fetch ADR from Firebase cache) ──
             const bannerEl2 = document.getElementById('harvestPlanBanner');
-            bannerEl2.style.background = '#f3f4f6';
-            bannerEl2.style.borderLeft = '4px solid #9ca3af';
-            bannerEl2.style.color = '#6b7280';
-            bannerEl2.innerHTML = '⏳ Checking ADR...';
+            const riskLevel = pos.initialWeight || 0;
+            const riskLevelTriggered = riskLevel >= 0.75;
 
-            // Render plans immediately with a default, then update banner once ADR loads
-            let usePlanB = false; // default, updated async below
-            renderHarvestPlans(pos, entry, stop, currentStop, riskPerShare, initialShares, remaining, initialRisk$, usePlanB);
+            // If risk level alone already decides, show immediately — no need to wait for ADR
+            if (riskLevelTriggered) {
+                const usePlanBImmediate = true;
+                bannerEl2.style.background = '#fdf4ff';
+                bannerEl2.style.borderLeft = '4px solid #7c3aed';
+                bannerEl2.style.color = '#4c1d95';
+                bannerEl2.innerHTML = `⚡ <strong>Plan B recommended</strong> — Risk Level ${riskLevel}% ≥ 0.75% threshold`;
+                renderHarvestPlans(pos, entry, stop, currentStop, riskPerShare, initialShares, remaining, initialRisk$, usePlanBImmediate);
+            } else {
+                bannerEl2.style.background = '#f3f4f6';
+                bannerEl2.style.borderLeft = '4px solid #9ca3af';
+                bannerEl2.style.color = '#6b7280';
+                bannerEl2.innerHTML = `⏳ Risk Level ${riskLevel}% < 0.75% — checking ATR...`;
+                renderHarvestPlans(pos, entry, stop, currentStop, riskPerShare, initialShares, remaining, initialRisk$, false);
+            }
 
-            // Try to get ADR from Firebase cache (already fetched by position sizing tabs)
+            // Always fetch ADR to show the full picture in the banner
             (async () => {
                 let adrPct = null;
-                let adrSource = 'no ADR data';
                 try {
                     const snap = await firebase.database().ref(`adrCache/${pos.symbol.toUpperCase()}`).once('value');
                     const cached = snap.val();
-                    if (cached && cached.adrPct) {
-                        adrPct = cached.adrPct;
-                        adrSource = `${adrPct.toFixed(2)}% ADR (cached)`;
-                    }
+                    if (cached && cached.adrPct) adrPct = cached.adrPct;
                 } catch(e) { /* no cache */ }
 
+                const adrTriggered  = adrPct !== null && adrPct > 5;
+                const usePlanB      = riskLevelTriggered || adrTriggered;
+
+                // Build reason string showing which conditions fired
+                let reasons = [];
+                if (riskLevelTriggered) reasons.push(`Risk Level ${riskLevel}% ≥ 0.75%`);
                 if (adrPct !== null) {
-                    usePlanB = adrPct > 5;
-                    const triggerReason = usePlanB
-                        ? `20-day ADR ${adrPct.toFixed(2)}% > 5% threshold`
-                        : `20-day ADR ${adrPct.toFixed(2)}% ≤ 5% threshold`;
-                    if (usePlanB) {
-                        bannerEl2.style.background = '#fdf4ff';
-                        bannerEl2.style.borderLeft = '4px solid #7c3aed';
-                        bannerEl2.style.color = '#4c1d95';
-                        bannerEl2.innerHTML = `⚡ <strong>Plan B recommended</strong> — ${triggerReason}`;
-                    } else {
-                        bannerEl2.style.background = '#eff6ff';
-                        bannerEl2.style.borderLeft = '4px solid #3b82f6';
-                        bannerEl2.style.color = '#1e40af';
-                        bannerEl2.innerHTML = `✅ <strong>Plan A recommended</strong> — ${triggerReason}`;
-                    }
+                    if (adrTriggered) reasons.push(`ADR ${adrPct.toFixed(2)}% > 5%`);
+                    else reasons.push(`ADR ${adrPct.toFixed(2)}% ≤ 5%`);
                 } else {
-                    bannerEl2.style.background = '#fef9c3';
-                    bannerEl2.style.borderLeft = '4px solid #d97706';
-                    bannerEl2.style.color = '#92400e';
-                    bannerEl2.innerHTML = `⚠️ <strong>No ADR available</strong> — run a Stock tab for ${pos.symbol} first to cache ADR. Defaulting to Plan A.`;
+                    reasons.push(`ADR unavailable — run Stock tab for ${pos.symbol} to cache`);
                 }
+
+                if (usePlanB) {
+                    bannerEl2.style.background = '#fdf4ff';
+                    bannerEl2.style.borderLeft = '4px solid #7c3aed';
+                    bannerEl2.style.color = '#4c1d95';
+                    bannerEl2.innerHTML = `⚡ <strong>Plan B recommended</strong> — ${reasons.join(' | ')}`;
+                } else {
+                    bannerEl2.style.background = '#eff6ff';
+                    bannerEl2.style.borderLeft = '4px solid #3b82f6';
+                    bannerEl2.style.color = '#1e40af';
+                    bannerEl2.innerHTML = `✅ <strong>Plan A recommended</strong> — ${reasons.join(' | ')}`;
+                }
+
                 // Re-render plans with correct recommendation badge
                 renderHarvestPlans(pos, entry, stop, currentStop, riskPerShare, initialShares, remaining, initialRisk$, usePlanB);
             })();
@@ -4724,20 +4733,16 @@
                 </div>`;
 
             // ── Plan B ────────────────────────────────────────────────────
-            const planB1Shares   = Math.round(initialShares * 0.15);
-            const planB2Shares   = Math.round(initialShares * 0.18);
-            const planB1Price    = entry + riskPerShare;
-            const planB2Price    = entry + 3 * riskPerShare;
-            const planB1Banked   = riskPerShare * planB1Shares;
-            const planB2Banked   = 3 * riskPerShare * planB2Shares;
-            const planBRem1      = remaining - planB1Shares;
-            const planBRem2      = remaining - planB1Shares - planB2Shares;
-            const planBWorst1PnL = planB1Banked + (currentStop - entry) * planBRem1;
-            const planBWorst1R   = initialRisk$ > 0 ? planBWorst1PnL / initialRisk$ : 0;
-            const planBWorst2PnL = planB1Banked + planB2Banked + (currentStop - entry) * planBRem2;
-            const planBWorst2R   = initialRisk$ > 0 ? planBWorst2PnL / initialRisk$ : 0;
-            const planB8RPnL     = planB1Banked + planB2Banked + 8 * riskPerShare * planBRem2;
-            const planB8R        = initialRisk$ > 0 ? planB8RPnL / initialRisk$ : 0;
+            const pB_sell1   = Math.round(initialShares * 0.15);
+            const pB_sell2   = Math.round(initialShares * 0.18);
+            const pB_rem     = initialShares - pB_sell1 - pB_sell2;
+            const pB_bank1   = pB_sell1 * 1 * riskPerShare;
+            const pB_bank2   = pB_sell2 * 3 * riskPerShare;
+            const pB_wc1     = initialRisk$ > 0 ? (pB_bank1 - (initialShares - pB_sell1) * riskPerShare) / initialRisk$ : 0;
+            const pB_wcBoth  = initialRisk$ > 0 ? (pB_bank1 + pB_bank2 - pB_rem * riskPerShare) / initialRisk$ : 0;
+            const pB_8R      = initialRisk$ > 0 ? (pB_bank1 + pB_bank2 + pB_rem * 8 * riskPerShare) / initialRisk$ : 0;
+            const planB1Price = entry + riskPerShare;
+            const planB2Price = entry + 3 * riskPerShare;
 
             document.getElementById('harvestPlanB').innerHTML = `
                 <div style="font-size:0.85em; font-weight:800; color:#4c1d95; margin-bottom:10px; display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
@@ -4746,13 +4751,15 @@
                     ${usePlanB ? '<span style="background:#dcfce7; color:#15803d; padding:2px 6px; border-radius:8px; font-size:0.8em;">← Recommended</span>' : ''}
                 </div>
                 <div style="font-size:0.82em; color:#374151; line-height:2; display:grid; gap:2px;">
-                    <div>Sell 1 at 1R: <strong>${planB1Shares} shares @ $${planB1Price.toFixed(2)}</strong>
-                        <span style="font-size:0.8em; color:#9ca3af;">(15% of ${initialShares})</span></div>
-                    <div style="padding-left:8px; color:#6b7280; font-size:0.9em;">→ Bank $${planB1Banked.toFixed(0)} | ${planBRem1} remain | worst ${planBWorst1R.toFixed(2)}R</div>
-                    <div>Sell 2 at 3R: <strong>${planB2Shares} shares @ $${planB2Price.toFixed(2)}</strong>
-                        <span style="font-size:0.8em; color:#9ca3af;">(18% of ${initialShares})</span></div>
-                    <div style="padding-left:8px; color:#6b7280; font-size:0.9em;">→ Bank $${planB2Banked.toFixed(0)} | ${Math.max(0,planBRem2)} remain | worst ${planBWorst2R.toFixed(2)}R</div>
-                    <div style="border-top:1px solid #e9d5ff; margin-top:4px; padding-top:4px;">At 8R outcome: <strong style="color:#7c3aed;">${planB8R.toFixed(2)}R</strong></div>
+                    <div>Sell 1 at 1R: <strong>${pB_sell1} shares @ $${planB1Price.toFixed(2)}</strong>
+                        <span style="font-size:0.8em; color:#9ca3af;">(15% of ${initialShares} original)</span></div>
+                    <div style="padding-left:8px; color:#6b7280; font-size:0.9em;">→ Bank $${pB_bank1.toFixed(0)} | worst case: ${pB_wc1.toFixed(2)}R</div>
+                    <div>Sell 2 at 3R: <strong>${pB_sell2} shares @ $${planB2Price.toFixed(2)}</strong>
+                        <span style="font-size:0.8em; color:#9ca3af;">(18% of ${initialShares} original)</span></div>
+                    <div style="padding-left:8px; color:#6b7280; font-size:0.9em;">→ Bank $${pB_bank2.toFixed(0)} | worst case after both: ${pB_wcBoth.toFixed(2)}R</div>
+                    <div style="border-top:1px solid #e9d5ff; margin-top:4px; padding-top:4px;">
+                        ${pB_rem} shares remain (${Math.round(pB_rem/initialShares*100)}%) | At 8R: <strong style="color:#7c3aed;">${pB_8R.toFixed(2)}R</strong>
+                    </div>
                 </div>`;
         }
 
