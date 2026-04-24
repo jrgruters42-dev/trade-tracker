@@ -6809,56 +6809,51 @@
 
         // ── Reward Readiness Tracker ──────────────────────────────────────────
         function updateRewardReadiness() {
-            const card     = document.getElementById('rewardReadinessCard');
-            const bar      = document.getElementById('rewardReadinessBar');
+            const card = document.getElementById('rewardReadinessCard');
             if (!card) return;
 
             const startingAccount = parseFloat(document.getElementById('startingAccount').value) || 250000;
             const accountSize     = getAccountSize();
-            const marginBalance   = parseFloat(document.getElementById('marginBalance')?.value) || 0;
 
-            // Banked profits = realized from closed trades + partial sell profits
-            let realizedFromClosed = 0;
+            // NET banked profits — same formula as the Banked Profits stat in the safety dashboard
+            // Includes ALL closed trades (wins AND losses) + partial sell profits on open positions
+            let netFromClosed = 0;
             closedTrades.forEach(trade => {
-                const pnl = (trade.portfolioPnlPercent / 100) * accountSize;
-                if (pnl > 0) realizedFromClosed += pnl;
+                netFromClosed += (trade.portfolioPnlPercent / 100) * accountSize;
             });
             let realizedFromPartials = 0;
             openPositions.forEach(pos => {
                 if (pos.partialSells && pos.partialSells.length > 0) {
                     pos.partialSells.forEach(sell => {
-                        const profit = (sell.price - pos.entryPrice) * sell.shares;
-                        if (profit > 0) realizedFromPartials += profit;
+                        realizedFromPartials += (sell.price - pos.entryPrice) * sell.shares;
                     });
                 }
             });
-            const bankedProfits   = realizedFromClosed + realizedFromPartials;
-            const milestoneSize   = startingAccount * 0.05;  // 5% of starting account
-            const currentMilestone = Math.floor(bankedProfits / milestoneSize); // how many complete 5% chunks
-            const nextMilestone    = currentMilestone + 1;
-            const progressToNext   = bankedProfits % milestoneSize;
-            const progressPct      = (progressToNext / milestoneSize) * 100;
+            const bankedProfits = netFromClosed + realizedFromPartials;
 
-            // Locked in YTD — threshold scales with the milestone being claimed.
-            // The milestone you're CLAIMING is currentMilestone (when > rewardMilestoneClaimed).
-            // The milestone you're WORKING TOWARD is nextMilestone.
-            // Use claimedTarget = the milestone number whose bar applies right now.
+            const milestoneSize    = startingAccount * 0.05;  // 5% of starting account
+            // How many complete milestones have been EARNED (based on banked profits)
+            const earnedMilestone  = bankedProfits > 0 ? Math.floor(bankedProfits / milestoneSize) : 0;
+            // Next milestone to CLAIM is always the next one in sequence after the last claimed
+            // This forces sequential claiming — can't skip from 0 to 2
+            const claimingMilestone = rewardMilestoneClaimed + 1;
+            const canClaim          = earnedMilestone >= claimingMilestone;
+            // Progress toward the claimingMilestone
+            const progressDollars   = Math.max(0, bankedProfits - (rewardMilestoneClaimed * milestoneSize));
+            const progressPct       = Math.min(100, (progressDollars / milestoneSize) * 100);
+
+            // Locked in YTD — threshold = claimingMilestone × 1%
+            // Milestone 1 → need 1%, Milestone 2 → need 2%, etc.
             let totalUnrealized = 0;
             openPositions.forEach(pos => {
                 const m = calculatePositionMetrics(pos);
                 if (m.unrealizedPnL > 0) totalUnrealized += m.unrealizedPnL;
             });
-            const ytdDollars   = getAdjustedYTDDollars(accountSize, startingAccount);
-            const ytdFloor     = ytdDollars - totalUnrealized;
-            const ytdFloorPct  = (ytdFloor / startingAccount) * 100;
-
-            // Which milestone are we evaluating the bar for?
-            // If a new milestone is available (crit1 would be true), bar = currentMilestone × 1%
-            // If no new milestone yet, bar = nextMilestone × 1% (what you'll need when you get there)
-            const hasPendingMilestone = currentMilestone > rewardMilestoneClaimed;
-            const barMilestone        = hasPendingMilestone ? currentMilestone : nextMilestone;
-            const solidThresholdPct   = barMilestone;  // e.g. milestone 3 → need 3%
-            const solidThreshold      = startingAccount * (solidThresholdPct / 100);
+            const ytdDollars       = getAdjustedYTDDollars(accountSize, startingAccount);
+            const ytdFloor         = ytdDollars - totalUnrealized;
+            const ytdFloorPct      = (ytdFloor / startingAccount) * 100;
+            const solidThresholdPct = claimingMilestone;  // 1% per milestone in sequence
+            const solidThreshold    = startingAccount * (solidThresholdPct / 100);
 
             // Off margin = exposure ≤ 100%
             let totalExposure = 0;
@@ -6869,14 +6864,13 @@
             const onMargin = totalExposure > 100;
 
             // ── 3 criteria ─────────────────────────────────────────────
-            const crit1Met = hasPendingMilestone;
+            const crit1Met = canClaim;
             const crit2Met = ytdFloor >= solidThreshold;
             const crit3Met = !onMargin;
+            const allMet   = crit1Met && crit2Met && crit3Met;
 
-            const allMet = crit1Met && crit2Met && crit3Met;
-
-            // Always show card if any banked profits exist
-            if (bankedProfits <= 0 && currentMilestone === 0) {
+            // Always show card if there are any banked profits or we're working toward milestone 1
+            if (bankedProfits <= 0 && earnedMilestone === 0) {
                 card.style.display = 'none';
                 return;
             }
@@ -6884,20 +6878,17 @@
             card.style.borderLeftColor = allMet ? '#f59e0b' : '#10b981';
 
             // Progress bar
-            document.getElementById('rewardProgressBar').style.width = `${Math.min(100, progressPct).toFixed(1)}%`;
+            document.getElementById('rewardProgressBar').style.width = `${progressPct.toFixed(1)}%`;
 
-            // Milestone label (header — always visible)
-            const milestoneDollars = currentMilestone * milestoneSize;
-            const nextDollars      = nextMilestone * milestoneSize;
-            document.getElementById('rewardMilestoneLabel').innerHTML = hasPendingMilestone
-                ? `🔔 Milestone ${currentMilestone} available ($${bankedProfits.toFixed(0)} banked)`
-                : currentMilestone > 0
-                    ? `Milestone ${currentMilestone} claimed — ${progressPct.toFixed(0)}% to Milestone ${nextMilestone} ($${nextDollars.toLocaleString()})`
-                    : `${progressPct.toFixed(0)}% to Milestone 1 ($${milestoneSize.toLocaleString()} banked)`;
+            // Milestone label (header)
+            const nextMilestoneDollars = claimingMilestone * milestoneSize;
+            document.getElementById('rewardMilestoneLabel').innerHTML = canClaim
+                ? `🔔 Milestone ${claimingMilestone} available — $${bankedProfits.toFixed(0)} banked`
+                : `Working toward Milestone ${claimingMilestone} — $${progressDollars.toFixed(0)} / $${milestoneSize.toLocaleString()} (${progressPct.toFixed(0)}%)`;
 
             // Ack button
             const ackBtn = document.getElementById('rewardAckBtn');
-            ackBtn.style.display = (crit1Met && allMet) ? 'inline-block' : 'none';
+            ackBtn.style.display = allMet ? 'inline-block' : 'none';
 
             // Criteria cells
             const critStyle = (met, label, value, detail) => {
@@ -6914,19 +6905,19 @@
 
             document.getElementById('rewardCrit1').outerHTML =
                 `<div id="rewardCrit1">${critStyle(crit1Met,
-                    'Banked Profits Milestone',
-                    `$${bankedProfits.toFixed(0)} banked`,
+                    'Banked Profits',
+                    `$${bankedProfits.toFixed(0)} net banked`,
                     crit1Met
-                        ? `Milestone ${currentMilestone} unlocked!`
-                        : `$${(milestoneSize - progressToNext).toFixed(0)} to next milestone`)}</div>`;
+                        ? `Milestone ${claimingMilestone} unlocked ($${(claimingMilestone * milestoneSize).toLocaleString()} threshold)`
+                        : `Need $${Math.max(0, claimingMilestone * milestoneSize - bankedProfits).toFixed(0)} more for Milestone ${claimingMilestone}`)}</div>`;
 
             document.getElementById('rewardCrit2').outerHTML =
                 `<div id="rewardCrit2">${critStyle(crit2Met,
                     `Locked in YTD`,
                     `${ytdFloorPct.toFixed(1)}%`,
                     crit2Met
-                        ? `✓ $${ytdFloor.toFixed(0)} locked (Milestone ${barMilestone} needs ≥${solidThresholdPct}%)`
-                        : `Need $${Math.max(0, solidThreshold - ytdFloor).toFixed(0)} more — Milestone ${barMilestone} requires ≥${solidThresholdPct}% locked in`)}</div>`;
+                        ? `✓ $${ytdFloor.toFixed(0)} locked (Milestone ${claimingMilestone} needs ≥${solidThresholdPct}%)`
+                        : `Need $${Math.max(0, solidThreshold - ytdFloor).toFixed(0)} more locked in (need ≥${solidThresholdPct}% for Milestone ${claimingMilestone})`)}</div>`;
 
             document.getElementById('rewardCrit3').outerHTML =
                 `<div id="rewardCrit3">${critStyle(crit3Met,
@@ -6940,25 +6931,15 @@
         }
 
         function acknowledgeRewardMilestone() {
-            const startingAccount = parseFloat(document.getElementById('startingAccount').value) || 250000;
-            const accountSize     = getAccountSize();
-            const milestoneSize   = startingAccount * 0.05;
-
-            let bankedProfits = 0;
-            closedTrades.forEach(t => { const p = (t.portfolioPnlPercent/100)*accountSize; if(p>0) bankedProfits+=p; });
-            openPositions.forEach(pos => {
-                if (pos.partialSells) pos.partialSells.forEach(s => { const p=(s.price-pos.entryPrice)*s.shares; if(p>0) bankedProfits+=p; });
-            });
-
-            const currentMilestone = Math.floor(bankedProfits / milestoneSize);
-            rewardMilestoneClaimed = currentMilestone;
+            // Always claim the next one in sequence, never skip
+            const claimingNow = rewardMilestoneClaimed + 1;
+            rewardMilestoneClaimed = claimingNow;
             saveToFirebase();
             updateRewardReadiness();
 
-            // Toast
             const toast = document.createElement('div');
             toast.style.cssText = 'position:fixed;bottom:30px;right:30px;background:#f59e0b;color:white;padding:12px 20px;border-radius:8px;font-weight:700;font-size:0.9em;z-index:9999;box-shadow:0 4px 12px rgba(0,0,0,0.2);';
-            toast.textContent = `🎁 Milestone ${currentMilestone} marked as claimed!`;
+            toast.textContent = `🎁 Milestone ${claimingNow} marked as claimed!`;
             document.body.appendChild(toast);
             setTimeout(() => toast.remove(), 3500);
         }
