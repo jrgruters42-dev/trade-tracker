@@ -884,6 +884,7 @@
             <button class="tab" onclick="switchTab('stock5')"><span id="stock5Symbol">Stock 5</span></button>
             <button class="tab" onclick="switchTab('stock6')"><span id="stock6Symbol">Stock 6</span></button>
             <button class="tab" onclick="switchTab('equity-curves')">Equity Curves</button>
+            <button class="tab" onclick="switchTab('options-hedge')">🛡️ Options Hedge</button>
         </div>
 
         <!-- Open Positions Tab -->
@@ -1802,6 +1803,91 @@
             <div class="card">
                 <h2>Daily Closed P&L % Distribution</h2>
                 <div id="dailyPnlChart"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Options Hedge Tab -->
+    <div id="options-hedge" class="tab-content">
+        <div class="card" style="max-width:900px; margin:0 auto;">
+            <h2 style="margin-bottom:4px;">🛡️ Put Hedge Cost Analyzer</h2>
+            <p style="font-size:0.85em; color:#6b7280; margin-bottom:20px;">Evaluates whether buying a put for downside protection is cost-effective vs. simply selling the position.</p>
+
+            <!-- Position selector -->
+            <div style="background:#f0f9ff; padding:14px; border-radius:8px; border:2px solid #bfdbfe; margin-bottom:18px;">
+                <div style="font-size:0.78em; font-weight:700; color:#1e40af; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:10px;">Step 1 — Select Open Position</div>
+                <select id="hedgePositionSelect" onchange="loadHedgePosition()" style="width:100%; padding:10px; border:2px solid #bfdbfe; border-radius:6px; font-size:1em; font-weight:600; color:#1e40af; background:white;">
+                    <option value="">— Choose a position —</option>
+                </select>
+                <!-- Auto-populated position summary -->
+                <div id="hedgePositionSummary" style="display:none; margin-top:12px; display:none; grid-template-columns:repeat(5,1fr); gap:8px;"></div>
+            </div>
+
+            <!-- Option inputs -->
+            <div style="background:#fdf4ff; padding:14px; border-radius:8px; border:2px solid #e9d5ff; margin-bottom:18px;">
+                <div style="font-size:0.78em; font-weight:700; color:#4c1d95; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:10px;">Step 2 — Enter Put Details</div>
+                <div style="display:grid; grid-template-columns:repeat(4,1fr); gap:12px;">
+                    <div>
+                        <label style="font-size:0.78em; font-weight:600; display:block; margin-bottom:4px;" title="The put option premium per share (multiply by 100 for cost per contract)">Premium / Share ($)</label>
+                        <input type="number" id="hedgePremiumPerShare" placeholder="e.g. 3.50" step="0.01" min="0"
+                               style="width:100%; padding:8px; border:2px solid #e9d5ff; border-radius:6px; font-size:1em; font-weight:700;"
+                               oninput="calculateHedge()">
+                    </div>
+                    <div>
+                        <label style="font-size:0.78em; font-weight:600; display:block; margin-bottom:4px;" title="The strike price of the put — the price below which you're protected">Strike Price ($)</label>
+                        <input type="number" id="hedgeStrike" placeholder="e.g. 145.00" step="0.01" min="0"
+                               style="width:100%; padding:8px; border:2px solid #e9d5ff; border-radius:6px; font-size:1em; font-weight:700;"
+                               oninput="calculateHedge()">
+                    </div>
+                    <div>
+                        <label style="font-size:0.78em; font-weight:600; display:block; margin-bottom:4px;" title="Number of put contracts (each covers 100 shares)">Contracts</label>
+                        <input type="number" id="hedgeContracts" placeholder="e.g. 3" step="1" min="1"
+                               style="width:100%; padding:8px; border:2px solid #e9d5ff; border-radius:6px; font-size:1em; font-weight:700;"
+                               oninput="calculateHedge()">
+                    </div>
+                    <div>
+                        <label style="font-size:0.78em; font-weight:600; display:block; margin-bottom:4px;" title="Expiration date of the put option">Expiration Date</label>
+                        <input type="date" id="hedgeExpiry"
+                               style="width:100%; padding:8px; border:2px solid #e9d5ff; border-radius:6px; font-size:0.95em; font-weight:700;"
+                               oninput="calculateHedge()">
+                    </div>
+                </div>
+                <div style="margin-top:10px; display:flex; align-items:center; gap:8px; font-size:0.82em; color:#6b7280;">
+                    <span>💡 Tip: contracts × 100 should approximate your share count for full coverage.</span>
+                    <span id="hedgeCoverageNote" style="font-weight:700;"></span>
+                </div>
+            </div>
+
+            <!-- Results (hidden until calculated) -->
+            <div id="hedgeResults" style="display:none;">
+
+                <!-- Verdict banner -->
+                <div id="hedgeVerdict" style="padding:14px 18px; border-radius:10px; margin-bottom:16px; font-size:1em;"></div>
+
+                <!-- Key metrics grid -->
+                <div style="display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin-bottom:16px;">
+                    <div id="hedgeMetric1" style="padding:12px; border-radius:8px; text-align:center; border:2px solid #e5e7eb;"></div>
+                    <div id="hedgeMetric2" style="padding:12px; border-radius:8px; text-align:center; border:2px solid #e5e7eb;"></div>
+                    <div id="hedgeMetric3" style="padding:12px; border-radius:8px; text-align:center; border:2px solid #e5e7eb;"></div>
+                    <div id="hedgeMetric4" style="padding:12px; border-radius:8px; text-align:center; border:2px solid #e5e7eb;"></div>
+                    <div id="hedgeMetric5" style="padding:12px; border-radius:8px; text-align:center; border:2px solid #e5e7eb;"></div>
+                    <div id="hedgeMetric6" style="padding:12px; border-radius:8px; text-align:center; border:2px solid #e5e7eb;"></div>
+                </div>
+
+                <!-- Protection scenario -->
+                <div style="background:#f8fafc; border-radius:8px; padding:14px; margin-bottom:16px;">
+                    <div style="font-size:0.78em; font-weight:700; color:#374151; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:10px;">📉 Protection Scenarios — What Does This Put Actually Cover?</div>
+                    <div id="hedgeScenarios" style="display:grid; grid-template-columns:repeat(4,1fr); gap:8px;"></div>
+                    <div style="margin-top:10px; font-size:0.75em; color:#9ca3af;">Each scenario shows: put payoff − premium cost = net protection on your open profit</div>
+                </div>
+
+                <!-- Verdict detail breakdown -->
+                <div id="hedgeVerdictDetail" style="padding:12px 14px; background:#f9fafb; border-radius:8px; font-size:0.85em; line-height:1.8;"></div>
+            </div>
+
+            <!-- Empty state -->
+            <div id="hedgeEmptyState" style="text-align:center; padding:40px; color:#9ca3af; font-style:italic;">
+                Select a position and enter put details to see the analysis.
             </div>
         </div>
     </div>
@@ -6504,6 +6590,244 @@
         }
 
         // Update all displays
+        // ── Options Hedge Calculator ──────────────────────────────────────────
+        function populateHedgePositionDropdown() {
+            const sel = document.getElementById('hedgePositionSelect');
+            if (!sel) return;
+            const current = sel.value;
+            sel.innerHTML = '<option value="">— Choose a position —</option>';
+            openPositions.forEach(pos => {
+                const metrics = calculatePositionMetrics(pos);
+                const r = metrics.initialR.toFixed(1);
+                const pnl = metrics.unrealizedPnL >= 0
+                    ? `+$${metrics.unrealizedPnL.toFixed(0)}`
+                    : `-$${Math.abs(metrics.unrealizedPnL).toFixed(0)}`;
+                const opt = document.createElement('option');
+                opt.value = pos.id;
+                opt.textContent = `${pos.symbol}  —  ${pos.shares} shares  |  ${pnl} unrealized  |  ${r}R`;
+                if (pos.id == current) opt.selected = true;
+                sel.appendChild(opt);
+            });
+        }
+
+        function loadHedgePosition() {
+            const sel   = document.getElementById('hedgePositionSelect');
+            const posId = parseInt(sel.value);
+            const pos   = openPositions.find(p => p.id === posId);
+            const sumEl = document.getElementById('hedgePositionSummary');
+            const contEl = document.getElementById('hedgeContracts');
+
+            document.getElementById('hedgeResults').style.display    = 'none';
+            document.getElementById('hedgeEmptyState').style.display = 'block';
+
+            if (!pos) { sumEl.style.display = 'none'; return; }
+
+            const metrics      = calculatePositionMetrics(pos);
+            const unrealized   = metrics.unrealizedPnL;
+            const initialRisk$ = (pos.entryPrice - pos.initialStop) * (pos.initialShares || pos.shares);
+            const suggestedContracts = Math.round((pos.initialShares || pos.shares) / 100);
+
+            // Auto-suggest contracts
+            if (contEl && (!contEl.value || contEl.value == 0)) {
+                contEl.value = Math.max(1, suggestedContracts);
+            }
+
+            const cells = [
+                { label: 'Entry / Avg Cost',  value: `$${pos.entryPrice.toFixed(2)}` },
+                { label: 'Current Price',     value: `$${pos.currentPrice.toFixed(2)}` },
+                { label: 'Shares',            value: pos.shares.toLocaleString() },
+                { label: 'Unrealized P&L',    value: unrealized >= 0 ? `+$${unrealized.toFixed(0)}` : `-$${Math.abs(unrealized).toFixed(0)}`,
+                  color: unrealized >= 0 ? '#15803d' : '#dc2626' },
+                { label: 'Current R',         value: `${metrics.initialR.toFixed(2)}R`,
+                  color: metrics.initialR >= 0 ? '#15803d' : '#dc2626' },
+            ];
+
+            sumEl.style.display = 'grid';
+            sumEl.innerHTML = cells.map(c => `
+                <div style="padding:8px 10px; background:white; border-radius:6px; border:1px solid #bfdbfe; text-align:center;">
+                    <div style="font-size:0.68em; color:#9ca3af; margin-bottom:2px;">${c.label}</div>
+                    <div style="font-size:1em; font-weight:700; color:${c.color || '#1e40af'};">${c.value}</div>
+                </div>`).join('');
+
+            calculateHedge();
+        }
+
+        function calculateHedge() {
+            const sel      = document.getElementById('hedgePositionSelect');
+            const posId    = parseInt(sel.value);
+            const pos      = openPositions.find(p => p.id === posId);
+            if (!pos) return;
+
+            const premium   = parseFloat(document.getElementById('hedgePremiumPerShare').value);
+            const strike    = parseFloat(document.getElementById('hedgeStrike').value);
+            const contracts = parseInt(document.getElementById('hedgeContracts').value);
+            const expiryVal = document.getElementById('hedgeExpiry').value;
+
+            if (!premium || !strike || !contracts) {
+                document.getElementById('hedgeResults').style.display    = 'none';
+                document.getElementById('hedgeEmptyState').style.display = 'block';
+                return;
+            }
+
+            const metrics      = calculatePositionMetrics(pos);
+            const currentPrice = pos.currentPrice;
+            const entry        = pos.entryPrice;
+            const shares       = pos.initialShares || pos.shares;
+            const unrealized   = metrics.unrealizedPnL;
+            const initialRisk$ = (entry - pos.initialStop) * shares;
+            const totalCost    = contracts * premium * 100;
+            const sharesHedged = contracts * 100;
+
+            // Coverage note
+            const coverageNote = document.getElementById('hedgeCoverageNote');
+            if (sharesHedged < shares) {
+                coverageNote.textContent = `⚠ ${sharesHedged} of ${shares} shares covered (${Math.round(sharesHedged/shares*100)}%)`;
+                coverageNote.style.color = '#d97706';
+            } else if (sharesHedged > shares) {
+                coverageNote.textContent = `⚠ Over-hedged — ${sharesHedged} contracts cover ${sharesHedged - shares} more shares than you own`;
+                coverageNote.style.color = '#d97706';
+            } else {
+                coverageNote.textContent = `✓ Full coverage`;
+                coverageNote.style.color = '#15803d';
+            }
+
+            // Core calculations
+            const optPctOfPrice    = (premium / currentPrice) * 100;
+            const pctOfUnrealized  = unrealized > 0 ? (totalCost / unrealized) * 100 : null;
+            const pctOfCostBasis   = ((entry - pos.initialStop) * shares) > 0
+                ? (totalCost / ((currentPrice - entry) * shares)) * 100 : null;
+            const otmPct           = ((currentPrice - strike) / currentPrice) * 100;
+            const breakeven        = currentPrice - premium;  // effective downside breakeven after paying premium
+            const costInR          = initialRisk$ > 0 ? totalCost / initialRisk$ : null;
+
+            // DTE
+            let dte = null, costPerDay = null;
+            if (expiryVal) {
+                const expiry = new Date(expiryVal);
+                const today  = new Date();
+                dte = Math.round((expiry - today) / (1000 * 60 * 60 * 24));
+                if (dte > 0) costPerDay = totalCost / dte;
+            }
+
+            // ── Scoring ──────────────────────────────────────────────────
+            const scores = [];
+
+            // 1. Option cost as % of stock price (< 6% good)
+            const priceScore = optPctOfPrice < 6 ? 'green' : optPctOfPrice < 10 ? 'yellow' : 'red';
+            scores.push(priceScore);
+
+            // 2. % of unrealized profit (< 33% good)
+            let profitScore = 'grey';
+            if (pctOfUnrealized !== null) {
+                profitScore = pctOfUnrealized < 33 ? 'green' : pctOfUnrealized < 50 ? 'yellow' : 'red';
+                scores.push(profitScore);
+            }
+
+            // 3. OTM% — if > 15% OTM the put is too far to be meaningful protection
+            const otmScore = otmPct < 5 ? 'green' : otmPct < 15 ? 'yellow' : 'red';
+            scores.push(otmScore);
+
+            // 4. DTE — < 7 days is very short
+            let dteScore = 'grey';
+            if (dte !== null) {
+                dteScore = dte >= 21 ? 'green' : dte >= 7 ? 'yellow' : 'red';
+                scores.push(dteScore);
+            }
+
+            const redCount    = scores.filter(s => s === 'red').length;
+            const yellowCount = scores.filter(s => s === 'yellow').length;
+
+            let verdict, verdictBg, verdictBorder, verdictColor;
+            if (redCount === 0 && yellowCount === 0) {
+                verdict = '✅ Worth It — All criteria pass. This put is cost-effective protection.';
+                verdictBg = '#dcfce7'; verdictBorder = '#16a34a'; verdictColor = '#14532d';
+            } else if (redCount >= 2 || (pctOfUnrealized !== null && pctOfUnrealized > 50)) {
+                verdict = '🚫 Consider Selling Instead — Put cost is too high relative to the profit you\'re protecting. Selling part of the position may be a better hedge.';
+                verdictBg = '#fee2e2'; verdictBorder = '#dc2626'; verdictColor = '#7f1d1d';
+            } else if (redCount === 1 || yellowCount >= 2) {
+                verdict = '⚠️ Marginal — Some criteria are borderline. Review the detail below before proceeding.';
+                verdictBg = '#fef9c3'; verdictBorder = '#d97706'; verdictColor = '#78350f';
+            } else {
+                verdict = '🟡 Acceptable — Minor cautions noted. Generally OK if you want the protection.';
+                verdictBg = '#fef9c3'; verdictBorder = '#d97706'; verdictColor = '#78350f';
+            }
+
+            document.getElementById('hedgeVerdict').innerHTML = `<strong style="font-size:1.05em;">${verdict}</strong>`;
+            document.getElementById('hedgeVerdict').style.cssText = `padding:14px 18px; border-radius:10px; margin-bottom:16px; border-left:5px solid ${verdictBorder}; background:${verdictBg}; color:${verdictColor};`;
+
+            // ── Metric cells ──────────────────────────────────────────────
+            const metricStyle = (score) => {
+                if (score === 'green')  return { bg: '#dcfce7', border: '#86efac', color: '#15803d' };
+                if (score === 'yellow') return { bg: '#fef9c3', border: '#fde68a', color: '#92400e' };
+                if (score === 'red')    return { bg: '#fee2e2', border: '#fca5a5', color: '#dc2626' };
+                return { bg: '#f3f4f6', border: '#e5e7eb', color: '#374151' };
+            };
+
+            const metrics6 = [
+                { label: 'Total Put Cost', value: `$${totalCost.toFixed(0)}`, sub: `${contracts} contract${contracts>1?'s':''} × $${premium} × 100`, score: 'grey' },
+                { label: 'Cost vs Stock Price', value: `${optPctOfPrice.toFixed(2)}%`, sub: 'target < 6%', score: priceScore },
+                { label: '% of Open Profit', value: pctOfUnrealized !== null ? `${pctOfUnrealized.toFixed(1)}%` : 'N/A (position at loss)', sub: 'target < 33%', score: profitScore },
+                { label: 'Strike OTM', value: `${otmPct.toFixed(1)}% below price`, sub: `Strike $${strike} vs $${currentPrice.toFixed(2)}`, score: otmScore },
+                { label: 'Cost in R', value: costInR !== null ? `${costInR.toFixed(2)}R` : 'N/A', sub: `vs initial risk $${initialRisk$.toFixed(0)}`, score: costInR !== null && costInR < 0.5 ? 'green' : costInR !== null && costInR < 1 ? 'yellow' : 'grey' },
+                { label: dte !== null ? `DTE / Cost/Day` : 'Expiry', value: dte !== null ? `${dte} days` : 'No expiry entered', sub: dte !== null && costPerDay !== null ? `$${costPerDay.toFixed(1)}/day` : '', score: dteScore },
+            ];
+
+            ['hedgeMetric1','hedgeMetric2','hedgeMetric3','hedgeMetric4','hedgeMetric5','hedgeMetric6'].forEach((id, i) => {
+                const m = metrics6[i];
+                const s = metricStyle(m.score);
+                document.getElementById(id).style.cssText = `padding:12px; border-radius:8px; text-align:center; background:${s.bg}; border:2px solid ${s.border};`;
+                document.getElementById(id).innerHTML = `
+                    <div style="font-size:0.7em; color:#6b7280; margin-bottom:3px;">${m.label}</div>
+                    <div style="font-size:1.2em; font-weight:800; color:${s.color};">${m.value}</div>
+                    ${m.sub ? `<div style="font-size:0.7em; color:#9ca3af; margin-top:2px;">${m.sub}</div>` : ''}`;
+            });
+
+            // ── Protection scenarios ──────────────────────────────────────
+            const drops = [5, 10, 20, 30];
+            const scenarioHTML = drops.map(drop => {
+                const dropPrice   = currentPrice * (1 - drop / 100);
+                const putPayoff   = Math.max(0, (strike - dropPrice) * contracts * 100);
+                const netProtect  = putPayoff - totalCost;
+                const stockLoss   = (currentPrice - dropPrice) * shares;
+                const newUnreal   = unrealized - stockLoss + putPayoff - totalCost;
+                const covered     = putPayoff > 0;
+                const bg          = drop <= 10 ? '#f0f9ff' : drop <= 20 ? '#fef9c3' : '#fee2e2';
+                const borderColor = drop <= 10 ? '#bfdbfe' : drop <= 20 ? '#fde68a' : '#fca5a5';
+                return `
+                    <div style="padding:10px; background:${bg}; border-radius:8px; border:2px solid ${borderColor}; text-align:center;">
+                        <div style="font-size:0.75em; font-weight:700; color:#374151; margin-bottom:4px;">− ${drop}% Drop</div>
+                        <div style="font-size:0.7em; color:#6b7280;">Price → $${dropPrice.toFixed(2)}</div>
+                        <div style="font-size:0.7em; color:#6b7280; margin-bottom:6px;">Stock loss: $${stockLoss.toFixed(0)}</div>
+                        ${covered
+                            ? `<div style="font-size:0.85em; font-weight:700; color:#15803d;">Put pays: +$${putPayoff.toFixed(0)}</div>
+                               <div style="font-size:0.78em; color:${netProtect>=0?'#15803d':'#dc2626'}; margin-top:2px;">Net protect: ${netProtect>=0?'+':''}$${netProtect.toFixed(0)}</div>`
+                            : `<div style="font-size:0.85em; font-weight:700; color:#9ca3af;">Put OTM — $0</div>
+                               <div style="font-size:0.78em; color:#dc2626; margin-top:2px;">Cost: −$${totalCost.toFixed(0)}</div>`}
+                        <div style="font-size:0.7em; color:#374151; border-top:1px solid rgba(0,0,0,0.08); margin-top:6px; padding-top:5px;">
+                            Open P&L: <strong style="color:${newUnreal>=0?'#15803d':'#dc2626'};">${newUnreal>=0?'+':''}$${newUnreal.toFixed(0)}</strong>
+                        </div>
+                    </div>`;
+            }).join('');
+            document.getElementById('hedgeScenarios').innerHTML = scenarioHTML;
+
+            // ── Verdict detail ────────────────────────────────────────────
+            const details = [
+                `<span style="color:${metricStyle(priceScore).color};">${priceScore === 'green' ? '✓' : priceScore === 'yellow' ? '⚠' : '✗'} Premium ${optPctOfPrice.toFixed(2)}% of stock price (target < 6%)</span>`,
+                pctOfUnrealized !== null
+                    ? `<span style="color:${metricStyle(profitScore).color};">${profitScore === 'green' ? '✓' : profitScore === 'yellow' ? '⚠' : '✗'} Put costs ${pctOfUnrealized.toFixed(1)}% of open profit${pctOfUnrealized > 33 ? ' — consider selling stock instead' : ''} (target < 33%)</span>`
+                    : `<span style="color:#6b7280;">ℹ Position is not currently profitable — hedging a loss locks in more cost</span>`,
+                `<span style="color:${metricStyle(otmScore).color};">${otmScore === 'green' ? '✓' : otmScore === 'yellow' ? '⚠' : '✗'} Strike is ${otmPct.toFixed(1)}% OTM — ${otmPct < 5 ? 'tight protection' : otmPct < 15 ? 'reasonable buffer' : 'too far OTM to provide meaningful near-term protection'}</span>`,
+                dte !== null ? `<span style="color:${metricStyle(dteScore).color};">${dteScore === 'green' ? '✓' : dteScore === 'yellow' ? '⚠' : '✗'} ${dte} days to expiry${dte < 7 ? ' — very short, premium decay accelerates' : dte < 21 ? ' — OK but watch theta' : ' — good runway'}</span>` : '',
+                `<span style="color:#374151;">ℹ Breakeven: stock falls to $${breakeven.toFixed(2)} before the put begins to offset its cost</span>`,
+                costInR !== null ? `<span style="color:#374151;">ℹ This put costs ${costInR.toFixed(2)}R — ${costInR < 0.25 ? 'cheap relative to your initial risk' : costInR < 0.75 ? 'moderate cost relative to initial risk' : 'significant cost — nearly a full loss on this trade if wrong'}</span>` : '',
+            ].filter(Boolean).join('<br>');
+
+            document.getElementById('hedgeVerdictDetail').innerHTML = details;
+
+            document.getElementById('hedgeResults').style.display    = 'block';
+            document.getElementById('hedgeEmptyState').style.display = 'none';
+        }
+
         function updateAllDisplays() {
             updateSafetyDashboard();
             updateOpenPositionsTable();
@@ -6522,6 +6846,7 @@
             updateRDistribution();
             updatePortfolioHealthBar();
             updateExposureScaling();
+            populateHedgePositionDropdown();
             // Trade quality only updates when panel is open (performance)
             if (document.getElementById('tradeQualityContent')?.style.display !== 'none') {
                 updateTradeQuality();
