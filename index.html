@@ -753,22 +753,31 @@
             
             <!-- Core Stats (Compact) -->
             <div id="rewardReadinessCard" class="card" style="padding: 10px; margin-bottom: 10px; display: none; border-left: 4px solid #10b981;">
-                <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:8px;">
-                    <div style="font-size:0.75em; font-weight:700; color:#059669; text-transform:uppercase; letter-spacing:0.5px;">🎁 Reward Readiness</div>
-                    <div id="rewardMilestoneLabel" style="font-size:0.8em; font-weight:700; color:#374151;"></div>
-                    <button onclick="acknowledgeRewardMilestone()" id="rewardAckBtn" style="display:none; padding:3px 10px; font-size:0.75em; background:#10b981; color:white; border:none; border-radius:6px; cursor:pointer; font-weight:700;">✓ Mark Claimed</button>
+                <!-- Collapsible header -->
+                <div onclick="toggleRewardReadiness()" style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:8px; cursor:pointer;">
+                    <div style="display:flex; align-items:center; gap:10px;">
+                        <div style="font-size:0.75em; font-weight:700; color:#059669; text-transform:uppercase; letter-spacing:0.5px;">🎁 Reward Readiness</div>
+                        <div id="rewardMilestoneLabel" style="font-size:0.78em; font-weight:700; color:#374151;"></div>
+                    </div>
+                    <div style="display:flex; align-items:center; gap:8px;">
+                        <button onclick="event.stopPropagation(); acknowledgeRewardMilestone()" id="rewardAckBtn" style="display:none; padding:3px 10px; font-size:0.72em; background:#10b981; color:white; border:none; border-radius:6px; cursor:pointer; font-weight:700;">✓ Mark Claimed</button>
+                        <span id="rewardReadinessToggle" style="font-size:0.75em; color:#9ca3af; font-weight:600;">▶ tap to expand</span>
+                    </div>
                 </div>
-                <!-- Progress bar -->
-                <div style="margin:8px 0 6px; background:#e5e7eb; border-radius:4px; height:10px; overflow:hidden;">
-                    <div id="rewardProgressBar" style="height:100%; border-radius:4px; background:linear-gradient(90deg,#10b981,#059669); transition:width 0.4s;"></div>
-                </div>
-                <div style="display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin-top:6px;">
-                    <div id="rewardCrit1" style="padding:7px 10px; border-radius:6px; font-size:0.78em; text-align:center;"></div>
-                    <div id="rewardCrit2" style="padding:7px 10px; border-radius:6px; font-size:0.78em; text-align:center;"></div>
-                    <div id="rewardCrit3" style="padding:7px 10px; border-radius:6px; font-size:0.78em; text-align:center;"></div>
-                </div>
-                <div id="rewardAllGreen" style="display:none; margin-top:8px; padding:8px 12px; background:#dcfce7; border-radius:6px; font-size:0.85em; font-weight:700; color:#14532d; text-align:center;">
-                    🎉 All criteria met — you've earned a reward withdrawal!
+                <!-- Collapsible body -->
+                <div id="rewardReadinessBody" style="display:none; margin-top:10px;">
+                    <!-- Progress bar -->
+                    <div style="margin:0 0 8px; background:#e5e7eb; border-radius:4px; height:10px; overflow:hidden;">
+                        <div id="rewardProgressBar" style="height:100%; border-radius:4px; background:linear-gradient(90deg,#10b981,#059669); transition:width 0.4s;"></div>
+                    </div>
+                    <div style="display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin-top:6px;">
+                        <div id="rewardCrit1" style="padding:7px 10px; border-radius:6px; font-size:0.78em; text-align:center;"></div>
+                        <div id="rewardCrit2" style="padding:7px 10px; border-radius:6px; font-size:0.78em; text-align:center;"></div>
+                        <div id="rewardCrit3" style="padding:7px 10px; border-radius:6px; font-size:0.78em; text-align:center;"></div>
+                    </div>
+                    <div id="rewardAllGreen" style="display:none; margin-top:8px; padding:8px 12px; background:#dcfce7; border-radius:6px; font-size:0.85em; font-weight:700; color:#14532d; text-align:center;">
+                        🎉 All criteria met — you've earned a reward withdrawal!
+                    </div>
                 </div>
             </div>
 
@@ -6790,6 +6799,14 @@
         }
 
 
+        function toggleRewardReadiness() {
+            const body   = document.getElementById('rewardReadinessBody');
+            const toggle = document.getElementById('rewardReadinessToggle');
+            const open   = body.style.display !== 'none';
+            body.style.display   = open ? 'none' : 'block';
+            toggle.textContent   = open ? '▶ tap to expand' : '▼ tap to collapse';
+        }
+
         // ── Reward Readiness Tracker ──────────────────────────────────────────
         function updateRewardReadiness() {
             const card     = document.getElementById('rewardReadinessCard');
@@ -6822,19 +6839,26 @@
             const progressToNext   = bankedProfits % milestoneSize;
             const progressPct      = (progressToNext / milestoneSize) * 100;
 
-            // Locked in YTD — threshold = currentMilestone × 1% of starting account (grows with each milestone)
-            // Minimum threshold is 1% even at milestone 0 so there's always a bar
+            // Locked in YTD — threshold scales with the milestone being claimed.
+            // The milestone you're CLAIMING is currentMilestone (when > rewardMilestoneClaimed).
+            // The milestone you're WORKING TOWARD is nextMilestone.
+            // Use claimedTarget = the milestone number whose bar applies right now.
             let totalUnrealized = 0;
             openPositions.forEach(pos => {
                 const m = calculatePositionMetrics(pos);
                 if (m.unrealizedPnL > 0) totalUnrealized += m.unrealizedPnL;
             });
-            const ytdDollars      = getAdjustedYTDDollars(accountSize, startingAccount);
-            const ytdFloor        = ytdDollars - totalUnrealized;
-            const ytdFloorPct     = (ytdFloor / startingAccount) * 100;
-            const milestoneForThreshold = Math.max(1, currentMilestone); // at least 1% required
-            const solidThreshold  = startingAccount * (milestoneForThreshold * 0.01); // 1% per milestone
-            const solidThresholdPct = milestoneForThreshold; // e.g. milestone 3 → need 3% locked in
+            const ytdDollars   = getAdjustedYTDDollars(accountSize, startingAccount);
+            const ytdFloor     = ytdDollars - totalUnrealized;
+            const ytdFloorPct  = (ytdFloor / startingAccount) * 100;
+
+            // Which milestone are we evaluating the bar for?
+            // If a new milestone is available (crit1 would be true), bar = currentMilestone × 1%
+            // If no new milestone yet, bar = nextMilestone × 1% (what you'll need when you get there)
+            const hasPendingMilestone = currentMilestone > rewardMilestoneClaimed;
+            const barMilestone        = hasPendingMilestone ? currentMilestone : nextMilestone;
+            const solidThresholdPct   = barMilestone;  // e.g. milestone 3 → need 3%
+            const solidThreshold      = startingAccount * (solidThresholdPct / 100);
 
             // Off margin = exposure ≤ 100%
             let totalExposure = 0;
@@ -6845,7 +6869,7 @@
             const onMargin = totalExposure > 100;
 
             // ── 3 criteria ─────────────────────────────────────────────
-            const crit1Met = currentMilestone > rewardMilestoneClaimed;
+            const crit1Met = hasPendingMilestone;
             const crit2Met = ytdFloor >= solidThreshold;
             const crit3Met = !onMargin;
 
@@ -6862,12 +6886,14 @@
             // Progress bar
             document.getElementById('rewardProgressBar').style.width = `${Math.min(100, progressPct).toFixed(1)}%`;
 
-            // Milestone label
+            // Milestone label (header — always visible)
             const milestoneDollars = currentMilestone * milestoneSize;
             const nextDollars      = nextMilestone * milestoneSize;
-            document.getElementById('rewardMilestoneLabel').innerHTML = currentMilestone > 0
-                ? `Milestone ${currentMilestone} reached ($${milestoneDollars.toLocaleString()} banked) — next at $${nextDollars.toLocaleString()} (${(progressPct).toFixed(0)}% there)`
-                : `Progress to first milestone: $${bankedProfits.toFixed(0)} / $${milestoneSize.toLocaleString()} (${progressPct.toFixed(0)}%)`;
+            document.getElementById('rewardMilestoneLabel').innerHTML = hasPendingMilestone
+                ? `🔔 Milestone ${currentMilestone} available ($${bankedProfits.toFixed(0)} banked)`
+                : currentMilestone > 0
+                    ? `Milestone ${currentMilestone} claimed — ${progressPct.toFixed(0)}% to Milestone ${nextMilestone} ($${nextDollars.toLocaleString()})`
+                    : `${progressPct.toFixed(0)}% to Milestone 1 ($${milestoneSize.toLocaleString()} banked)`;
 
             // Ack button
             const ackBtn = document.getElementById('rewardAckBtn');
@@ -6896,11 +6922,11 @@
 
             document.getElementById('rewardCrit2').outerHTML =
                 `<div id="rewardCrit2">${critStyle(crit2Met,
-                    `Locked in YTD (≥${solidThresholdPct}% required)`,
+                    `Locked in YTD`,
                     `${ytdFloorPct.toFixed(1)}%`,
                     crit2Met
-                        ? `$${ytdFloor.toFixed(0)} locked — threshold met`
-                        : `Need $${Math.max(0, solidThreshold - ytdFloor).toFixed(0)} more locked in (Milestone ${milestoneForThreshold} → ${solidThresholdPct}% bar)`)}</div>`;
+                        ? `✓ $${ytdFloor.toFixed(0)} locked (Milestone ${barMilestone} needs ≥${solidThresholdPct}%)`
+                        : `Need $${Math.max(0, solidThreshold - ytdFloor).toFixed(0)} more — Milestone ${barMilestone} requires ≥${solidThresholdPct}% locked in`)}</div>`;
 
             document.getElementById('rewardCrit3').outerHTML =
                 `<div id="rewardCrit3">${critStyle(crit3Met,
