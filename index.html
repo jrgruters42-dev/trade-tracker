@@ -60,6 +60,8 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
+            width: 100%;
+            box-sizing: border-box;
         }
 
         .sync-indicator {
@@ -88,6 +90,8 @@
             padding: 20px;
             margin-bottom: 20px;
             box-shadow: 0 8px 24px rgba(0,0,0,0.15);
+            width: 100%;
+            box-sizing: border-box;
         }
 
         .account-setup h3 {
@@ -571,7 +575,7 @@
         <h1 style="margin-bottom: 10px; font-size: 1.8em;">📊 Trade Tracker</h1>
 
         <!-- Sync Status -->
-        <div class="sync-status" style="padding: 10px 15px; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center;">
+        <div class="sync-status" style="padding: 10px 15px; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center; width: 100%; box-sizing: border-box;">
             <div class="sync-indicator" style="display: flex; align-items: center; gap: 10px;">
                 <div class="sync-dot" id="syncDot"></div>
                 <div style="display: flex; flex-direction: column;">
@@ -579,7 +583,8 @@
                     <span id="lastSavedTime" style="font-size: 11px; color: #666;">Never saved</span>
                 </div>
             </div>
-            <div style="display: flex; gap: 5px;">
+            <div style="display: flex; gap: 5px; align-items: center;">
+                <button onclick="quickSnapshotFromMain()" class="btn-success" style="padding:5px 10px; font-size:11px; font-weight:700;" title="Log today's snapshot without popup">⚡ Log Today</button>
                 <button onclick="forceSaveToFirebase()" class="btn-secondary btn-small" title="Force save all data to Firebase">💾 Save</button>
                 <button onclick="forceLoadFromFirebase()" class="btn-secondary btn-small" title="Force reload all data from Firebase">🔄 Reload</button>
                 <button onclick="openFirebaseSetup()" class="btn-secondary btn-small">⚙️</button>
@@ -587,7 +592,7 @@
         </div>
 
         <!-- Account Setup -->
-        <div class="account-setup" style="padding: 10px;">
+        <div class="account-setup" style="padding: 10px; width: 100%; box-sizing: border-box;">
             <!-- Collapsible header row -->
             <div style="display:flex; align-items:center; justify-content:space-between; cursor:pointer; margin-bottom:6px;" onclick="toggleAccountSetup()" title="Click to show/hide account input fields">
                 <h3 style="font-size: 1em; margin: 0;" title="ACCOUNT STATS: Update these values daily. Trading Account = your current total equity (update after market close). Roth accounts tracked separately. Starting (Jan 1) is set once per year and never changes — it's your benchmark for YTD calculations.">Account Setup ℹ</h3>
@@ -797,68 +802,52 @@
             </div>
 
         <!-- ── Card 1: Exposure Scaling ───────────────────────────────────── -->
-        <div class="card" style="padding:10px 14px; margin-bottom:8px;">
-            <div style="display:grid; grid-template-columns:1fr auto; align-items:start; gap:12px;">
+        <div class="card" style="padding:8px 14px; margin-bottom:8px;">
+            <div style="display:flex; flex-wrap:wrap; align-items:center; gap:8px;">
+                <span style="font-size:0.72em; font-weight:700; color:#9ca3af; text-transform:uppercase; letter-spacing:0.5px; white-space:nowrap;"
+                      title="EXPOSURE SCALING: Use these market condition checkboxes to determine what % risk per trade is appropriate.">
+                    📡 Exposure Scaling
+                </span>
 
-                <!-- Left: checkboxes + recommended level -->
-                <div>
-                    <div style="font-size:0.72em; font-weight:700; color:#9ca3af; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:6px;"
-                         title="EXPOSURE SCALING: Use these market condition checkboxes to determine what % risk per trade is appropriate. Net New Highs is non-negotiable — if unchecked, max risk is 0.25% regardless of other conditions. The recommended level updates automatically as you check/uncheck boxes.">
-                        📡 Exposure Scaling
-                    </div>
-                    <div style="display:flex; flex-wrap:wrap; gap:8px; align-items:center;">
-                        <label style="display:flex; align-items:center; gap:5px; cursor:pointer; font-size:0.82em; font-weight:600; padding:4px 8px; border-radius:6px; background:#f9fafb; border:1px solid #e5e7eb;"
-                               title="NET NEW HIGHS (Nasdaq): More stocks making new 52-week highs than new lows. This is the most important breadth indicator — it tells you the market internals support a trending environment. Non-negotiable: if this is unchecked, max risk is capped at 0.25% regardless of other conditions.">
-                            <input type="checkbox" id="chkNetNewHighs" onchange="saveMarketConditions(); updateExposureScaling();" style="width:15px; height:15px; cursor:pointer;">
-                            Net New Highs (Nasdaq)
-                        </label>
-                        <label style="display:flex; align-items:center; gap:5px; cursor:pointer; font-size:0.82em; font-weight:600; padding:4px 8px; border-radius:6px; background:#f9fafb; border:1px solid #e5e7eb;"
-                               title="JNK ABOVE 20 SMA: Auto-updated via Alpha Vantage when key is set. JNK is the high-yield bond ETF — above its 20-day SMA means credit markets are healthy. Below = credit stress, risk-off.">
-                            <input type="checkbox" id="chkJNK" onchange="saveMarketConditions(); updateExposureScaling();" style="width:15px; height:15px; cursor:pointer;">
-                            JNK &gt; 20 SMA
-                            <span id="jnkStatus" style="font-size:0.75em; color:#9ca3af; font-weight:400;"></span>
-                        </label>
-                        <label style="display:flex; align-items:center; gap:5px; cursor:pointer; font-size:0.82em; font-weight:600; padding:4px 8px; border-radius:6px; background:#f9fafb; border:1px solid #e5e7eb;"
-                               title="QQQ ABOVE 21 EMA: Auto-updated via Alpha Vantage when key is set. QQQ above its 21-day EMA confirms Nasdaq leaders are in uptrend. Below = correction, not safe to be aggressive.">
-                            <input type="checkbox" id="chkQQQ" onchange="saveMarketConditions(); updateExposureScaling();" style="width:15px; height:15px; cursor:pointer;">
-                            QQQ &gt; 21 EMA
-                            <span id="qqqStatus" style="font-size:0.75em; color:#9ca3af; font-weight:400;"></span>
-                        </label>
-                        <button onclick="autoUpdateMarketConditions(true)" 
-                                id="maUpdateBtn"
-                                style="padding:3px 8px; font-size:0.75em; font-weight:600; border-radius:6px; border:1px solid #d1d5db; background:#f9fafb; cursor:pointer; color:#6b7280; display:none;"
-                                title="Re-fetch JNK and QQQ vs their moving averages from Alpha Vantage. Cached daily — only uses an API call if data is older than 24hrs.">
-                            🔄 Update MA
-                        </button>
+                <label style="display:flex; align-items:center; gap:5px; cursor:pointer; font-size:0.82em; font-weight:600; padding:4px 8px; border-radius:6px; background:#f9fafb; border:1px solid #e5e7eb;"
+                       title="NET NEW HIGHS (Nasdaq): Non-negotiable — if unchecked, max risk is capped at 0.25%.">
+                    <input type="checkbox" id="chkNetNewHighs" onchange="saveMarketConditions(); updateExposureScaling();" style="width:15px; height:15px; cursor:pointer;">
+                    Net New Highs
+                </label>
+                <label style="display:flex; align-items:center; gap:5px; cursor:pointer; font-size:0.82em; font-weight:600; padding:4px 8px; border-radius:6px; background:#f9fafb; border:1px solid #e5e7eb;"
+                       title="JNK ABOVE 20 SMA: Auto-updated via Alpha Vantage. Credit markets healthy = risk-on.">
+                    <input type="checkbox" id="chkJNK" onchange="saveMarketConditions(); updateExposureScaling();" style="width:15px; height:15px; cursor:pointer;">
+                    JNK &gt; 20 SMA
+                    <span id="jnkStatus" style="font-size:0.75em; color:#9ca3af; font-weight:400;"></span>
+                </label>
+                <label style="display:flex; align-items:center; gap:5px; cursor:pointer; font-size:0.82em; font-weight:600; padding:4px 8px; border-radius:6px; background:#f9fafb; border:1px solid #e5e7eb;"
+                       title="QQQ ABOVE 21 EMA: Auto-updated via Alpha Vantage. Nasdaq leaders in uptrend.">
+                    <input type="checkbox" id="chkQQQ" onchange="saveMarketConditions(); updateExposureScaling();" style="width:15px; height:15px; cursor:pointer;">
+                    QQQ &gt; 21 EMA
+                    <span id="qqqStatus" style="font-size:0.75em; color:#9ca3af; font-weight:400;"></span>
+                </label>
+                <button onclick="autoUpdateMarketConditions(true)"
+                        id="maUpdateBtn"
+                        style="padding:3px 8px; font-size:0.75em; font-weight:600; border-radius:6px; border:1px solid #d1d5db; background:#f9fafb; cursor:pointer; color:#6b7280; display:none;"
+                        title="Re-fetch JNK and QQQ vs their moving averages from Alpha Vantage.">
+                    🔄 Update MA
+                </button>
 
-                        <!-- NCFD/FOMO Barometer -->
-                        <div style="display:flex; align-items:center; gap:5px; padding:4px 8px; border-radius:6px; border:1px solid #e5e7eb; background:#f9fafb;"
-                             title="FOMO ($NCFD) — Nasdaq Composite Stocks Above 5-Day Average. Used as a contrarian indicator. Above 80 = overbought, avoid new buys, look for pullbacks. 65–80 = elevated, be selective. 20–65 = normal range, conditions OK. Below 20 = fear/oversold, look to buy. Enter today's closing value from TradingView.">
-                            <span style="font-size:0.82em; font-weight:600; white-space:nowrap;">FOMO</span>
-                            <input type="number" id="ncfdInput" placeholder="—" step="0.1" min="0" max="100"
-                                   style="width:60px; padding:3px 5px; font-size:0.85em; border:2px solid #e5e7eb; border-radius:4px; text-align:center; font-weight:700;"
-                                   oninput="updateNcfdBarometer()" onchange="saveMarketConditions();"
-                                   title="$NCFD closing price from TradingView. Contrarian: &gt;80 = overbought (avoid buys), &lt;20 = fear (look to buy).">
-                            <span id="ncfdBaro" style="font-size:0.78em; font-weight:700; color:#6b7280; white-space:nowrap;"></span>
-                        </div>
-                    </div>
+                <!-- FOMO -->
+                <div style="display:flex; align-items:center; gap:5px; padding:4px 8px; border-radius:6px; border:1px solid #e5e7eb; background:#f9fafb;"
+                     title="FOMO ($NCFD): Contrarian indicator. >80 = overbought, <20 = oversold/buy zone.">
+                    <span style="font-size:0.82em; font-weight:600; white-space:nowrap;">FOMO</span>
+                    <input type="number" id="ncfdInput" placeholder="—" step="0.1" min="0" max="100"
+                           style="width:55px; padding:3px 5px; font-size:0.85em; border:2px solid #e5e7eb; border-radius:4px; text-align:center; font-weight:700;"
+                           oninput="updateNcfdBarometer()" onchange="saveMarketConditions();">
+                    <span id="ncfdBaro" style="font-size:0.78em; font-weight:700; color:#6b7280; white-space:nowrap;"></span>
                 </div>
 
-                <!-- Right: recommended level + snapshot button -->
-                <div style="display:flex; flex-direction:column; align-items:flex-end; gap:6px; min-width:160px;">
-                    <div style="text-align:right;">
-                        <div style="font-size:0.68em; color:#9ca3af; text-transform:uppercase; letter-spacing:0.4px;"
-                             title="Recommended risk % per trade based on your current market condition checkboxes. This updates automatically. Note: you can always use discretion, especially when open risk is yellow/red.">
-                            Recommended Risk/Trade
-                        </div>
-                        <div id="recommendedRisk" style="font-size:1.6em; font-weight:800; color:#6b7280;">—</div>
-                        <div id="recommendedRiskReason" style="font-size:0.68em; color:#9ca3af; margin-top:1px;"></div>
-                    </div>
-                    <button onclick="quickSnapshotFromMain()" class="btn-success"
-                            style="padding:5px 12px; font-size:0.8em; font-weight:700; white-space:nowrap;"
-                            title="Save today's snapshot: logs account value, NCFD, exposure, and drawdown to your equity curve. No popup needed — just update account values and NCFD above, then press this.">
-                        ⚡ Log Today
-                    </button>
+                <!-- Recommended risk — inline on right -->
+                <div style="margin-left:auto; text-align:right; white-space:nowrap;">
+                    <span style="font-size:0.68em; color:#9ca3af; text-transform:uppercase; letter-spacing:0.4px;">Rec. Risk/Trade</span>
+                    <span id="recommendedRisk" style="font-size:1.4em; font-weight:800; color:#6b7280; margin-left:6px;">—</span>
+                    <div id="recommendedRiskReason" style="font-size:0.65em; color:#9ca3af;"></div>
                 </div>
             </div>
         </div>
