@@ -702,24 +702,24 @@
                             </div>
                         </div>
                         
-                        <div style="cursor: help;" title="LOCKED IN YTD: Formula = Current YTD $ − Total Unrealized Gains. Answers: 'If every open position went to zero right now, what would my year look like?' Keep this POSITIVE. A negative number means your entire apparent YTD gain exists only on paper and could evaporate with a bad week.">
-                            <div style="font-size: 0.65em; opacity: 0.7;">Locked in YTD</div>
+                        <div style="cursor: help;" title="YTD IF EVERYTHING STOPS OUT: What your YTD would be if every open position hit its current stop price today. Uses actual stop prices, not zero. If this is negative, your entire year's gain is sitting in open positions and could evaporate if stops get hit. Keep this positive.">
+                            <div style="font-size: 0.65em; opacity: 0.7;">YTD if Stops Hit</div>
                             <div style="font-size: 1.1em; font-weight: 700;" id="ytdFloor">$0 (0.0%)</div>
                         </div>
                         
-                        <div style="cursor: help;" title="LONG-TERM: How many times your unrealized profit could cover your YTD net losses (all trades since Jan 1). >3.0x = Harvest now. Compare with Recent Recovery (short-term, last N trades) to see if things are improving or getting worse.">
-                            <div style="font-size: 0.65em; opacity: 0.7;">YTD Protection</div>
+                        <div style="cursor: help;" title="ROUND-TRIP RISK (Long-Term): How many times bigger your unrealized gains are vs your realized losses this year. Above 2x = warning, you're relying heavily on open winners to justify your YTD. Above 3x = action required — harvest something. If your open positions pull back you could give it all back.">
+                            <div style="font-size: 0.65em; opacity: 0.7;">Round-Trip Risk</div>
                             <div style="font-size: 1.1em; font-weight: 700;" id="ytdProtection">--</div>
                         </div>
                         
-                        <div style="cursor: help;" title="SHORT-TERM: Shows if your open winners can cover losses from last N trades (default 15, adjustable). Compares RECENT trading vs YTD Protection (all trades). Rising = getting riskier. Falling = improving. >1.5x means you're leaning too hard on winners.">
-                            <div style="font-size: 0.65em; opacity: 0.7;">Recent Recovery</div>
+                        <div style="cursor: help;" title="SHORT-TERM ROUND-TRIP RISK: Same as Round-Trip Risk but only looking at your last N trades (configurable lookback). Rising = getting more dependent on open winners to cover recent losses. Above 1.5x = warning.">
+                            <div style="font-size: 0.65em; opacity: 0.7;">ST Round-Trip Risk</div>
                             <div style="font-size: 1.1em; font-weight: 700;" id="recentRecovery">--</div>
                         </div>
                         
-                        <div style="cursor: help;" title="True net R across all trading: Unrealized + Net Realized + Partials">
-                            <div style="font-size: 0.65em; opacity: 0.7;">Net R</div>
-                            <div style="font-size: 1.1em; font-weight: 700;" id="netRCompact">0.00R</div>
+                        <div style="cursor: help;" title="% OF OPEN PROFIT PROTECTED: What % of your total unrealized gains are protected by stops currently above your entry price. A stop above entry means even if it hits, you still lock in some profit. Stops below entry count as negative — they're eating into protection. 0% = all unrealized profit is fully exposed to round-trips. 100% = all unrealized gains are locked in by stops.">
+                            <div style="font-size: 0.65em; opacity: 0.7;">Open Profit Protected</div>
+                            <div style="font-size: 1.1em; font-weight: 700;" id="openProfitProtected">--%</div>
                         </div>
                         
                         <div style="cursor: help;" title="SPY year-to-date performance for comparison">
@@ -1648,7 +1648,7 @@
                     <h3 style="margin-bottom: 15px;">📊 Metrics Priority (Watch in This Order)</h3>
                     
                     <div style="background: white; padding: 15px; border-radius: 8px; margin-bottom: 15px; border-left: 4px solid #ef4444;">
-                        <div style="font-weight: 700; color: #dc2626; margin-bottom: 8px;" title="LOCKED IN YTD = Current YTD $ − Total Unrealized Gains. It answers: 'If all my open positions went to zero right now, what would my YTD be?' Keep this positive. A negative number means your entire year's gain exists only on paper and could evaporate.">Priority 1: Locked in YTD ℹ</div>
+                        <div style="font-weight: 700; color: #dc2626; margin-bottom: 8px;" title="YTD IF STOPS HIT: What your YTD would be if every open position hit its current stop today. Keep this positive — if negative, your entire year's gain is on paper and could evaporate.">Priority 1: YTD if Stops Hit ℹ</div>
                         <div style="font-size: 0.9em; margin-bottom: 8px;">
                             <strong>Current:</strong> <span id="ruleYtdFloor">--</span>
                         </div>
@@ -1684,7 +1684,7 @@
                     </div>
                     
                     <div style="background: white; padding: 15px; border-radius: 8px; border-left: 4px solid #10b981;">
-                        <div style="font-weight: 700; color: #059669; margin-bottom: 8px;" title="RECENT RECOVERY: How many times your open unrealized profit could cover losses from your last N trades (configurable lookback). >1.5x = warning, you're leaning too hard on current open winners to bail out recent losses. Think of it as: are you gambling on your open positions to save you, or are you actually generating consistent profits?">Priority 4: Recent Recovery ℹ</div>
+                        <div style="font-weight: 700; color: #059669; margin-bottom: 8px;" title="SHORT-TERM ROUND-TRIP RISK: How many times your open unrealized profit could cover losses from your last N trades. >1.5x = warning, you're leaning too hard on current open winners.">Priority 4: Short-Term Round-Trip Risk ℹ</div>
                         <div style="font-size: 0.9em; margin-bottom: 8px;">
                             <strong>Current:</strong> <span id="ruleRecentRecovery">--</span>
                         </div>
@@ -2086,11 +2086,11 @@
                     </div>
                     <div class="form-group">
                         <label>Portfolio P&L (%)</label>
-                        <input type="number" id="editClosedPortfolioPnl" step="0.01" required>
+                        <input type="number" id="editClosedPortfolioPnl" step="any" required>
                     </div>
                     <div class="form-group">
                         <label>R-Multiple</label>
-                        <input type="number" id="editClosedRMultiple" step="0.01" required>
+                        <input type="number" id="editClosedRMultiple" step="any" required>
                     </div>
                 </div>
                 <div style="background: #f0f9ff; padding: 10px; border-radius: 6px; margin-bottom: 10px; font-size: 0.9em;">
@@ -4357,6 +4357,7 @@
                     closedTrades = [];
                     dailyEquityEntries = [];
                     dailyEquity = [];
+                    rewardMilestoneClaimed = 0;
                     
                     // Set new starting account value to current value
                     const currentAccount = getAccountSize();
@@ -4367,7 +4368,7 @@
                     saveToFirebase();
                     updateAllDisplays();
                     
-                    alert(`✅ Tracker reset for ${currentYear}!\n\nYour archive is saved as: trade-tracker-archive-${previousYear}.json\n\nStarting account values updated to current balances.`);
+                    alert(`✅ Tracker reset for ${currentYear}!\n\nYour archive is saved as: trade-tracker-archive-${previousYear}.json\n\nStarting account values updated to current balances.\nReward milestone counter reset to 0.`);
                 }
             }, 1000);
         }
@@ -4588,8 +4589,8 @@
             document.getElementById('editClosedInitialShares').value = trade.initialShares || '';
             document.getElementById('editClosedExitDate').value = trade.exitDate;
             document.getElementById('editClosedAccountWeight').value = trade.accountWeight;
-            document.getElementById('editClosedPortfolioPnl').value = trade.portfolioPnlPercent || 0;
-            document.getElementById('editClosedRMultiple').value = trade.rMultiple || 0;
+            document.getElementById('editClosedPortfolioPnl').value = parseFloat((trade.portfolioPnlPercent || 0).toFixed(4));
+            document.getElementById('editClosedRMultiple').value = parseFloat((trade.rMultiple || 0).toFixed(4));
             document.getElementById('editClosedNotes').value = trade.notes || '';
             document.getElementById('recalcPreview').textContent = '';
             document.getElementById('recalcPreview').style.color = '';
@@ -5243,10 +5244,37 @@
             const currentYTD = getAdjustedYTDDollars(accountSize, startingAccount);
             const currentYTDPercent = getAdjustedYTDPercent(accountSize, startingAccount);
             const ytdRealizedDollars = totalRealizedDollars + totalPartialRealizedDollars;
-            const ytdFloorDollars = currentYTD - totalUnrealizedDollars;
+
+            // YTD if Everything Stops Out — uses CURRENT STOP prices, not zero
+            // For each position: if stopped out today at currentStop, P&L = (currentStop - adjustedPrice) × shares
+            let stopOutPnLDollars = 0;
+            openPositions.forEach(pos => {
+                const metrics = calculatePositionMetrics(pos);
+                // P&L at current stop = (currentStop - adjustedPrice) × remaining shares
+                const stopOutPnL = (pos.currentStop - metrics.adjustedPrice) * pos.shares;
+                // Add already-realized partial profits too
+                stopOutPnLDollars += stopOutPnL + metrics.realizedPnL;
+            });
+            const ytdFloorDollars = ytdRealizedDollars + stopOutPnLDollars;
             const ytdFloorPercent = (ytdFloorDollars / startingAccount) * 100;
+
+            // % of Open Profit Protected by stops
+            // Stop above entry = protected (positive contribution)
+            // Stop below entry = unprotected (negative contribution)
+            let totalProtectedDollars = 0;
+            openPositions.forEach(pos => {
+                const metrics = calculatePositionMetrics(pos);
+                if (metrics.unrealizedPnL > 0) {
+                    // Profit locked by stop = (currentStop - entry) × shares (can be negative if stop below entry)
+                    const lockedByStop = (pos.currentStop - pos.entryPrice) * pos.shares;
+                    totalProtectedDollars += lockedByStop;
+                }
+            });
+            const openProfitProtectedPct = totalUnrealizedDollars > 0
+                ? Math.min(100, (totalProtectedDollars / totalUnrealizedDollars) * 100)
+                : null;
             
-            // Calculate YTD Protection ratio
+            // Calculate YTD Protection ratio (Round-Trip Risk)
             const netRealizedYTD = totalRealizedDollars + totalPartialRealizedDollars;
             const ytdLosses = Math.abs(Math.min(0, netRealizedYTD));
             const ytdProtection = ytdLosses > 0 ? totalUnrealizedDollars / ytdLosses : null;
@@ -5289,11 +5317,11 @@
             document.getElementById('ytdRealizedDollars').textContent = '$' + ytdRealizedDollars.toLocaleString(undefined, {minimumFractionDigits: 0, maximumFractionDigits: 0});
             document.getElementById('ytdUnrealizedDollars').textContent = '$' + totalUnrealizedDollars.toLocaleString(undefined, {minimumFractionDigits: 0, maximumFractionDigits: 0});
             
-            // Display YTD Floor
+            // Display YTD if Stops Hit
             const floorColor = ytdFloorDollars >= 0 ? '#10b981' : '#ef4444';
             document.getElementById('ytdFloor').innerHTML = `<span style="color: ${floorColor};">${ytdFloorDollars >= 0 ? '+' : ''}$${ytdFloorDollars.toLocaleString()} (${ytdFloorPercent.toFixed(1)}%)</span>`;
             
-            // Display YTD Protection
+            // Display Round-Trip Risk (was YTD Protection)
             if (ytdProtection !== null) {
                 const protColor = ytdProtection > 3.0 ? '#ef4444' : ytdProtection > 2.0 ? '#f59e0b' : '#10b981';
                 document.getElementById('ytdProtection').innerHTML = `<span style="color: ${protColor};">${ytdProtection.toFixed(1)}x</span>`;
@@ -5301,17 +5329,26 @@
                 document.getElementById('ytdProtection').innerHTML = '<span style="color: #10b981;">Clear ✓</span>';
             }
             
-            // Display Recent Recovery
+            // Display Short-Term Round-Trip Risk (was Recent Recovery)
             if (recentRecovery !== null) {
                 const recColor = recentRecovery > 1.5 ? '#f59e0b' : '#10b981';
                 document.getElementById('recentRecovery').innerHTML = `<span style="color: ${recColor};">${recentRecovery.toFixed(1)}x</span>`;
             } else {
                 document.getElementById('recentRecovery').innerHTML = '<span style="color: #10b981;">Clear ✓</span>';
             }
-            
-            // Display Net R
-            const netRColor = netR >= 0 ? '#10b981' : '#ef4444';
-            document.getElementById('netRCompact').innerHTML = `<span style="color: ${netRColor};">${netR.toFixed(2)}R</span>`;
+
+            // Display % of Open Profit Protected
+            const oppEl = document.getElementById('openProfitProtected');
+            if (oppEl) {
+                if (openProfitProtectedPct === null) {
+                    oppEl.innerHTML = '<span style="color:#9ca3af;">No open profit</span>';
+                } else {
+                    const oppColor = openProfitProtectedPct >= 50 ? '#10b981'
+                                   : openProfitProtectedPct >= 20 ? '#f59e0b'
+                                   : '#ef4444';
+                    oppEl.innerHTML = `<span style="color:${oppColor};">${openProfitProtectedPct.toFixed(0)}%</span>`;
+                }
+            }
             
             // Display Realized Cushion
             const cushionColor = ytdRealizedDollars >= 0 ? '#10b981' : '#ef4444';
@@ -6913,11 +6950,11 @@
 
             document.getElementById('rewardCrit2').outerHTML =
                 `<div id="rewardCrit2">${critStyle(crit2Met,
-                    `Locked in YTD`,
+                    `YTD if Stops Hit`,
                     `${ytdFloorPct.toFixed(1)}%`,
                     crit2Met
-                        ? `✓ $${ytdFloor.toFixed(0)} locked (Milestone ${claimingMilestone} needs ≥${solidThresholdPct}%)`
-                        : `Need $${Math.max(0, solidThreshold - ytdFloor).toFixed(0)} more locked in (need ≥${solidThresholdPct}% for Milestone ${claimingMilestone})`)}</div>`;
+                        ? `✓ $${ytdFloor.toFixed(0)} floor (Milestone ${claimingMilestone} needs ≥${solidThresholdPct}%)`
+                        : `Need $${Math.max(0, solidThreshold - ytdFloor).toFixed(0)} more (need ≥${solidThresholdPct}% for Milestone ${claimingMilestone})`)}</div>`;
 
             document.getElementById('rewardCrit3').outerHTML =
                 `<div id="rewardCrit3">${critStyle(crit3Met,
