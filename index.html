@@ -702,8 +702,8 @@
                             </div>
                         </div>
                         
-                        <div style="cursor: help;" title="YTD IF EVERYTHING STOPS OUT: What your YTD would be if every open position hit its current stop price today. Uses actual stop prices, not zero. If this is negative, your entire year's gain is sitting in open positions and could evaporate if stops get hit. Keep this positive.">
-                            <div style="font-size: 0.65em; opacity: 0.7;">YTD if Stops Hit</div>
+                        <div style="cursor: help;" title="WHAT-IF DRAWDOWN: If every open position hit its current stop today, what would your YTD be? This is your worst-case scenario from here — not what already happened (that's drawdown) but what could still happen. Keep this positive. If negative, your entire YTD gain is still at risk in open positions.">
+                            <div style="font-size: 0.65em; opacity: 0.7;">YTD profit if all stops hit</div>
                             <div style="font-size: 1.1em; font-weight: 700;" id="ytdFloor">$0 (0.0%)</div>
                         </div>
                         
@@ -1648,7 +1648,7 @@
                     <h3 style="margin-bottom: 15px;">📊 Metrics Priority (Watch in This Order)</h3>
                     
                     <div style="background: white; padding: 15px; border-radius: 8px; margin-bottom: 15px; border-left: 4px solid #ef4444;">
-                        <div style="font-weight: 700; color: #dc2626; margin-bottom: 8px;" title="YTD IF STOPS HIT: What your YTD would be if every open position hit its current stop today. Keep this positive — if negative, your entire year's gain is on paper and could evaporate.">Priority 1: YTD if Stops Hit ℹ</div>
+                        <div style="font-weight: 700; color: #dc2626; margin-bottom: 8px;" title="YTD IF STOPS HIT: What your YTD would be if every open position hit its current stop today. Keep this positive — if negative, your entire year's gain is on paper and could evaporate.">Priority 1: YTD profit if all stops hit ℹ</div>
                         <div style="font-size: 0.9em; margin-bottom: 8px;">
                             <strong>Current:</strong> <span id="ruleYtdFloor">--</span>
                         </div>
@@ -5245,17 +5245,17 @@
             const currentYTDPercent = getAdjustedYTDPercent(accountSize, startingAccount);
             const ytdRealizedDollars = totalRealizedDollars + totalPartialRealizedDollars;
 
-            // YTD if Everything Stops Out — uses CURRENT STOP prices, not zero
-            // For each position: if stopped out today at currentStop, P&L = (currentStop - adjustedPrice) × shares
-            let stopOutPnLDollars = 0;
+            // YTD if Everything Stops Out
+            // = Current YTD minus the portion of unrealized that is ABOVE the current stop
+            // (the part above the stop would be lost if stopped out; the part below stop was never "real" profit)
+            let unrealizedAboveStop = 0;
             openPositions.forEach(pos => {
                 const metrics = calculatePositionMetrics(pos);
-                // P&L at current stop = (currentStop - adjustedPrice) × remaining shares
-                const stopOutPnL = (pos.currentStop - metrics.adjustedPrice) * pos.shares;
-                // Add already-realized partial profits too
-                stopOutPnLDollars += stopOutPnL + metrics.realizedPnL;
+                // Unrealized profit that would evaporate if stopped out = (currentPrice - currentStop) × shares
+                const atRiskAboveStop = Math.max(0, (pos.currentPrice - pos.currentStop) * pos.shares);
+                unrealizedAboveStop += atRiskAboveStop;
             });
-            const ytdFloorDollars = ytdRealizedDollars + stopOutPnLDollars;
+            const ytdFloorDollars = currentYTD - unrealizedAboveStop;
             const ytdFloorPercent = (ytdFloorDollars / startingAccount) * 100;
 
             // % of Open Profit Protected by stops
@@ -6950,7 +6950,7 @@
 
             document.getElementById('rewardCrit2').outerHTML =
                 `<div id="rewardCrit2">${critStyle(crit2Met,
-                    `YTD if Stops Hit`,
+                    `YTD profit if all stops hit`,
                     `${ytdFloorPct.toFixed(1)}%`,
                     crit2Met
                         ? `✓ $${ytdFloor.toFixed(0)} floor (Milestone ${claimingMilestone} needs ≥${solidThresholdPct}%)`
