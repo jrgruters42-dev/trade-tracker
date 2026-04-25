@@ -668,7 +668,11 @@
                     <div style="font-size:0.75em; color:#9ca3af; margin-top:3px;">Net flows: <span id="netCashFlows" style="font-weight:600; color:#374151;">$0</span> — excluded from YTD%</div>
                 </div>
             </div>
-            <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; padding-top: 6px; border-top: 1px solid #e0e0e0; margin-bottom: 8px;">
+            <div style="display: grid; grid-template-columns: 1fr 1fr 1fr 1fr 1fr 1fr 1fr; gap: 6px; padding-top: 6px; border-top: 1px solid #e0e0e0; margin-bottom: 8px;">
+                <div style="padding: 4px; text-align: center; font-size: 0.75em;" title="Your year-to-date performance">
+                    <div style="opacity: 0.7;">YTD</div>
+                    <div style="font-weight: 600;" id="ytdDisplay">--</div>
+                </div>
                 <div style="padding: 4px; text-align: center; font-size: 0.75em;">
                     <div style="opacity: 0.7;">Account Size</div>
                     <div style="font-weight: 600;" id="accountSizeDisplay">$250,000</div>
@@ -681,6 +685,19 @@
                     <div style="opacity: 0.7;">Cash Available</div>
                     <div style="font-weight: 600;" id="cashAvailableCompact">$0</div>
                 </div>
+                <div style="padding: 4px; text-align: center; font-size: 0.75em; border-left: 1px solid #e0e0e0;" title="SPY year-to-date performance for comparison">
+                    <div style="opacity: 0.7;">SPY YTD</div>
+                    <div style="font-weight: 600;" id="spyYTDCompact">--</div>
+                </div>
+                <div style="padding: 4px; text-align: center; font-size: 0.75em;" title="My Roth YTD performance. Gold outline if beating SPY.">
+                    <div style="opacity: 0.7;">My Roth</div>
+                    <div style="font-weight: 600;" id="myRothCompact">0.0%</div>
+                </div>
+                <div style="padding: 4px; text-align: center; font-size: 0.75em;" title="Wife Roth YTD performance. Gold outline if beating SPY.">
+                    <div style="opacity: 0.7;">Wife Roth</div>
+                    <div style="font-weight: 600;" id="wifeRothCompact">0.0%</div>
+                </div>
+            </div>
             </div>
             
             <!-- Safety Dashboard -->
@@ -694,50 +711,45 @@
                     
                     <!-- Metrics Grid -->
                     <div style="display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px;">
-                        <div style="cursor: help;" title="Your year-to-date performance. Green = profitable, Red = negative">
-                            <div style="font-size: 0.65em; opacity: 0.7;">YTD</div>
-                            <div style="font-size: 1.1em; font-weight: 700;" id="ytdDisplay">+$0 (0.0%)</div>
+                        <div style="cursor: help;" title="Total unrealized profit/loss across all open positions">
+                            <div style="font-size: 0.65em; opacity: 0.7;">Open P&L</div>
+                            <div style="font-size: 1.1em; font-weight: 700;" id="openPnlCompact">$0 (0%)</div>
                             <div style="font-size: 0.6em; opacity: 0.7; margin-top: 2px;">
                                 <span id="ytdRealizedDollars">$0</span> locked | <span id="ytdUnrealizedDollars">$0</span> at risk
                             </div>
                         </div>
                         
-                        <div style="cursor: help;" title="WHAT-IF DRAWDOWN: If every open position hit its current stop today, what would your YTD be? This is your worst-case scenario from here — not what already happened (that's drawdown) but what could still happen. Keep this positive. If negative, your entire YTD gain is still at risk in open positions.">
-                            <div style="font-size: 0.65em; opacity: 0.7;">YTD profit if all stops hit</div>
+                        <div style="cursor: help;" title="ACTUAL ACCOUNT PROGRESS: Your YTD with all open position gains removed. Answers: 'What have I actually earned this year, ignoring paper gains?' If every open winner round-tripped back to entry price, this is what your year would look like.">
+                            <div style="font-size: 0.65em; opacity: 0.7;">Actual Account Progress</div>
                             <div style="font-size: 1.1em; font-weight: 700;" id="ytdFloor">$0 (0.0%)</div>
                         </div>
                         
-                        <div style="cursor: help;" title="ROUND-TRIP RISK (Long-Term): How many times bigger your unrealized gains are vs your realized losses this year. Above 2x = warning, you're relying heavily on open winners to justify your YTD. Above 3x = action required — harvest something. If your open positions pull back you could give it all back.">
+                        <div style="cursor: help;" title="ROUND-TRIP RISK (Long-Term): How many times bigger your unrealized gains are vs your realized losses this year. Above 2x = warning. Above 3x = action required.">
                             <div style="font-size: 0.65em; opacity: 0.7;">Round-Trip Risk</div>
                             <div style="font-size: 1.1em; font-weight: 700;" id="ytdProtection">--</div>
                         </div>
                         
-                        <div style="cursor: help;" title="SHORT-TERM ROUND-TRIP RISK: Same as Round-Trip Risk but only looking at your last N trades (configurable lookback). Rising = getting more dependent on open winners to cover recent losses. Above 1.5x = warning.">
+                        <div style="cursor: help;" title="SHORT-TERM ROUND-TRIP RISK: Same as Round-Trip Risk but only looking at your last N trades. Above 1.5x = warning.">
                             <div style="font-size: 0.65em; opacity: 0.7;">ST Round-Trip Risk</div>
                             <div style="font-size: 1.1em; font-weight: 700;" id="recentRecovery">--</div>
                         </div>
                         
-                        <div style="cursor: help;" title="% OF OPEN PROFIT PROTECTED: What % of your total unrealized gains are protected by stops currently above your entry price. A stop above entry means even if it hits, you still lock in some profit. Stops below entry count as negative — they're eating into protection. 0% = all unrealized profit is fully exposed to round-trips. 100% = all unrealized gains are locked in by stops.">
+                        <div style="cursor: help;" title="% OF OPEN PROFIT PROTECTED: What % of your total unrealized gains are protected by stops above entry. Stops below entry count negative. 0% = all open profit exposed to round-trips.">
                             <div style="font-size: 0.65em; opacity: 0.7;">Open Profit Protected</div>
                             <div style="font-size: 1.1em; font-weight: 700;" id="openProfitProtected">--%</div>
                         </div>
                         
-                        <div style="cursor: help;" title="SPY year-to-date performance for comparison">
-                            <div style="font-size: 0.65em; opacity: 0.7;">SPY YTD</div>
-                            <div style="font-size: 1.1em; font-weight: 700;" id="spyYTDCompact">--</div>
-                        </div>
-                        
-                        <div style="cursor: help;" title="BANKED PROFITS: Formula = Cash already booked from fully closed trades + partial sell profits on still-open positions. This is money that cannot be taken back by the market — truly locked in regardless of what happens to your open positions.">
+                        <div style="cursor: help;" title="BANKED PROFITS: Cash booked from fully closed trades + partial sell profits on open positions. Cannot be taken back by the market.">
                             <div style="font-size: 0.65em; opacity: 0.7;">Banked Profits</div>
                             <div style="font-size: 1.1em; font-weight: 700;" id="realizedCushion">$0</div>
                         </div>
                         
-                        <div style="cursor: help;" title="What % of all your P&L activity is still unrealized (at risk). Shows Unrealized / (Unrealized + Realized). >60% means most gains are still exposed to drawdowns.">
+                        <div style="cursor: help;" title="What % of all your P&L activity is still unrealized (at risk). >60% means most gains are still exposed to drawdowns.">
                             <div style="font-size: 0.65em; opacity: 0.7;">Unrealized Risk %</div>
                             <div style="font-size: 1.1em; font-weight: 700;" id="bufferPercent">0%</div>
                         </div>
 
-                        <div style="cursor: help;" title="CLOSED CURVE DRAWDOWN: The peak-to-trough decline in your cumulative closed trade P&L%. Measures only realized trades — open positions excluded. Green = within 2% of peak. Yellow = 2–5% drawdown. Red = 5%+ drawdown (execution warning signal). A deepening drawdown here means your realized performance is deteriorating, not just an open position going against you.">
+                        <div style="cursor: help;" title="CLOSED CURVE DRAWDOWN: Peak-to-trough decline in cumulative closed trade P&L%. Green = within 2% of peak. Yellow = 2–5%. Red = 5%+.">
                             <div style="font-size: 0.65em; opacity: 0.7;">Closed DD from Peak</div>
                             <div style="font-size: 1.1em; font-weight: 700;" id="closedCurveDD">--</div>
                         </div>
@@ -783,7 +795,7 @@
 
             <!-- Core Stats (Compact) -->
             <div class="card" style="padding: 8px; margin-bottom: 10px;">
-                <div style="display: grid; grid-template-columns: repeat(6, 1fr); gap: 6px;">
+                <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px;">
                     <div style="cursor: help; text-align: center;" title="Total capital deployed across all open positions as % of account">
                         <div style="font-size: 0.65em; opacity: 0.7;">Exposure</div>
                         <div style="font-size: 1em; font-weight: 600;" id="exposureCompact">0%</div>
@@ -792,17 +804,9 @@
                         <div style="font-size: 0.65em; opacity: 0.7;">Total Risk</div>
                         <div style="font-size: 1em; font-weight: 600;" id="totalRiskCompact">0%</div>
                     </div>
-                    <div style="cursor: help; text-align: center;" title="Total unrealized profit/loss across all open positions">
+                    <div style="cursor: help; text-align: center;" title="Total unrealized profit/loss across all open positions — duplicated here for quick reference">
                         <div style="font-size: 0.65em; opacity: 0.7;">Open P&L</div>
                         <div style="font-size: 1em; font-weight: 600;" id="openPnlCompact">$0 (0%)</div>
-                    </div>
-                    <div style="cursor: help; text-align: center;" title="My Roth YTD performance. Gold outline if beating SPY.">
-                        <div style="font-size: 0.65em; opacity: 0.7;">My Roth</div>
-                        <div style="font-size: 1em; font-weight: 600;" id="myRothCompact">0.0%</div>
-                    </div>
-                    <div style="cursor: help; text-align: center;" title="Wife Roth YTD performance. Gold outline if beating SPY.">
-                        <div style="font-size: 0.65em; opacity: 0.7;">Wife Roth</div>
-                        <div style="font-size: 1em; font-weight: 600;" id="wifeRothCompact">0.0%</div>
                     </div>
                 </div>
                 
@@ -820,7 +824,7 @@
                         <div style="font-size: 0.65em; opacity: 0.7;">Avg Loss</div>
                         <div style="font-size: 1em; font-weight: 600; color: #dc2626;" id="avgLossCompact">0R</div>
                     </div>
-                    <div style="cursor: help; text-align: center;" title="EXPECTANCY: (Win Rate × Avg Win R) - (Loss Rate × Avg Loss R). Based on all closed trades. This is your edge per trade — positive means your system is mathematically profitable over a large sample.">
+                    <div style="cursor: help; text-align: center;" title="EXPECTANCY: (Win Rate × Avg Win R) - (Loss Rate × Avg Loss R). Based on all closed trades.">
                         <div style="font-size: 0.65em; opacity: 0.7;">Expectancy</div>
                         <div style="font-size: 1em; font-weight: 600;" id="expectancyPctCompact">0R</div>
                     </div>
@@ -1648,7 +1652,7 @@
                     <h3 style="margin-bottom: 15px;">📊 Metrics Priority (Watch in This Order)</h3>
                     
                     <div style="background: white; padding: 15px; border-radius: 8px; margin-bottom: 15px; border-left: 4px solid #ef4444;">
-                        <div style="font-weight: 700; color: #dc2626; margin-bottom: 8px;" title="YTD IF STOPS HIT: What your YTD would be if every open position hit its current stop today. Keep this positive — if negative, your entire year's gain is on paper and could evaporate.">Priority 1: YTD profit if all stops hit ℹ</div>
+                        <div style="font-weight: 700; color: #dc2626; margin-bottom: 8px;" title="ACTUAL ACCOUNT PROGRESS: YTD with all open gains removed. What you've actually earned this year ignoring paper gains.">Priority 1: Actual Account Progress ℹ</div>
                         <div style="font-size: 0.9em; margin-bottom: 8px;">
                             <strong>Current:</strong> <span id="ruleYtdFloor">--</span>
                         </div>
@@ -5245,17 +5249,10 @@
             const currentYTDPercent = getAdjustedYTDPercent(accountSize, startingAccount);
             const ytdRealizedDollars = totalRealizedDollars + totalPartialRealizedDollars;
 
-            // YTD if Everything Stops Out
-            // = Current YTD minus the portion of unrealized that is ABOVE the current stop
-            // (the part above the stop would be lost if stopped out; the part below stop was never "real" profit)
-            let unrealizedAboveStop = 0;
-            openPositions.forEach(pos => {
-                const metrics = calculatePositionMetrics(pos);
-                // Unrealized profit that would evaporate if stopped out = (currentPrice - currentStop) × shares
-                const atRiskAboveStop = Math.max(0, (pos.currentPrice - pos.currentStop) * pos.shares);
-                unrealizedAboveStop += atRiskAboveStop;
-            });
-            const ytdFloorDollars = currentYTD - unrealizedAboveStop;
+            // Actual Account Progress = YTD minus all unrealized gains
+            // Asks: "if every open winner round-tripped back to entry, what would my year look like?"
+            // This is the same formula used in reward readiness — both should reflect actual progress only
+            const ytdFloorDollars = currentYTD - totalUnrealizedDollars;
             const ytdFloorPercent = (ytdFloorDollars / startingAccount) * 100;
 
             // % of Open Profit Protected by stops
@@ -6950,7 +6947,7 @@
 
             document.getElementById('rewardCrit2').outerHTML =
                 `<div id="rewardCrit2">${critStyle(crit2Met,
-                    `YTD profit if all stops hit`,
+                    `Actual Account Progress`,
                     `${ytdFloorPct.toFixed(1)}%`,
                     crit2Met
                         ? `✓ $${ytdFloor.toFixed(0)} floor (Milestone ${claimingMilestone} needs ≥${solidThresholdPct}%)`
