@@ -696,8 +696,10 @@
             </div>
             </div>
             
-            <!-- Safety Dashboard -->
-            <div id="safetyDashboard" class="card" style="padding: 10px; margin-bottom: 10px; border-left: 5px solid #10b981;">
+        </div><!-- end account-setup -->
+
+        <!-- Safety Dashboard -->
+        <div id="safetyDashboard" class="card" style="padding: 10px; margin-bottom: 10px; border-left: 5px solid #10b981;">
                 <div style="display: grid; grid-template-columns: auto 1fr; gap: 12px; align-items: center;">
                     <!-- Status Indicator -->
                     <div style="text-align: center;">
@@ -706,8 +708,13 @@
                     </div>
                     
                     <!-- Metrics Grid -->
-                    <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px;">
-                        <!-- Row 1 -->
+                    <div style="display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px;">
+                        <!-- Row 1: Total Risk | Open P&L | YTD if all stops hit | Open Profit Protected | Round-Trip Risk -->
+                        <div style="cursor: help;" title="Total Risk % of your Original Capital. Color-coded: green <2%, yellow 2-3%, red 3%+">
+                            <div style="font-size: 0.65em; opacity: 0.7;">Total Risk</div>
+                            <div style="font-size: 1.1em; font-weight: 700;" id="totalRiskCompact">0%</div>
+                        </div>
+
                         <div style="cursor: help;" title="Total unrealized profit/loss across all open positions">
                             <div style="font-size: 0.65em; opacity: 0.7;">Open P&L</div>
                             <div style="font-size: 1.1em; font-weight: 700;" id="openPnlCompact">$0 (0%)</div>
@@ -716,38 +723,43 @@
                             </div>
                         </div>
 
-                        <div style="cursor: help;" title="YTD IF ALL STOPS HIT: Your YTD with all open position gains removed. If every open winner round-tripped back to entry price, this is what your year would look like. Strips out unrealized gains to show real baseline progress.">
+                        <div style="cursor: help;" title="YTD IF ALL STOPS HIT: Your YTD with all open position gains removed. If every open winner round-tripped back to entry price, this is what your year would look like.">
                             <div style="font-size: 0.65em; opacity: 0.7;">YTD if all stops hit</div>
                             <div style="font-size: 1.1em; font-weight: 700;" id="ytdFloor">$0 (0.0%)</div>
                         </div>
 
-                        <div style="cursor: help;" title="% OF OPEN PROFIT PROTECTED: What % of your total unrealized gains are protected by stops above entry. Stops below entry count negative. 0% = all open profit exposed to round-trips.">
+                        <div style="cursor: help;" title="% OF OPEN PROFIT PROTECTED: What % of your total unrealized gains are protected by stops above entry. Stops below entry count negative.">
                             <div style="font-size: 0.65em; opacity: 0.7;">Open Profit Protected</div>
                             <div style="font-size: 1.1em; font-weight: 700;" id="openProfitProtected">--%</div>
                         </div>
 
-                        <div style="cursor: help;" title="ROUND-TRIP RISK (Long-Term): How many times bigger your unrealized gains are vs your realized losses this year. Above 2x = warning. Above 3x = action required.">
+                        <div style="cursor: help;" title="ROUND-TRIP RISK (Long-Term): How many times bigger your unrealized gains are vs your realized losses. Above 2x = warning. Above 3x = action required.">
                             <div style="font-size: 0.65em; opacity: 0.7;">Round-Trip Risk</div>
                             <div style="font-size: 1.1em; font-weight: 700;" id="ytdProtection">--</div>
                         </div>
 
-                        <!-- Row 2 -->
+                        <!-- Row 2: Exposure | Unrealized Risk % | Banked Profits | Closed DD from Peak | ST Round-Trip Risk -->
+                        <div style="cursor: help; margin-top: 8px;" title="Total capital deployed as % of account. Above 100% = on margin.">
+                            <div style="font-size: 0.65em; opacity: 0.7;">Exposure</div>
+                            <div style="font-size: 1.1em; font-weight: 700;" id="exposureCompact">0%</div>
+                        </div>
+
                         <div style="cursor: help; margin-top: 8px;" title="What % of all your P&L activity is still unrealized (at risk). >60% means most gains are still exposed to drawdowns.">
                             <div style="font-size: 0.65em; opacity: 0.7;">Unrealized Risk %</div>
                             <div style="font-size: 1.1em; font-weight: 700;" id="bufferPercent">0%</div>
                         </div>
 
-                        <div style="cursor: help; margin-top: 8px;" title="BANKED PROFITS: Cash booked from fully closed trades + partial sell profits on open positions. Cannot be taken back by the market.">
+                        <div style="cursor: help; margin-top: 8px;" title="BANKED PROFITS: Cash booked from closed trades + partial sell profits. Cannot be taken back by the market.">
                             <div style="font-size: 0.65em; opacity: 0.7;">Banked Profits</div>
                             <div style="font-size: 1.1em; font-weight: 700;" id="realizedCushion">$0</div>
                         </div>
 
-                        <div style="cursor: help; margin-top: 8px;" title="CLOSED CURVE DRAWDOWN: Peak-to-trough decline in cumulative closed trade P&L%. Green = within 2% of peak. Yellow = 2–5%. Red = 5%+.">
+                        <div style="cursor: help; margin-top: 8px;" title="CLOSED CURVE DRAWDOWN: Peak-to-trough decline in cumulative closed trade P&L%. Green = within 2% of peak. Yellow = 2-5%. Red = 5%+.">
                             <div style="font-size: 0.65em; opacity: 0.7;">Closed DD from Peak</div>
                             <div style="font-size: 1.1em; font-weight: 700;" id="closedCurveDD">--</div>
                         </div>
 
-                        <div style="cursor: help; margin-top: 8px;" title="SHORT-TERM ROUND-TRIP RISK: Same as Round-Trip Risk but only looking at your last N trades. Above 1.5x = warning.">
+                        <div style="cursor: help; margin-top: 8px;" title="SHORT-TERM ROUND-TRIP RISK: Same as Round-Trip Risk but only last N trades. Above 1.5x = warning.">
                             <div style="font-size: 0.65em; opacity: 0.7;">ST Round-Trip Risk</div>
                             <div style="font-size: 1.1em; font-weight: 700;" id="recentRecovery">--</div>
                         </div>
@@ -762,54 +774,9 @@
             </div>
             
             <!-- Core Stats (Compact) -->
-            <div id="rewardReadinessCard" class="card" style="padding: 10px; margin-bottom: 10px; display: none; border-left: 4px solid #10b981;">
-                <!-- Collapsible header -->
-                <div onclick="toggleRewardReadiness()" style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:8px; cursor:pointer;">
-                    <div style="display:flex; align-items:center; gap:10px;">
-                        <div style="font-size:0.75em; font-weight:700; color:#059669; text-transform:uppercase; letter-spacing:0.5px;">🎁 Reward Readiness</div>
-                        <div id="rewardMilestoneLabel" style="font-size:0.78em; font-weight:700; color:#374151;"></div>
-                    </div>
-                    <div style="display:flex; align-items:center; gap:8px;">
-                        <button onclick="event.stopPropagation(); acknowledgeRewardMilestone()" id="rewardAckBtn" style="display:none; padding:3px 10px; font-size:0.72em; background:#10b981; color:white; border:none; border-radius:6px; cursor:pointer; font-weight:700;">✓ Mark Claimed</button>
-                        <span id="rewardReadinessToggle" style="font-size:0.75em; color:#9ca3af; font-weight:600;">▶ tap to expand</span>
-                    </div>
-                </div>
-                <!-- Collapsible body -->
-                <div id="rewardReadinessBody" style="display:none; margin-top:10px;">
-                    <!-- Progress bar -->
-                    <div style="margin:0 0 8px; background:#e5e7eb; border-radius:4px; height:10px; overflow:hidden;">
-                        <div id="rewardProgressBar" style="height:100%; border-radius:4px; background:linear-gradient(90deg,#10b981,#059669); transition:width 0.4s;"></div>
-                    </div>
-                    <div style="display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin-top:6px;">
-                        <div id="rewardCrit1" style="padding:7px 10px; border-radius:6px; font-size:0.78em; text-align:center;"></div>
-                        <div id="rewardCrit2" style="padding:7px 10px; border-radius:6px; font-size:0.78em; text-align:center;"></div>
-                        <div id="rewardCrit3" style="padding:7px 10px; border-radius:6px; font-size:0.78em; text-align:center;"></div>
-                    </div>
-                    <div id="rewardAllGreen" style="display:none; margin-top:8px; padding:8px 12px; background:#dcfce7; border-radius:6px; font-size:0.85em; font-weight:700; color:#14532d; text-align:center;">
-                        🎉 All criteria met — you've earned a reward withdrawal!
-                    </div>
-                </div>
-            </div>
-
-            <!-- Core Stats (Compact) -->
+            <!-- Performance Stats Row -->
             <div class="card" style="padding: 8px; margin-bottom: 10px;">
-                <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px;">
-                    <div style="cursor: help; text-align: center;" title="Total capital deployed across all open positions as % of account">
-                        <div style="font-size: 0.65em; opacity: 0.7;">Exposure</div>
-                        <div style="font-size: 1em; font-weight: 600;" id="exposureCompact">0%</div>
-                    </div>
-                    <div style="cursor: help; text-align: center;" title="Total Risk % of your Original Capital">
-                        <div style="font-size: 0.65em; opacity: 0.7;">Total Risk</div>
-                        <div style="font-size: 1em; font-weight: 600;" id="totalRiskCompact">0%</div>
-                    </div>
-                    <div style="cursor: help; text-align: center;" title="Total unrealized profit/loss across all open positions — duplicated here for quick reference">
-                        <div style="font-size: 0.65em; opacity: 0.7;">Open P&L</div>
-                        <div style="font-size: 1em; font-weight: 600;" id="openPnlCompact">$0 (0%)</div>
-                    </div>
-                </div>
-                
-                <!-- Performance Stats Row -->
-                <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin-top: 6px; padding-top: 6px; border-top: 1px solid #e5e7eb;">
+                <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px;">
                     <div style="cursor: help; text-align: center;" title="Percentage of trades that were winners">
                         <div style="font-size: 0.65em; opacity: 0.7;">Win Rate</div>
                         <div style="font-size: 1em; font-weight: 600;" id="winRateCompact">0%</div>
@@ -828,7 +795,6 @@
                     </div>
                 </div>
             </div>
-        </div>
 
         <!-- ── Card 1: Exposure Scaling ───────────────────────────────────── -->
         <div class="card" style="padding:10px 14px; margin-bottom:8px;">
@@ -911,6 +877,34 @@
                 <div id="tradeQualityGrid"></div>
             </div>
         </div>
+
+        <!-- ── Reward Readiness ─────────────────────────────────────────────── -->
+        <div id="rewardReadinessCard" class="card" style="padding:10px 14px; margin-bottom:8px; display:none; border-left:4px solid #10b981;">
+            <div onclick="toggleRewardReadiness()" style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:8px; cursor:pointer;">
+                <div style="display:flex; align-items:center; gap:10px;">
+                    <div style="font-size:0.75em; font-weight:700; color:#059669; text-transform:uppercase; letter-spacing:0.5px;">🎁 Reward Readiness</div>
+                    <div id="rewardMilestoneLabel" style="font-size:0.78em; font-weight:700; color:#374151;"></div>
+                </div>
+                <div style="display:flex; align-items:center; gap:8px;">
+                    <button onclick="event.stopPropagation(); acknowledgeRewardMilestone()" id="rewardAckBtn" style="display:none; padding:3px 10px; font-size:0.72em; background:#10b981; color:white; border:none; border-radius:6px; cursor:pointer; font-weight:700;">✓ Mark Claimed</button>
+                    <span id="rewardReadinessToggle" style="font-size:0.75em; color:#9ca3af; font-weight:600;">▶ tap to expand</span>
+                </div>
+            </div>
+            <div id="rewardReadinessBody" style="display:none; margin-top:10px;">
+                <div style="margin:0 0 8px; background:#e5e7eb; border-radius:4px; height:10px; overflow:hidden;">
+                    <div id="rewardProgressBar" style="height:100%; border-radius:4px; background:linear-gradient(90deg,#10b981,#059669); transition:width 0.4s;"></div>
+                </div>
+                <div style="display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin-top:6px;">
+                    <div id="rewardCrit1" style="padding:7px 10px; border-radius:6px; font-size:0.78em; text-align:center;"></div>
+                    <div id="rewardCrit2" style="padding:7px 10px; border-radius:6px; font-size:0.78em; text-align:center;"></div>
+                    <div id="rewardCrit3" style="padding:7px 10px; border-radius:6px; font-size:0.78em; text-align:center;"></div>
+                </div>
+                <div id="rewardAllGreen" style="display:none; margin-top:8px; padding:8px 12px; background:#dcfce7; border-radius:6px; font-size:0.85em; font-weight:700; color:#14532d; text-align:center;">
+                    🎉 All criteria met — you've earned a reward withdrawal!
+                </div>
+            </div>
+        </div>
+
         <div class="tabs">
             <button class="tab active" onclick="switchTab('open-positions')">Open Positions</button>
             <button class="tab" onclick="switchTab('closed-trades')">Closed Trades</button>
