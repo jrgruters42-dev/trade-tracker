@@ -668,14 +668,10 @@
                     <div style="font-size:0.75em; color:#9ca3af; margin-top:3px;">Net flows: <span id="netCashFlows" style="font-weight:600; color:#374151;">$0</span> — excluded from YTD%</div>
                 </div>
             </div>
-            <div style="display: grid; grid-template-columns: 1fr 1fr 1fr 1fr 1fr 1fr 1fr; gap: 6px; padding-top: 6px; border-top: 1px solid #e0e0e0; margin-bottom: 8px;">
-                <div style="padding: 4px; text-align: center; font-size: 0.75em;" title="Your year-to-date performance">
-                    <div style="opacity: 0.7;">YTD</div>
-                    <div style="font-weight: 600;" id="ytdDisplay">--</div>
-                </div>
-                <div style="padding: 4px; text-align: center; font-size: 0.75em;">
-                    <div style="opacity: 0.7;">Account Size</div>
-                    <div style="font-weight: 600;" id="accountSizeDisplay">$250,000</div>
+            <div style="display: grid; grid-template-columns: auto 1fr 1fr 1fr 1fr 1fr; gap: 6px; padding-top: 6px; border-top: 1px solid #e0e0e0; margin-bottom: 8px; align-items: center;">
+                <div style="padding: 6px 12px; text-align: center; font-size: 0.85em; background: #f0f9ff; border-radius: 8px; border: 2px solid #bfdbfe;" title="Your year-to-date performance">
+                    <div style="opacity: 0.7; font-size: 0.75em;">YTD</div>
+                    <div style="font-weight: 700; font-size: 1.2em;" id="ytdDisplay">--</div>
                 </div>
                 <div style="padding: 4px; text-align: center; font-size: 0.75em;">
                     <div style="opacity: 0.7;">Starting (Jan 1)</div>
@@ -710,7 +706,8 @@
                     </div>
                     
                     <!-- Metrics Grid -->
-                    <div style="display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px;">
+                    <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px;">
+                        <!-- Row 1 -->
                         <div style="cursor: help;" title="Total unrealized profit/loss across all open positions">
                             <div style="font-size: 0.65em; opacity: 0.7;">Open P&L</div>
                             <div style="font-size: 1.1em; font-weight: 700;" id="openPnlCompact">$0 (0%)</div>
@@ -718,40 +715,41 @@
                                 <span id="ytdRealizedDollars">$0</span> locked | <span id="ytdUnrealizedDollars">$0</span> at risk
                             </div>
                         </div>
-                        
-                        <div style="cursor: help;" title="ACTUAL ACCOUNT PROGRESS: Your YTD with all open position gains removed. Answers: 'What have I actually earned this year, ignoring paper gains?' If every open winner round-tripped back to entry price, this is what your year would look like.">
-                            <div style="font-size: 0.65em; opacity: 0.7;">Actual Account Progress</div>
+
+                        <div style="cursor: help;" title="YTD IF ALL STOPS HIT: Your YTD with all open position gains removed. If every open winner round-tripped back to entry price, this is what your year would look like. Strips out unrealized gains to show real baseline progress.">
+                            <div style="font-size: 0.65em; opacity: 0.7;">YTD if all stops hit</div>
                             <div style="font-size: 1.1em; font-weight: 700;" id="ytdFloor">$0 (0.0%)</div>
                         </div>
-                        
-                        <div style="cursor: help;" title="ROUND-TRIP RISK (Long-Term): How many times bigger your unrealized gains are vs your realized losses this year. Above 2x = warning. Above 3x = action required.">
-                            <div style="font-size: 0.65em; opacity: 0.7;">Round-Trip Risk</div>
-                            <div style="font-size: 1.1em; font-weight: 700;" id="ytdProtection">--</div>
-                        </div>
-                        
-                        <div style="cursor: help;" title="SHORT-TERM ROUND-TRIP RISK: Same as Round-Trip Risk but only looking at your last N trades. Above 1.5x = warning.">
-                            <div style="font-size: 0.65em; opacity: 0.7;">ST Round-Trip Risk</div>
-                            <div style="font-size: 1.1em; font-weight: 700;" id="recentRecovery">--</div>
-                        </div>
-                        
+
                         <div style="cursor: help;" title="% OF OPEN PROFIT PROTECTED: What % of your total unrealized gains are protected by stops above entry. Stops below entry count negative. 0% = all open profit exposed to round-trips.">
                             <div style="font-size: 0.65em; opacity: 0.7;">Open Profit Protected</div>
                             <div style="font-size: 1.1em; font-weight: 700;" id="openProfitProtected">--%</div>
                         </div>
-                        
-                        <div style="cursor: help;" title="BANKED PROFITS: Cash booked from fully closed trades + partial sell profits on open positions. Cannot be taken back by the market.">
-                            <div style="font-size: 0.65em; opacity: 0.7;">Banked Profits</div>
-                            <div style="font-size: 1.1em; font-weight: 700;" id="realizedCushion">$0</div>
+
+                        <div style="cursor: help;" title="ROUND-TRIP RISK (Long-Term): How many times bigger your unrealized gains are vs your realized losses this year. Above 2x = warning. Above 3x = action required.">
+                            <div style="font-size: 0.65em; opacity: 0.7;">Round-Trip Risk</div>
+                            <div style="font-size: 1.1em; font-weight: 700;" id="ytdProtection">--</div>
                         </div>
-                        
-                        <div style="cursor: help;" title="What % of all your P&L activity is still unrealized (at risk). >60% means most gains are still exposed to drawdowns.">
+
+                        <!-- Row 2 -->
+                        <div style="cursor: help; margin-top: 8px;" title="What % of all your P&L activity is still unrealized (at risk). >60% means most gains are still exposed to drawdowns.">
                             <div style="font-size: 0.65em; opacity: 0.7;">Unrealized Risk %</div>
                             <div style="font-size: 1.1em; font-weight: 700;" id="bufferPercent">0%</div>
                         </div>
 
-                        <div style="cursor: help;" title="CLOSED CURVE DRAWDOWN: Peak-to-trough decline in cumulative closed trade P&L%. Green = within 2% of peak. Yellow = 2–5%. Red = 5%+.">
+                        <div style="cursor: help; margin-top: 8px;" title="BANKED PROFITS: Cash booked from fully closed trades + partial sell profits on open positions. Cannot be taken back by the market.">
+                            <div style="font-size: 0.65em; opacity: 0.7;">Banked Profits</div>
+                            <div style="font-size: 1.1em; font-weight: 700;" id="realizedCushion">$0</div>
+                        </div>
+
+                        <div style="cursor: help; margin-top: 8px;" title="CLOSED CURVE DRAWDOWN: Peak-to-trough decline in cumulative closed trade P&L%. Green = within 2% of peak. Yellow = 2–5%. Red = 5%+.">
                             <div style="font-size: 0.65em; opacity: 0.7;">Closed DD from Peak</div>
                             <div style="font-size: 1.1em; font-weight: 700;" id="closedCurveDD">--</div>
+                        </div>
+
+                        <div style="cursor: help; margin-top: 8px;" title="SHORT-TERM ROUND-TRIP RISK: Same as Round-Trip Risk but only looking at your last N trades. Above 1.5x = warning.">
+                            <div style="font-size: 0.65em; opacity: 0.7;">ST Round-Trip Risk</div>
+                            <div style="font-size: 1.1em; font-weight: 700;" id="recentRecovery">--</div>
                         </div>
                     </div>
                 </div>
@@ -1652,7 +1650,7 @@
                     <h3 style="margin-bottom: 15px;">📊 Metrics Priority (Watch in This Order)</h3>
                     
                     <div style="background: white; padding: 15px; border-radius: 8px; margin-bottom: 15px; border-left: 4px solid #ef4444;">
-                        <div style="font-weight: 700; color: #dc2626; margin-bottom: 8px;" title="ACTUAL ACCOUNT PROGRESS: YTD with all open gains removed. What you've actually earned this year ignoring paper gains.">Priority 1: Actual Account Progress ℹ</div>
+                        <div style="font-weight: 700; color: #dc2626; margin-bottom: 8px;" title="ACTUAL ACCOUNT PROGRESS: YTD with all open gains removed. What you've actually earned this year ignoring paper gains.">Priority 1: YTD if all stops hit ℹ</div>
                         <div style="font-size: 0.9em; margin-bottom: 8px;">
                             <strong>Current:</strong> <span id="ruleYtdFloor">--</span>
                         </div>
@@ -5300,7 +5298,7 @@
             const bufferPct = totalPnL > 0 ? (totalUnrealizedDollars / totalPnL) * 100 : 0;
             
             // Display account info
-            document.getElementById('accountSizeDisplay').textContent = '$' + accountSize.toLocaleString();
+            const asdEl = document.getElementById('accountSizeDisplay'); if (asdEl) asdEl.textContent = '$' + accountSize.toLocaleString();
             document.getElementById('startingAccountDisplay').textContent = '$' + startingAccount.toLocaleString();
             
             // Display YTD — green/red + gold glow if beating SPY
