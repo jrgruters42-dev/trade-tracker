@@ -7131,11 +7131,11 @@
                     cumNote = `Cumulative YTD through this quarter: ${cumToDate >= 0 ? '+' : ''}$${cumToDate.toFixed(0)}`;
                 }
 
-                // Status (based on quarterly isolated payment)
+                // Status based on cumulative tax through this quarter
                 let statusBg, statusColor, statusText;
-                if (gain <= 0) {
-                    statusBg = '#f3f4f6'; statusColor = '#6b7280'; statusText = 'No gain this Q';
-                } else if (paid && paidAmt >= total * 0.95) {
+                if (cumTax <= 0) {
+                    statusBg = '#f3f4f6'; statusColor = '#6b7280'; statusText = 'No liability yet';
+                } else if (paid && paidAmt >= cumTax * 0.95) {
                     statusBg = '#dcfce7'; statusColor = '#15803d'; statusText = '✓ Paid';
                 } else if (paid && paidAmt > 0) {
                     statusBg = '#fef9c3'; statusColor = '#92400e'; statusText = '⚠ Partial';
@@ -7143,7 +7143,7 @@
                     const dueYear  = q.key === 'Q4' ? year + 1 : year;
                     const dueParts = q.due.split(' ');
                     const dueDate  = new Date(`${dueParts[0]} ${dueParts[1]}, ${dueYear}`);
-                    const overdue  = today > dueDate && total > 0;
+                    const overdue  = today > dueDate && cumTax > 0;
                     statusBg    = overdue ? '#fee2e2' : '#fef9c3';
                     statusColor = overdue ? '#dc2626' : '#92400e';
                     statusText  = overdue ? '⚠ Overdue' : '○ Unpaid';
@@ -7154,27 +7154,29 @@
                     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
                         <div>
                             <div style="font-size:1em; font-weight:800; color:#374151;">${q.label} — ${q.name}</div>
-                            <div style="font-size:0.72em; color:#9ca3af;">Due ${q.due}</div>
+                            <div style="font-size:0.72em; color:#9ca3af;">Est. payment due ${q.due}</div>
                         </div>
                         <div style="padding:3px 10px; border-radius:12px; background:${statusBg}; color:${statusColor}; font-size:0.78em; font-weight:700;">${statusText}</div>
                     </div>
 
-                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:6px; margin-bottom:8px; font-size:0.82em;">
-                        <div><span style="color:#9ca3af;">This Q gain:</span> <strong style="color:${gain>=0?'#15803d':'#dc2626'};">${gain>=0?'+':''}$${gain.toFixed(0)}</strong></div>
-                        <div><span style="color:#9ca3af;">YTD cumulative:</span> <strong style="color:${cumToDate>=0?'#15803d':'#dc2626'};">${cumToDate>=0?'+':''}$${cumToDate.toFixed(0)}</strong></div>
-                        <div><span style="color:#9ca3af;">Q isolated tax:</span> <strong style="color:${total>0?'#dc2626':'#6b7280'};">${total>0?'$'+total.toFixed(0):'$0'}</strong></div>
-                        <div><span style="color:#9ca3af;">Cumulative tax:</span> <strong style="color:${cumTax>0?'#dc2626':'#15803d'};">${cumTax>0?'$'+cumTax.toFixed(0):'$0'}</strong></div>
+                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:6px; margin-bottom:10px; font-size:0.85em;">
+                        <div style="padding:8px; background:#f9fafb; border-radius:6px;">
+                            <div style="font-size:0.7em; color:#9ca3af; margin-bottom:2px;">YTD net gain thru ${q.label}</div>
+                            <div style="font-weight:700; color:${cumToDate>=0?'#15803d':'#dc2626'};">${cumToDate>=0?'+':''}$${cumToDate.toFixed(0)}</div>
+                        </div>
+                        <div style="padding:8px; background:${cumTax>0?'#fee2e2':'#f0fdf4'}; border-radius:6px;">
+                            <div style="font-size:0.7em; color:#9ca3af; margin-bottom:2px;">Tax owed thru ${q.label}</div>
+                            <div style="font-weight:700; color:${cumTax>0?'#dc2626':'#15803d'};">${cumTax>0?'$'+cumTax.toFixed(0):'$0 — still net loss'}</div>
+                        </div>
                     </div>
 
-                    ${cumNote ? `<div style="font-size:0.72em; color:#92400e; background:#fef9c3; padding:5px 8px; border-radius:5px; margin-bottom:8px;">${cumNote}</div>` : ''}
-
-                    ${gain > 0 ? `
+                    ${cumTax > 0 ? `
                     <div style="border-top:1px solid #e5e7eb; padding-top:10px;">
                         <div style="font-size:0.75em; font-weight:700; color:#374151; margin-bottom:6px;">Log Estimated Payment</div>
                         <div style="display:grid; grid-template-columns:1fr 1fr; gap:6px; margin-bottom:6px;">
                             <div>
                                 <label style="font-size:0.7em; color:#6b7280;">Amount paid ($)</label>
-                                <input type="number" id="taxAmt_${key}" value="${paidAmt || ''}" placeholder="${total.toFixed(0)}"
+                                <input type="number" id="taxAmt_${key}" value="${paidAmt||''}" placeholder="${cumTax.toFixed(0)}"
                                        style="width:100%; padding:5px; border:2px solid #e5e7eb; border-radius:5px; font-size:0.9em;">
                             </div>
                             <div>
@@ -7187,10 +7189,10 @@
                             <button onclick="logTaxPayment('${key}', true)" class="btn-success" style="flex:1; padding:6px; font-size:0.8em;">✓ Mark Paid</button>
                             ${paid ? `<button onclick="logTaxPayment('${key}', false)" class="btn-secondary" style="flex:0; padding:6px 10px; font-size:0.8em;">Undo</button>` : ''}
                         </div>
-                        ${paid && paidAmt > 0 ? `<div style="margin-top:6px; font-size:0.72em; color:${shortfall > 0 ? '#dc2626' : '#15803d'};">
-                            Paid $${paidAmt.toFixed(0)} on ${paidDate} · ${shortfall > 0 ? `Shortfall: $${shortfall.toFixed(0)}` : 'Fully covered ✓'}
+                        ${paid && paidAmt > 0 ? `<div style="margin-top:6px; font-size:0.72em; color:${shortfall>0?'#dc2626':'#15803d'};">
+                            Paid $${paidAmt.toFixed(0)} on ${paidDate} · ${shortfall>0?`Still owe: $${shortfall.toFixed(0)}`:'Fully covered ✓'}
                         </div>` : ''}
-                    </div>` : ''}
+                    </div>` : `<div style="font-size:0.75em; color:#6b7280; font-style:italic;">No payment needed — cumulative YTD is still a net loss.</div>`}
                 </div>`;
             }).join('');
 
