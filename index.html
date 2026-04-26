@@ -907,7 +907,6 @@
             <button class="tab" onclick="switchTab('stock6')"><span id="stock6Symbol">Stock 6</span></button>
             <button class="tab" onclick="switchTab('equity-curves')">Equity Curves</button>
             <button class="tab" onclick="switchTab('options-hedge')">🛡️ Options Hedge</button>
-            <button class="tab" onclick="switchTab('tax-tracker')">🧾 Tax</button>
         </div>
 
         <!-- Open Positions Tab -->
@@ -1108,6 +1107,38 @@
                 <h2 style="margin-bottom: 15px;" title="MONTHLY PERFORMANCE: Breaks down your closed trades by month. Shows win rate, expectancy, and net R for each month individually. Use this to spot patterns — are certain months consistently weak? Is expectancy improving or declining over time? Net R is the sum of all R-multiples for the month.">📅 Monthly Performance ℹ</h2>
                 <div class="table-scroll" id="monthlyStatsTable">
                     <div class="empty-state">No closed trades</div>
+                </div>
+            </div>
+
+            <!-- Tax Summary (collapsible) -->
+            <div class="card" style="margin-top:20px;">
+                <div onclick="toggleTaxSection()" style="display:flex; align-items:center; justify-content:space-between; cursor:pointer;">
+                    <h2 style="margin:0; border:none; padding:0; font-size:1.1em;">🧾 Tax Liability</h2>
+                    <span id="taxSectionToggle" style="font-size:0.8em; color:#9ca3af; font-weight:600;">▶ tap to expand</span>
+                </div>
+                <div id="taxSectionBody" style="display:none; margin-top:16px;">
+                    <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px; margin-bottom:14px;">
+                        <div style="font-size:0.8em; color:#6b7280;">All short-term · Federal 24% · SC 6.4% · Based on closed trades</div>
+                        <div style="display:flex; gap:8px; align-items:center;">
+                            <span style="font-size:0.75em; color:#6b7280;">Year:</span>
+                            <select id="taxYear" onchange="updateTaxTab()" style="padding:4px 8px; border:2px solid #e5e7eb; border-radius:6px; font-size:0.85em; font-weight:600;"></select>
+                        </div>
+                    </div>
+                    <div style="display:grid; grid-template-columns:repeat(5,1fr); gap:10px; margin-bottom:14px;" id="taxSummaryRow"></div>
+                    <div style="display:grid; grid-template-columns:repeat(4,1fr); gap:12px; margin-bottom:14px;" id="taxQuarterCards"></div>
+                    <div style="border-top:1px solid #e5e7eb; padding-top:14px;">
+                        <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:10px;">
+                            <div style="font-size:0.9em; font-weight:700; color:#374151;">Trade Detail</div>
+                            <select id="taxQuarterFilter" onchange="updateTaxTradeTable()" style="padding:4px 8px; border:2px solid #e5e7eb; border-radius:6px; font-size:0.82em;">
+                                <option value="all">All quarters</option>
+                                <option value="Q1">Q1 (Jan–Mar)</option>
+                                <option value="Q2">Q2 (Apr–Jun)</option>
+                                <option value="Q3">Q3 (Jul–Sep)</option>
+                                <option value="Q4">Q4 (Oct–Dec)</option>
+                            </select>
+                        </div>
+                        <div id="taxTradeTable" style="overflow-x:auto;"></div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -1855,45 +1886,6 @@
     </div>
 
     <!-- Tax Tracker Tab -->
-    <div id="tax-tracker" class="tab-content">
-        <div class="card" style="margin-bottom:16px; padding:16px 20px;">
-            <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px;">
-                <div>
-                    <h2 style="margin:0 0 4px; border:none; padding:0; font-size:1.1em;">🧾 Tax Liability Tracker</h2>
-                    <div style="font-size:0.8em; color:#6b7280;">All short-term gains · Federal 24% · SC 6.4% · Based on closed trades only</div>
-                </div>
-                <div style="display:flex; gap:10px; align-items:center;">
-                    <div style="font-size:0.75em; color:#6b7280;">Tax year:</div>
-                    <select id="taxYear" onchange="updateTaxTab()" style="padding:5px 8px; border:2px solid #e5e7eb; border-radius:6px; font-size:0.9em; font-weight:600;">
-                    </select>
-                </div>
-            </div>
-        </div>
-
-        <!-- YTD Summary -->
-        <div style="display:grid; grid-template-columns:repeat(5,1fr); gap:12px; margin-bottom:16px;" id="taxSummaryRow"></div>
-
-        <!-- Quarterly breakdown -->
-        <div style="display:grid; grid-template-columns:repeat(4,1fr); gap:14px; margin-bottom:16px;" id="taxQuarterCards"></div>
-
-        <!-- Trade detail table -->
-        <div class="card" style="padding:16px;">
-            <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:12px;">
-                <h2 style="margin:0; border:none; padding:0; font-size:1em;">Closed Trade Detail</h2>
-                <div style="display:flex; gap:8px; align-items:center;">
-                    <label style="font-size:0.8em; color:#6b7280;">Filter quarter:</label>
-                    <select id="taxQuarterFilter" onchange="updateTaxTradeTable()" style="padding:4px 8px; border:2px solid #e5e7eb; border-radius:6px; font-size:0.85em;">
-                        <option value="all">All quarters</option>
-                        <option value="Q1">Q1 (Jan–Mar)</option>
-                        <option value="Q2">Q2 (Apr–Jun)</option>
-                        <option value="Q3">Q3 (Jul–Sep)</option>
-                        <option value="Q4">Q4 (Oct–Dec)</option>
-                    </select>
-                </div>
-            </div>
-            <div id="taxTradeTable" style="overflow-x:auto;"></div>
-        </div>
-    </div>
 
     <!-- Firebase Setup Modal -->
     <div id="firebaseSetupModal" class="modal">
@@ -5216,6 +5208,7 @@
             // Init hedge cards lazily when tab first opens
             if (tabName === 'options-hedge') initHedgeCards();
             if (tabName === 'tax-tracker') updateTaxTab();
+            if (tabName === 'closed-trades') { initTaxYearSelector(); }
         }
 
         // Update Safety Dashboard
@@ -7003,6 +6996,15 @@
             toast.textContent = `🎁 Milestone ${claimingNow} marked as claimed!`;
             document.body.appendChild(toast);
             setTimeout(() => toast.remove(), 3500);
+        }
+
+        function toggleTaxSection() {
+            const body   = document.getElementById('taxSectionBody');
+            const toggle = document.getElementById('taxSectionToggle');
+            const open   = body.style.display !== 'none';
+            body.style.display = open ? 'none' : 'block';
+            toggle.textContent = open ? '▶ tap to expand' : '▼ tap to collapse';
+            if (!open) updateTaxTab();
         }
 
         // ── Tax Tracker ──────────────────────────────────────────────────────
