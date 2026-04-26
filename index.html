@@ -5269,10 +5269,16 @@
             const currentYTDPercent = getAdjustedYTDPercent(accountSize, startingAccount);
             const ytdRealizedDollars = totalRealizedDollars + totalPartialRealizedDollars;
 
-            // Actual Account Progress = YTD minus all unrealized gains
-            // Asks: "if every open winner round-tripped back to entry, what would my year look like?"
-            // This is the same formula used in reward readiness — both should reflect actual progress only
-            const ytdFloorDollars = currentYTD - totalUnrealizedDollars;
+            // YTD if all stops hit = currentYTD minus the portion of unrealized profit
+            // that sits ABOVE the current stop (that's what evaporates when stopped out)
+            // Portion above stop per position = (currentPrice - currentStop) × shares
+            // If stop is above current price (locked in), this is 0 or negative — floor goes up
+            let unrealizedAboveStop = 0;
+            openPositions.forEach(pos => {
+                const aboveStop = (pos.currentPrice - pos.currentStop) * pos.shares;
+                unrealizedAboveStop += Math.max(0, aboveStop);
+            });
+            const ytdFloorDollars = currentYTD - unrealizedAboveStop;
             const ytdFloorPercent = (ytdFloorDollars / startingAccount) * 100;
 
             // % of Open Profit Protected by stops
@@ -7238,16 +7244,16 @@
                 const total    = federal + sc;
                 const qKey     = getTradeQuarter(t);
                 const gainColor = gain >= 0 ? '#15803d' : '#dc2626';
-                return `<tr>
-                    <td>${t.exitDate}</td>
-                    <td><strong>${t.symbol}</strong></td>
-                    <td style="color:${gainColor};">${gain >= 0 ? '+' : ''}$${gain.toFixed(0)}</td>
-                    <td style="color:${gainColor};">${t.rMultiple?.toFixed(2)}R</td>
-                    <td>${qKey || '--'}</td>
-                    <td style="color:${federal > 0 ? '#1e40af' : '#9ca3af'};">${federal > 0 ? '$' + federal.toFixed(0) : '—'}</td>
-                    <td style="color:${sc > 0 ? '#7c3aed' : '#9ca3af'};">${sc > 0 ? '$' + sc.toFixed(0) : '—'}</td>
-                    <td style="font-weight:700; color:${total > 0 ? '#dc2626' : '#15803d'};">${total > 0 ? '$' + total.toFixed(0) : gain < 0 ? '(loss)' : '—'}</td>
-                    <td style="color:${cumGain >= 0 ? '#15803d' : '#dc2626'};">${cumGain >= 0 ? '+' : ''}$${cumGain.toFixed(0)}</td>
+                return `<tr style="border-bottom:1px solid #e5e7eb;">
+                    <td style="padding:7px 8px;">${t.exitDate}</td>
+                    <td style="padding:7px 8px;"><strong>${t.symbol}</strong></td>
+                    <td style="padding:7px 8px; text-align:right; color:${gainColor};">${gain >= 0 ? '+' : ''}$${gain.toFixed(0)}</td>
+                    <td style="padding:7px 8px; text-align:right; color:${gainColor};">${t.rMultiple?.toFixed(2)}R</td>
+                    <td style="padding:7px 8px; text-align:center;">${qKey || '--'}</td>
+                    <td style="padding:7px 8px; text-align:right; color:${federal > 0 ? '#1e40af' : '#9ca3af'};">${federal > 0 ? '$' + federal.toFixed(0) : '—'}</td>
+                    <td style="padding:7px 8px; text-align:right; color:${sc > 0 ? '#7c3aed' : '#9ca3af'};">${sc > 0 ? '$' + sc.toFixed(0) : '—'}</td>
+                    <td style="padding:7px 8px; text-align:right; font-weight:700; color:${total > 0 ? '#dc2626' : '#15803d'};">${total > 0 ? '$' + total.toFixed(0) : gain < 0 ? '(loss)' : '—'}</td>
+                    <td style="padding:7px 8px; text-align:right; color:${cumGain >= 0 ? '#15803d' : '#dc2626'};">${cumGain >= 0 ? '+' : ''}$${cumGain.toFixed(0)}</td>
                 </tr>`;
             }).join('');
 
