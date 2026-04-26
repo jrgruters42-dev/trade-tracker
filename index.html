@@ -5282,14 +5282,15 @@
             const ytdFloorPercent = (ytdFloorDollars / startingAccount) * 100;
 
             // % of Open Profit Protected by stops
-            // Stop above entry = protected (positive contribution)
-            // Stop below entry = unprotected (negative contribution)
+            // Uses adjustedPrice (same basis as unrealizedPnL) for consistency
+            // Stop above adjustedPrice = protected (positive contribution)
+            // Stop below adjustedPrice = unprotected (negative contribution)
             let totalProtectedDollars = 0;
             openPositions.forEach(pos => {
                 const metrics = calculatePositionMetrics(pos);
                 if (metrics.unrealizedPnL > 0) {
-                    // Profit locked by stop = (currentStop - entry) × shares (can be negative if stop below entry)
-                    const lockedByStop = (pos.currentStop - pos.entryPrice) * pos.shares;
+                    // Profit locked by stop = (currentStop - adjustedPrice) × shares
+                    const lockedByStop = (pos.currentStop - metrics.adjustedPrice) * pos.shares;
                     totalProtectedDollars += lockedByStop;
                 }
             });
