@@ -7060,64 +7060,93 @@
             const year = parseInt(document.getElementById('taxYear')?.value) || new Date().getFullYear();
             const accountSize = getAccountSize();
 
-            // YTD totals
+            // YTD cumulative net gain (all quarters combined) — used for annual filing liability
             const ytdGain    = getNetGainForPeriod(year, null);
             const ytdFederal = Math.max(0, ytdGain) * TAX_FEDERAL;
             const ytdSC      = Math.max(0, ytdGain) * TAX_SC;
-            const ytdTotal   = ytdFederal + ytdSC;
+            const ytdTotal   = ytdFederal + ytdSC;  // $0 if YTD is a net loss
 
-            // How much paid
+            // Quarterly gains (for estimated payment decisions)
+            const qGains = {};
+            let cumGainByQ = 0;
+            QUARTERS.forEach(q => {
+                qGains[q.key] = getNetGainForPeriod(year, q.key);
+            });
+
+            // How much paid across all quarters
             const totalPaid = QUARTERS.reduce((sum, q) => {
                 const key = `${year}-${q.key}`;
                 return sum + (taxPayments[key]?.paid ? (taxPayments[key]?.amount || 0) : 0);
             }, 0);
             const remaining = Math.max(0, ytdTotal - totalPaid);
 
-            // Summary row
+            // Summary row — based on cumulative YTD net (what you'd actually owe at filing)
             const summaryData = [
-                { label: 'Net Gains (YTD)',    value: `${ytdGain >= 0 ? '+' : ''}$${ytdGain.toFixed(0)}`,  color: ytdGain >= 0 ? '#15803d' : '#dc2626' },
-                { label: 'Federal Tax (24%)',  value: `$${ytdFederal.toFixed(0)}`,  color: '#1e40af' },
-                { label: 'SC Tax (6.4%)',      value: `$${ytdSC.toFixed(0)}`,       color: '#7c3aed' },
-                { label: 'Total Liability',    value: `$${ytdTotal.toFixed(0)}`,    color: '#dc2626', bold: true },
-                { label: 'Remaining to Pay',   value: `$${remaining.toFixed(0)}`,   color: remaining > 0 ? '#dc2626' : '#15803d', bold: true },
+                { label: 'Net Gains YTD (cumulative)', value: `${ytdGain >= 0 ? '+' : ''}$${ytdGain.toFixed(0)}`, color: ytdGain >= 0 ? '#15803d' : '#dc2626' },
+                { label: 'Federal Tax (24%)',           value: ytdGain > 0 ? `$${ytdFederal.toFixed(0)}` : '$0 — net loss',  color: ytdGain > 0 ? '#1e40af' : '#6b7280' },
+                { label: 'SC Tax (6.4%)',               value: ytdGain > 0 ? `$${ytdSC.toFixed(0)}` : '$0 — net loss',      color: ytdGain > 0 ? '#7c3aed' : '#6b7280' },
+                { label: 'Total Annual Liability',      value: `$${ytdTotal.toFixed(0)}`,  color: ytdTotal > 0 ? '#dc2626' : '#15803d', bold: true },
+                { label: 'Remaining to Pay',            value: `$${remaining.toFixed(0)}`, color: remaining > 0 ? '#dc2626' : '#15803d', bold: true },
             ];
 
             document.getElementById('taxSummaryRow').innerHTML = summaryData.map(s => `
                 <div class="card" style="padding:14px; text-align:center; margin-bottom:0;">
                     <div style="font-size:0.72em; color:#9ca3af; margin-bottom:4px;">${s.label}</div>
-                    <div style="font-size:1.4em; font-weight:${s.bold ? '800' : '700'}; color:${s.color};">${s.value}</div>
+                    <div style="font-size:${s.bold ? '1.4em' : '1.2em'}; font-weight:${s.bold ? '800' : '700'}; color:${s.color};">${s.value}</div>
                 </div>`).join('');
+
+            // Build cumulative gain up to each quarter for context note
+            let runningGain = 0;
+            const cumulativeByQ = {};
+            QUARTERS.forEach(q => {
+                runningGain += qGains[q.key];
+                cumulativeByQ[q.key] = runningGain;
+            });
 
             // Quarter cards
             const today = new Date();
             document.getElementById('taxQuarterCards').innerHTML = QUARTERS.map(q => {
-                const key      = `${year}-${q.key}`;
-                const gain     = getNetGainForPeriod(year, q.key);
-                const federal  = Math.max(0, gain) * TAX_FEDERAL;
-                const sc       = Math.max(0, gain) * TAX_SC;
-                const total    = federal + sc;
-                const payment  = taxPayments[key] || {};
-                const paid     = payment.paid || false;
-                const paidAmt  = payment.amount || 0;
-                const paidDate = payment.date || '';
-                const shortfall = total - paidAmt;
+                const key        = `${year}-${q.key}`;
+                const gain       = qGains[q.key];
+                const cumToDate  = cumulativeByQ[q.key];
+                const federal    = Math.max(0, gain) * TAX_FEDERAL;
+                const sc         = Math.max(0, gain) * TAX_SC;
+                const total      = federal + sc;  // quarterly isolated liability
+                const cumTax     = Math.max(0, cumToDate) * TAX_TOTAL;  // cumulative through this Q
+                const payment    = taxPayments[key] || {};
+                const paid       = payment.paid || false;
+                const paidAmt    = payment.amount || 0;
+                const paidDate   = payment.date || '';
+                const shortfall  = total - paidAmt;
 
-                // Status
+                // Cumulative context note
+                let cumNote = '';
+                if (gain > 0 && cumToDate < gain) {
+                    // Prior losses offset some of this quarter's gain
+                    const priorLoss = Math.abs(cumToDate - gain);
+                    cumNote = `⚠ Prior losses ($${priorLoss.toFixed(0)}) offset this — cumulative YTD: ${cumToDate >= 0 ? '+' : ''}$${cumToDate.toFixed(0)}`;
+                } else if (gain > 0 && cumToDate <= 0) {
+                    cumNote = `ℹ Prior losses mean cumulative YTD is still ${cumToDate >= 0 ? '+' : ''}$${cumToDate.toFixed(0)} — no annual liability yet`;
+                } else if (gain <= 0) {
+                    cumNote = `Cumulative YTD through this quarter: ${cumToDate >= 0 ? '+' : ''}$${cumToDate.toFixed(0)}`;
+                }
+
+                // Status (based on quarterly isolated payment)
                 let statusBg, statusColor, statusText;
                 if (gain <= 0) {
-                    statusBg = '#f3f4f6'; statusColor = '#6b7280'; statusText = 'No taxable gain';
+                    statusBg = '#f3f4f6'; statusColor = '#6b7280'; statusText = 'No gain this Q';
                 } else if (paid && paidAmt >= total * 0.95) {
                     statusBg = '#dcfce7'; statusColor = '#15803d'; statusText = '✓ Paid';
                 } else if (paid && paidAmt > 0) {
                     statusBg = '#fef9c3'; statusColor = '#92400e'; statusText = '⚠ Partial';
                 } else {
-                    // Is it past due?
-                    const dueYear = q.key === 'Q4' ? year + 1 : year;
+                    const dueYear  = q.key === 'Q4' ? year + 1 : year;
                     const dueParts = q.due.split(' ');
                     const dueDate  = new Date(`${dueParts[0]} ${dueParts[1]}, ${dueYear}`);
-                    statusBg    = today > dueDate && total > 0 ? '#fee2e2' : '#fef9c3';
-                    statusColor = today > dueDate && total > 0 ? '#dc2626' : '#92400e';
-                    statusText  = today > dueDate && total > 0 ? '⚠ Overdue' : '○ Unpaid';
+                    const overdue  = today > dueDate && total > 0;
+                    statusBg    = overdue ? '#fee2e2' : '#fef9c3';
+                    statusColor = overdue ? '#dc2626' : '#92400e';
+                    statusText  = overdue ? '⚠ Overdue' : '○ Unpaid';
                 }
 
                 return `
@@ -7130,16 +7159,18 @@
                         <div style="padding:3px 10px; border-radius:12px; background:${statusBg}; color:${statusColor}; font-size:0.78em; font-weight:700;">${statusText}</div>
                     </div>
 
-                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:6px; margin-bottom:12px; font-size:0.82em;">
-                        <div><span style="color:#9ca3af;">Net gain:</span> <strong style="color:${gain>=0?'#15803d':'#dc2626'};">${gain>=0?'+':''}$${gain.toFixed(0)}</strong></div>
-                        <div><span style="color:#9ca3af;">Federal:</span> <strong>$${federal.toFixed(0)}</strong></div>
-                        <div><span style="color:#9ca3af;">SC tax:</span> <strong>$${sc.toFixed(0)}</strong></div>
-                        <div><span style="color:#9ca3af;">Total owed:</span> <strong style="color:#dc2626;">$${total.toFixed(0)}</strong></div>
+                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:6px; margin-bottom:8px; font-size:0.82em;">
+                        <div><span style="color:#9ca3af;">This Q gain:</span> <strong style="color:${gain>=0?'#15803d':'#dc2626'};">${gain>=0?'+':''}$${gain.toFixed(0)}</strong></div>
+                        <div><span style="color:#9ca3af;">YTD cumulative:</span> <strong style="color:${cumToDate>=0?'#15803d':'#dc2626'};">${cumToDate>=0?'+':''}$${cumToDate.toFixed(0)}</strong></div>
+                        <div><span style="color:#9ca3af;">Q isolated tax:</span> <strong style="color:${total>0?'#dc2626':'#6b7280'};">${total>0?'$'+total.toFixed(0):'$0'}</strong></div>
+                        <div><span style="color:#9ca3af;">Cumulative tax:</span> <strong style="color:${cumTax>0?'#dc2626':'#15803d'};">${cumTax>0?'$'+cumTax.toFixed(0):'$0'}</strong></div>
                     </div>
+
+                    ${cumNote ? `<div style="font-size:0.72em; color:#92400e; background:#fef9c3; padding:5px 8px; border-radius:5px; margin-bottom:8px;">${cumNote}</div>` : ''}
 
                     ${gain > 0 ? `
                     <div style="border-top:1px solid #e5e7eb; padding-top:10px;">
-                        <div style="font-size:0.75em; font-weight:700; color:#374151; margin-bottom:6px;">Log Payment</div>
+                        <div style="font-size:0.75em; font-weight:700; color:#374151; margin-bottom:6px;">Log Estimated Payment</div>
                         <div style="display:grid; grid-template-columns:1fr 1fr; gap:6px; margin-bottom:6px;">
                             <div>
                                 <label style="font-size:0.7em; color:#6b7280;">Amount paid ($)</label>
