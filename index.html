@@ -907,6 +907,7 @@
             <button class="tab" onclick="switchTab('stock6')"><span id="stock6Symbol">Stock 6</span></button>
             <button class="tab" onclick="switchTab('equity-curves')">Equity Curves</button>
             <button class="tab" onclick="switchTab('options-hedge')">🛡️ Options Hedge</button>
+            <button class="tab" onclick="switchTab('tax-tracker')">🧾 Tax</button>
         </div>
 
         <!-- Open Positions Tab -->
@@ -1853,6 +1854,47 @@
         </div>
     </div>
 
+    <!-- Tax Tracker Tab -->
+    <div id="tax-tracker" class="tab-content">
+        <div class="card" style="margin-bottom:16px; padding:16px 20px;">
+            <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px;">
+                <div>
+                    <h2 style="margin:0 0 4px; border:none; padding:0; font-size:1.1em;">🧾 Tax Liability Tracker</h2>
+                    <div style="font-size:0.8em; color:#6b7280;">All short-term gains · Federal 24% · SC 6.4% · Based on closed trades only</div>
+                </div>
+                <div style="display:flex; gap:10px; align-items:center;">
+                    <div style="font-size:0.75em; color:#6b7280;">Tax year:</div>
+                    <select id="taxYear" onchange="updateTaxTab()" style="padding:5px 8px; border:2px solid #e5e7eb; border-radius:6px; font-size:0.9em; font-weight:600;">
+                    </select>
+                </div>
+            </div>
+        </div>
+
+        <!-- YTD Summary -->
+        <div style="display:grid; grid-template-columns:repeat(5,1fr); gap:12px; margin-bottom:16px;" id="taxSummaryRow"></div>
+
+        <!-- Quarterly breakdown -->
+        <div style="display:grid; grid-template-columns:repeat(4,1fr); gap:14px; margin-bottom:16px;" id="taxQuarterCards"></div>
+
+        <!-- Trade detail table -->
+        <div class="card" style="padding:16px;">
+            <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:12px;">
+                <h2 style="margin:0; border:none; padding:0; font-size:1em;">Closed Trade Detail</h2>
+                <div style="display:flex; gap:8px; align-items:center;">
+                    <label style="font-size:0.8em; color:#6b7280;">Filter quarter:</label>
+                    <select id="taxQuarterFilter" onchange="updateTaxTradeTable()" style="padding:4px 8px; border:2px solid #e5e7eb; border-radius:6px; font-size:0.85em;">
+                        <option value="all">All quarters</option>
+                        <option value="Q1">Q1 (Jan–Mar)</option>
+                        <option value="Q2">Q2 (Apr–Jun)</option>
+                        <option value="Q3">Q3 (Jul–Sep)</option>
+                        <option value="Q4">Q4 (Oct–Dec)</option>
+                    </select>
+                </div>
+            </div>
+            <div id="taxTradeTable" style="overflow-x:auto;"></div>
+        </div>
+    </div>
+
     <!-- Firebase Setup Modal -->
     <div id="firebaseSetupModal" class="modal">
         <div class="modal-content">
@@ -2204,6 +2246,7 @@
         let isFirebaseInitialized = false;
         let cashFlows = [];  // [{id, type, amount, date, notes}]
         let rewardMilestoneClaimed = 0; // highest milestone number the user has acknowledged
+        let taxPayments = {}; // { "2025-Q1": { paid: true, amount: 1200, date: "2025-04-15" }, ... }
         
         // Configuration
         // Get recovery status lookback period from user input
@@ -2388,6 +2431,7 @@
                     qqq: document.getElementById('chkQQQ')?.checked || false,
                     ncfd: parseFloat(document.getElementById('ncfdInput')?.value) || null
                 },
+                taxPayments: taxPayments,
                 lastModified: new Date().toISOString()
             };
 
@@ -2612,6 +2656,7 @@
             if (data.alphaVantageKey) document.getElementById('alphaVantageKey').value = data.alphaVantageKey;
             if (data.marginBalance !== undefined) { const el = document.getElementById('marginBalance'); if (el) el.value = data.marginBalance || 0; }
             if (data.rewardMilestoneClaimed !== undefined) rewardMilestoneClaimed = data.rewardMilestoneClaimed || 0;
+            if (data.taxPayments) taxPayments = data.taxPayments || {};
             
             // Load stock profiles
             if (data.stockProfiles) {
@@ -5170,6 +5215,7 @@
 
             // Init hedge cards lazily when tab first opens
             if (tabName === 'options-hedge') initHedgeCards();
+            if (tabName === 'tax-tracker') updateTaxTab();
         }
 
         // Update Safety Dashboard
@@ -6957,6 +7003,233 @@
             toast.textContent = `🎁 Milestone ${claimingNow} marked as claimed!`;
             document.body.appendChild(toast);
             setTimeout(() => toast.remove(), 3500);
+        }
+
+        // ── Tax Tracker ──────────────────────────────────────────────────────
+        const TAX_FEDERAL = 0.24;
+        const TAX_SC      = 0.064;
+        const TAX_TOTAL   = TAX_FEDERAL + TAX_SC;  // 30.4%
+
+        const QUARTERS = [
+            { key: 'Q1', label: 'Q1', months: [0,1,2],   due: 'Apr 15', name: 'Jan – Mar' },
+            { key: 'Q2', label: 'Q2', months: [3,4,5],   due: 'Jun 15', name: 'Apr – Jun' },
+            { key: 'Q3', label: 'Q3', months: [6,7,8],   due: 'Sep 15', name: 'Jul – Sep' },
+            { key: 'Q4', label: 'Q4', months: [9,10,11], due: 'Jan 15', name: 'Oct – Dec' },
+        ];
+
+        function getTradeYear(trade) {
+            return trade.exitDate ? new Date(trade.exitDate).getFullYear() : null;
+        }
+
+        function getTradeQuarter(trade) {
+            if (!trade.exitDate) return null;
+            const month = new Date(trade.exitDate).getMonth();
+            return QUARTERS.find(q => q.months.includes(month))?.key || null;
+        }
+
+        function getTaxYears() {
+            const years = new Set();
+            const currentYear = new Date().getFullYear();
+            years.add(currentYear);
+            closedTrades.forEach(t => { const y = getTradeYear(t); if (y) years.add(y); });
+            return [...years].sort((a,b) => b - a);
+        }
+
+        function getNetGainForPeriod(year, quarterKey) {
+            return closedTrades
+                .filter(t => {
+                    if (getTradeYear(t) !== year) return false;
+                    if (quarterKey && getTradeQuarter(t) !== quarterKey) return false;
+                    return true;
+                })
+                .reduce((sum, t) => sum + (t.portfolioPnlPercent / 100) * getAccountSize(), 0);
+        }
+
+        function initTaxYearSelector() {
+            const sel = document.getElementById('taxYear');
+            if (!sel) return;
+            const years = getTaxYears();
+            const current = sel.value ? parseInt(sel.value) : new Date().getFullYear();
+            sel.innerHTML = years.map(y => `<option value="${y}" ${y === current ? 'selected' : ''}>${y}</option>`).join('');
+        }
+
+        function updateTaxTab() {
+            initTaxYearSelector();
+            const year = parseInt(document.getElementById('taxYear')?.value) || new Date().getFullYear();
+            const accountSize = getAccountSize();
+
+            // YTD totals
+            const ytdGain    = getNetGainForPeriod(year, null);
+            const ytdFederal = Math.max(0, ytdGain) * TAX_FEDERAL;
+            const ytdSC      = Math.max(0, ytdGain) * TAX_SC;
+            const ytdTotal   = ytdFederal + ytdSC;
+
+            // How much paid
+            const totalPaid = QUARTERS.reduce((sum, q) => {
+                const key = `${year}-${q.key}`;
+                return sum + (taxPayments[key]?.paid ? (taxPayments[key]?.amount || 0) : 0);
+            }, 0);
+            const remaining = Math.max(0, ytdTotal - totalPaid);
+
+            // Summary row
+            const summaryData = [
+                { label: 'Net Gains (YTD)',    value: `${ytdGain >= 0 ? '+' : ''}$${ytdGain.toFixed(0)}`,  color: ytdGain >= 0 ? '#15803d' : '#dc2626' },
+                { label: 'Federal Tax (24%)',  value: `$${ytdFederal.toFixed(0)}`,  color: '#1e40af' },
+                { label: 'SC Tax (6.4%)',      value: `$${ytdSC.toFixed(0)}`,       color: '#7c3aed' },
+                { label: 'Total Liability',    value: `$${ytdTotal.toFixed(0)}`,    color: '#dc2626', bold: true },
+                { label: 'Remaining to Pay',   value: `$${remaining.toFixed(0)}`,   color: remaining > 0 ? '#dc2626' : '#15803d', bold: true },
+            ];
+
+            document.getElementById('taxSummaryRow').innerHTML = summaryData.map(s => `
+                <div class="card" style="padding:14px; text-align:center; margin-bottom:0;">
+                    <div style="font-size:0.72em; color:#9ca3af; margin-bottom:4px;">${s.label}</div>
+                    <div style="font-size:1.4em; font-weight:${s.bold ? '800' : '700'}; color:${s.color};">${s.value}</div>
+                </div>`).join('');
+
+            // Quarter cards
+            const today = new Date();
+            document.getElementById('taxQuarterCards').innerHTML = QUARTERS.map(q => {
+                const key      = `${year}-${q.key}`;
+                const gain     = getNetGainForPeriod(year, q.key);
+                const federal  = Math.max(0, gain) * TAX_FEDERAL;
+                const sc       = Math.max(0, gain) * TAX_SC;
+                const total    = federal + sc;
+                const payment  = taxPayments[key] || {};
+                const paid     = payment.paid || false;
+                const paidAmt  = payment.amount || 0;
+                const paidDate = payment.date || '';
+                const shortfall = total - paidAmt;
+
+                // Status
+                let statusBg, statusColor, statusText;
+                if (gain <= 0) {
+                    statusBg = '#f3f4f6'; statusColor = '#6b7280'; statusText = 'No taxable gain';
+                } else if (paid && paidAmt >= total * 0.95) {
+                    statusBg = '#dcfce7'; statusColor = '#15803d'; statusText = '✓ Paid';
+                } else if (paid && paidAmt > 0) {
+                    statusBg = '#fef9c3'; statusColor = '#92400e'; statusText = '⚠ Partial';
+                } else {
+                    // Is it past due?
+                    const dueYear = q.key === 'Q4' ? year + 1 : year;
+                    const dueParts = q.due.split(' ');
+                    const dueDate  = new Date(`${dueParts[0]} ${dueParts[1]}, ${dueYear}`);
+                    statusBg    = today > dueDate && total > 0 ? '#fee2e2' : '#fef9c3';
+                    statusColor = today > dueDate && total > 0 ? '#dc2626' : '#92400e';
+                    statusText  = today > dueDate && total > 0 ? '⚠ Overdue' : '○ Unpaid';
+                }
+
+                return `
+                <div class="card" style="padding:16px; margin-bottom:0; border-top:4px solid ${statusColor};">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+                        <div>
+                            <div style="font-size:1em; font-weight:800; color:#374151;">${q.label} — ${q.name}</div>
+                            <div style="font-size:0.72em; color:#9ca3af;">Due ${q.due}</div>
+                        </div>
+                        <div style="padding:3px 10px; border-radius:12px; background:${statusBg}; color:${statusColor}; font-size:0.78em; font-weight:700;">${statusText}</div>
+                    </div>
+
+                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:6px; margin-bottom:12px; font-size:0.82em;">
+                        <div><span style="color:#9ca3af;">Net gain:</span> <strong style="color:${gain>=0?'#15803d':'#dc2626'};">${gain>=0?'+':''}$${gain.toFixed(0)}</strong></div>
+                        <div><span style="color:#9ca3af;">Federal:</span> <strong>$${federal.toFixed(0)}</strong></div>
+                        <div><span style="color:#9ca3af;">SC tax:</span> <strong>$${sc.toFixed(0)}</strong></div>
+                        <div><span style="color:#9ca3af;">Total owed:</span> <strong style="color:#dc2626;">$${total.toFixed(0)}</strong></div>
+                    </div>
+
+                    ${gain > 0 ? `
+                    <div style="border-top:1px solid #e5e7eb; padding-top:10px;">
+                        <div style="font-size:0.75em; font-weight:700; color:#374151; margin-bottom:6px;">Log Payment</div>
+                        <div style="display:grid; grid-template-columns:1fr 1fr; gap:6px; margin-bottom:6px;">
+                            <div>
+                                <label style="font-size:0.7em; color:#6b7280;">Amount paid ($)</label>
+                                <input type="number" id="taxAmt_${key}" value="${paidAmt || ''}" placeholder="${total.toFixed(0)}"
+                                       style="width:100%; padding:5px; border:2px solid #e5e7eb; border-radius:5px; font-size:0.9em;">
+                            </div>
+                            <div>
+                                <label style="font-size:0.7em; color:#6b7280;">Date paid</label>
+                                <input type="date" id="taxDate_${key}" value="${paidDate}"
+                                       style="width:100%; padding:5px; border:2px solid #e5e7eb; border-radius:5px; font-size:0.82em;">
+                            </div>
+                        </div>
+                        <div style="display:flex; gap:6px;">
+                            <button onclick="logTaxPayment('${key}', true)" class="btn-success" style="flex:1; padding:6px; font-size:0.8em;">✓ Mark Paid</button>
+                            ${paid ? `<button onclick="logTaxPayment('${key}', false)" class="btn-secondary" style="flex:0; padding:6px 10px; font-size:0.8em;">Undo</button>` : ''}
+                        </div>
+                        ${paid && paidAmt > 0 ? `<div style="margin-top:6px; font-size:0.72em; color:${shortfall > 0 ? '#dc2626' : '#15803d'};">
+                            Paid $${paidAmt.toFixed(0)} on ${paidDate} · ${shortfall > 0 ? `Shortfall: $${shortfall.toFixed(0)}` : 'Fully covered ✓'}
+                        </div>` : ''}
+                    </div>` : ''}
+                </div>`;
+            }).join('');
+
+            updateTaxTradeTable();
+        }
+
+        function logTaxPayment(key, markPaid) {
+            const amtEl  = document.getElementById(`taxAmt_${key}`);
+            const dateEl = document.getElementById(`taxDate_${key}`);
+            const amount = amtEl ? parseFloat(amtEl.value) || 0 : 0;
+            const date   = dateEl ? dateEl.value : '';
+
+            if (markPaid) {
+                taxPayments[key] = { paid: true, amount, date };
+            } else {
+                taxPayments[key] = { paid: false, amount: 0, date: '' };
+            }
+            saveToFirebase();
+            updateTaxTab();
+        }
+
+        function updateTaxTradeTable() {
+            const el       = document.getElementById('taxTradeTable');
+            const year     = parseInt(document.getElementById('taxYear')?.value) || new Date().getFullYear();
+            const qFilter  = document.getElementById('taxQuarterFilter')?.value || 'all';
+            const accountSize = getAccountSize();
+
+            let trades = closedTrades.filter(t => getTradeYear(t) === year);
+            if (qFilter !== 'all') trades = trades.filter(t => getTradeQuarter(t) === qFilter);
+            trades = [...trades].sort((a,b) => new Date(a.exitDate) - new Date(b.exitDate));
+
+            if (trades.length === 0) {
+                el.innerHTML = '<div class="empty-state">No closed trades for this period.</div>';
+                return;
+            }
+
+            let cumGain = 0;
+            const rows = trades.map(t => {
+                const gain     = (t.portfolioPnlPercent / 100) * accountSize;
+                cumGain       += gain;
+                const federal  = Math.max(0, gain) * TAX_FEDERAL;
+                const sc       = Math.max(0, gain) * TAX_SC;
+                const total    = federal + sc;
+                const qKey     = getTradeQuarter(t);
+                const gainColor = gain >= 0 ? '#15803d' : '#dc2626';
+                return `<tr>
+                    <td>${t.exitDate}</td>
+                    <td><strong>${t.symbol}</strong></td>
+                    <td style="color:${gainColor};">${gain >= 0 ? '+' : ''}$${gain.toFixed(0)}</td>
+                    <td style="color:${gainColor};">${t.rMultiple?.toFixed(2)}R</td>
+                    <td>${qKey || '--'}</td>
+                    <td style="color:${federal > 0 ? '#1e40af' : '#9ca3af'};">${federal > 0 ? '$' + federal.toFixed(0) : '—'}</td>
+                    <td style="color:${sc > 0 ? '#7c3aed' : '#9ca3af'};">${sc > 0 ? '$' + sc.toFixed(0) : '—'}</td>
+                    <td style="font-weight:700; color:${total > 0 ? '#dc2626' : '#15803d'};">${total > 0 ? '$' + total.toFixed(0) : gain < 0 ? '(loss)' : '—'}</td>
+                    <td style="color:${cumGain >= 0 ? '#15803d' : '#dc2626'};">${cumGain >= 0 ? '+' : ''}$${cumGain.toFixed(0)}</td>
+                </tr>`;
+            }).join('');
+
+            el.innerHTML = `<table style="width:100%; font-size:0.85em; border-collapse:collapse;">
+                <thead><tr style="background:#f5f5f5;">
+                    <th style="padding:8px; text-align:left;">Exit Date</th>
+                    <th style="padding:8px; text-align:left;">Symbol</th>
+                    <th style="padding:8px; text-align:right;">Gain/Loss $</th>
+                    <th style="padding:8px; text-align:right;">R</th>
+                    <th style="padding:8px; text-align:center;">Quarter</th>
+                    <th style="padding:8px; text-align:right; color:#1e40af;">Federal (24%)</th>
+                    <th style="padding:8px; text-align:right; color:#7c3aed;">SC (6.4%)</th>
+                    <th style="padding:8px; text-align:right; color:#dc2626;">Total Tax</th>
+                    <th style="padding:8px; text-align:right;">Cum. Gain</th>
+                </tr></thead>
+                <tbody>${rows}</tbody>
+            </table>`;
         }
 
         function updateAllDisplays() {
