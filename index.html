@@ -889,7 +889,7 @@
                     <div id="rewardCrit3" style="padding:7px 10px; border-radius:6px; font-size:0.78em; text-align:center;"></div>
                 </div>
                 <div id="rewardAllGreen" style="display:none; margin-top:8px; padding:8px 12px; background:#dcfce7; border-radius:6px; font-size:0.85em; font-weight:700; color:#14532d; text-align:center;">
-                    🎉 All criteria met — you've earned a reward withdrawal!
+                    🎉 All criteria met — you've earned a reward withdrawal! Suggested amount: <span id="rewardSuggestedAmt"></span>
                 </div>
             </div>
         </div>
@@ -6944,8 +6944,12 @@
             // Milestone label (header)
             const nextMilestoneDollars = claimingMilestone * milestoneSize;
             document.getElementById('rewardMilestoneLabel').innerHTML = canClaim
-                ? `🔔 Milestone ${claimingMilestone} available — $${bankedProfits.toFixed(0)} banked`
-                : `Working toward Milestone ${claimingMilestone} — $${progressDollars.toFixed(0)} / $${milestoneSize.toLocaleString()} (${progressPct.toFixed(0)}%)`;
+                ? `🔔 Milestone ${claimingMilestone} available — suggested reward: <strong>$${suggestedReward.toLocaleString(undefined,{maximumFractionDigits:0})}</strong>`
+                : `Working toward Milestone ${claimingMilestone} — $${progressDollars.toFixed(0)} / $${milestoneSize.toLocaleString()} (${progressPct.toFixed(0)}%) · Next reward when reached: $${suggestedReward.toLocaleString(undefined,{maximumFractionDigits:0})}`;
+
+            // Suggested reward = claimingMilestone × 10% of milestoneSize, capped at 40% (M4)
+            const rewardPct        = Math.min(40, claimingMilestone * 10) / 100;
+            const suggestedReward  = milestoneSize * rewardPct;
 
             // Ack button
             const ackBtn = document.getElementById('rewardAckBtn');
@@ -6988,7 +6992,13 @@
 
             // All green banner
             const allGreenEl = document.getElementById('rewardAllGreen');
+            const rewardAmtEl = document.getElementById('rewardSuggestedAmt');
             if (allGreenEl) allGreenEl.style.display = allMet ? 'block' : 'none';
+            if (rewardAmtEl) {
+                const displayPct = Math.min(40, claimingMilestone * 10);
+                const capped     = claimingMilestone > 4 ? ' (capped)' : '';
+                rewardAmtEl.textContent = `$${suggestedReward.toLocaleString(undefined,{maximumFractionDigits:0})} (${displayPct}%${capped} of $${milestoneSize.toLocaleString(undefined,{maximumFractionDigits:0})})`;
+            }
         }
 
         function acknowledgeRewardMilestone() {
