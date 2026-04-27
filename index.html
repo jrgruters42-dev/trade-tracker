@@ -885,7 +885,7 @@
             </div>
             <!-- Collapsible: criteria cards + all-green banner -->
             <div id="rewardReadinessBody" style="display:none; margin-top:10px;">
-                <div style="display:grid; grid-template-columns:repeat(3,1fr); gap:8px;">
+                <div class="reward-crit-grid" style="display:grid; grid-template-columns:repeat(3,1fr); gap:8px;">
                     <div id="rewardCrit1" style="padding:7px 10px; border-radius:6px; font-size:0.78em; text-align:center;"></div>
                     <div id="rewardCrit2" style="padding:7px 10px; border-radius:6px; font-size:0.78em; text-align:center;"></div>
                     <div id="rewardCrit3" style="padding:7px 10px; border-radius:6px; font-size:0.78em; text-align:center;"></div>
@@ -1792,6 +1792,7 @@
                                 <th>Date</th>
                                 <th>Account Equity</th>
                                 <th>Daily % Change</th>
+                                <th>YTD P&L%</th>
                                 <th>10-Day Avg</th>
                                 <th>Drawdown %</th>
                                 <th>Exposure %</th>
@@ -2240,6 +2241,7 @@
         let isFirebaseInitialized = false;
         let cashFlows = [];  // [{id, type, amount, date, notes}]
         let rewardMilestoneClaimed = 0; // highest milestone number the user has acknowledged
+        let spyYTDValue = null; // cached SPY YTD % for gold highlight comparisons
         let taxPayments = {}; // { "2025-Q1": { paid: true, amount: 1200, date: "2025-04-15" }, ... }
         
         // Configuration
@@ -3566,16 +3568,10 @@
             const myRoth = parseFloat(document.getElementById('myRoth').value) || 0;
             const myRothJan1 = parseFloat(document.getElementById('myRothJan1').value) || 0;
             const myRothYTD = myRothJan1 > 0 ? ((myRoth - myRothJan1) / myRothJan1) * 100 : 0;
-            const spyYTDText = document.getElementById('spyYTDCompact').textContent;
             const myRothColor = myRothYTD >= 0 ? '#15803d' : '#dc2626';
             let myRothDisplay = `<span style="color:${myRothColor}; font-weight:700;">${myRothYTD.toFixed(1)}%</span>`;
-            
-            // Add gold outline if beating SPY
-            if (spyYTDText && spyYTDText !== '--') {
-                const spyYTD = parseFloat(spyYTDText.replace('%', '').replace('+', ''));
-                if (!isNaN(spyYTD) && myRothYTD > spyYTD) {
-                    myRothDisplay = `<span style="color:${myRothColor}; font-weight:700; border: 2px solid #fbbf24; padding: 2px 4px; border-radius: 3px; box-shadow: 0 0 6px rgba(251, 191, 36, 0.5);">${myRothYTD.toFixed(1)}%</span>`;
-                }
+            if (spyYTDValue !== null && myRothYTD > spyYTDValue) {
+                myRothDisplay = `<span style="color:${myRothColor}; font-weight:700; border: 2px solid #fbbf24; padding: 2px 4px; border-radius: 3px; box-shadow: 0 0 6px rgba(251, 191, 36, 0.5);">${myRothYTD.toFixed(1)}%</span>`;
             }
             document.getElementById('myRothCompact').innerHTML = myRothDisplay;
             
@@ -3585,13 +3581,8 @@
             const wifeRothYTD = wifeRothJan1 > 0 ? ((wifeRoth - wifeRothJan1) / wifeRothJan1) * 100 : 0;
             const wifeRothColor = wifeRothYTD >= 0 ? '#15803d' : '#dc2626';
             let wifeRothDisplay = `<span style="color:${wifeRothColor}; font-weight:700;">${wifeRothYTD.toFixed(1)}%</span>`;
-            
-            // Add gold outline if beating SPY
-            if (spyYTDText && spyYTDText !== '--') {
-                const spyYTD = parseFloat(spyYTDText.replace('%', '').replace('+', ''));
-                if (!isNaN(spyYTD) && wifeRothYTD > spyYTD) {
-                    wifeRothDisplay = `<span style="color:${wifeRothColor}; font-weight:700; border: 2px solid #fbbf24; padding: 2px 4px; border-radius: 3px; box-shadow: 0 0 6px rgba(251, 191, 36, 0.5);">${wifeRothYTD.toFixed(1)}%</span>`;
-                }
+            if (spyYTDValue !== null && wifeRothYTD > spyYTDValue) {
+                wifeRothDisplay = `<span style="color:${wifeRothColor}; font-weight:700; border: 2px solid #fbbf24; padding: 2px 4px; border-radius: 3px; box-shadow: 0 0 6px rgba(251, 191, 36, 0.5);">${wifeRothYTD.toFixed(1)}%</span>`;
             }
             document.getElementById('wifeRothCompact').innerHTML = wifeRothDisplay;
             
@@ -4166,9 +4157,12 @@
             }
             
             if (dailyEquityEntries.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="9" class="empty-state">No daily entries yet. Click "Add Today\'s Entry" to start tracking.</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="10" class="empty-state">No daily entries yet. Click "Add Today\'s Entry" to start tracking.</td></tr>';
                 return;
             }
+
+            // Starting account for YTD% calculation
+            const startingAccount = parseFloat(document.getElementById('startingAccount').value) || 250000;
             
             let html = '';
             
@@ -4182,6 +4176,10 @@
                     tenDayAvg = last10.reduce((sum, e) => sum + e.accountValue, 0) / 10;
                     belowAvg = entry.accountValue < tenDayAvg;
                 }
+                
+                // YTD P&L% = (accountValue - startingAccount) / startingAccount
+                const ytdPct = ((entry.accountValue - startingAccount) / startingAccount) * 100;
+                const ytdColor = ytdPct >= 0 ? '#15803d' : '#dc2626';
                 
                 // Alternating row colors
                 const rowBg = index % 2 === 0 ? 'background: #f9fafb;' : 'background: white;';
@@ -4198,6 +4196,7 @@
                         <td>${entry.date}</td>
                         <td>$${entry.accountValue.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
                         <td class="${entry.dailyChange >= 0 ? 'profit' : 'loss'}">${entry.dailyChange.toFixed(2)}%</td>
+                        <td style="font-weight:600; color:${ytdColor};">${ytdPct >= 0 ? '+' : ''}${ytdPct.toFixed(2)}%</td>
                         <td style="${belowAvgStyle}">${tenDayAvg > 0 ? '$' + tenDayAvg.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}) : '-'}</td>
                         <td>${entry.drawdown.toFixed(2)}%</td>
                         <td>${entry.exposure.toFixed(2)}%</td>
@@ -4475,6 +4474,7 @@
                 // Calculate and display YTD %
                 if (spyJan2 > 0) {
                     const spyYTD = ((currentPrice - spyJan2) / spyJan2) * 100;
+                    spyYTDValue = spyYTD; // cache for immediate use in gold highlight comparisons
                     const spyYTDElement = document.getElementById('spyYTD');
                     if (spyYTDElement) spyYTDElement.textContent = spyYTD.toFixed(2) + '%';
                     
@@ -4484,6 +4484,8 @@
                         const spyColor = spyYTD >= 0 ? '#10b981' : '#ef4444';
                         spyYTDCompact.innerHTML = `<span style="color: ${spyColor};">${spyYTD >= 0 ? '+' : ''}${spyYTD.toFixed(1)}%</span>`;
                     }
+                    // Re-run safety dashboard to update gold highlights now that SPY is fresh
+                    updateSafetyDashboard();
                     
                     // Color code SPY YTD box (if old element exists)
                     if (spyYTDElement && spyYTDElement.parentElement) {
@@ -4993,11 +4995,11 @@
                 pos.partialSells.push({ shares, price, date: new Date().toISOString() });
                 pos.shares -= shares;
                 
+                closeModal('partialSellModal');
+                this.reset();
                 saveToFirebase();
                 saveDailySnapshot();
                 updateAllDisplays();
-                closeModal('partialSellModal');
-                this.reset();
             } else {
                 alert('Invalid partial sell amount');
             }
@@ -5334,7 +5336,7 @@
             
             // Display YTD — green/red + gold glow if beating SPY
             const ytdColor = currentYTD >= 0 ? '#10b981' : '#ef4444';
-            const spyYTDForComp = parseFloat((document.getElementById('spyYTDCompact').textContent || '').replace('%','').replace('+','')) || null;
+            const spyYTDForComp = spyYTDValue;
             let ytdHTML = `<span style="color: ${ytdColor};">${currentYTD >= 0 ? '+' : ''}$${currentYTD.toLocaleString()} (${currentYTDPercent.toFixed(1)}%)</span>`;
             if (spyYTDForComp !== null && !isNaN(spyYTDForComp) && currentYTDPercent > spyYTDForComp) {
                 ytdHTML = `<span style="color: ${ytdColor}; border: 2px solid #fbbf24; padding: 1px 4px; border-radius: 3px; box-shadow: 0 0 6px rgba(251,191,36,0.5);">${currentYTD >= 0 ? '+' : ''}$${currentYTD.toLocaleString()} (${currentYTDPercent.toFixed(1)}%)</span>`;
@@ -6638,11 +6640,8 @@
         function buildHedgeCardHTML(n) {
             return `
                 <div style="background:#f0f9ff; padding:10px; border-radius:8px; border:2px solid #bfdbfe; margin-bottom:12px;">
-                    <div style="font-size:0.72em; font-weight:700; color:#1e40af; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:8px;">Select Position</div>
-                    <select id="hedgePositionSelect${n}" onchange="loadHedgePosition(${n})"
-                            style="width:100%; padding:8px; border:2px solid #bfdbfe; border-radius:6px; font-size:0.9em; font-weight:600; color:#1e40af; background:white;">
-                        <option value="">— Choose a position —</option>
-                    </select>
+                    <div style="font-size:0.72em; font-weight:700; color:#1e40af; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:8px;">Select Position(s) — check multiple to combine</div>
+                    <div id="hedgeCheckboxList${n}" style="display:flex; flex-direction:column; gap:5px; max-height:120px; overflow-y:auto;"></div>
                     <div id="hedgePositionSummary${n}" style="display:none; margin-top:10px; grid-template-columns:repeat(3,1fr); gap:6px;"></div>
                 </div>
                 <div style="background:#fdf4ff; padding:10px; border-radius:8px; border:2px solid #e9d5ff; margin-bottom:12px;">
@@ -6706,59 +6705,89 @@
 
         function populateHedgePositionDropdown() {
             [1,2,3].forEach(n => {
-                const sel = document.getElementById(`hedgePositionSelect${n}`);
-                if (!sel) return;
-                const current = sel.value;
-                sel.innerHTML = '<option value="">\u2014 Choose a position \u2014</option>';
+                const listEl = document.getElementById(`hedgeCheckboxList${n}`);
+                if (!listEl) return;
+                // Remember currently checked IDs
+                const checked = new Set(
+                    [...listEl.querySelectorAll('input[type=checkbox]:checked')].map(cb => cb.value)
+                );
+                listEl.innerHTML = '';
                 openPositions.forEach(pos => {
                     const metrics = calculatePositionMetrics(pos);
-                    const r   = metrics.initialR.toFixed(1);
                     const pnl = metrics.unrealizedPnL >= 0
                         ? `+$${metrics.unrealizedPnL.toFixed(0)}`
                         : `-$${Math.abs(metrics.unrealizedPnL).toFixed(0)}`;
-                    const opt = document.createElement('option');
-                    opt.value = pos.id;
-                    opt.textContent = `${pos.symbol}  |  ${pos.shares} sh  |  ${pnl}  |  ${r}R`;
-                    if (pos.id == current) opt.selected = true;
-                    sel.appendChild(opt);
+                    const label = document.createElement('label');
+                    label.style.cssText = 'display:flex; align-items:center; gap:8px; cursor:pointer; font-size:0.85em; padding:4px 6px; border-radius:5px; background:white; border:1px solid #bfdbfe;';
+                    label.innerHTML = `<input type="checkbox" value="${pos.id}" ${checked.has(String(pos.id)) ? 'checked' : ''}
+                        style="width:14px; height:14px; cursor:pointer;" onchange="loadHedgePosition(${n})">
+                        <span style="font-weight:700; color:#1e40af;">${pos.symbol}</span>
+                        <span style="color:#6b7280;">${pos.shares} sh | ${pnl} | ${metrics.initialR.toFixed(1)}R</span>`;
+                    listEl.appendChild(label);
                 });
             });
         }
 
         function loadHedgePosition(n) {
-            const sel    = document.getElementById(`hedgePositionSelect${n}`);
-            const posId  = parseInt(sel.value);
-            const pos    = openPositions.find(p => p.id === posId);
-            const sumEl  = document.getElementById(`hedgePositionSummary${n}`);
+            const listEl  = document.getElementById(`hedgeCheckboxList${n}`);
+            const sumEl   = document.getElementById(`hedgePositionSummary${n}`);
+            const checked = [...listEl.querySelectorAll('input[type=checkbox]:checked')].map(cb => parseInt(cb.value));
+            const positions = checked.map(id => openPositions.find(p => p.id === id)).filter(Boolean);
+
             document.getElementById(`hedgeResults${n}`).style.display    = 'none';
             document.getElementById(`hedgeEmptyState${n}`).style.display = 'block';
-            if (!pos) { sumEl.style.display = 'none'; return; }
+            if (positions.length === 0) { sumEl.style.display = 'none'; return; }
 
-            const metrics    = calculatePositionMetrics(pos);
-            const unrealized = metrics.unrealizedPnL;
-            const contEl     = document.getElementById(`hedgeContracts${n}`);
-            if (contEl && !contEl.value) contEl.value = Math.max(1, Math.round((pos.initialShares || pos.shares) / 100));
+            // Build combined position using weighted averages
+            const totalShares    = positions.reduce((s, p) => s + (p.initialShares || p.shares), 0);
+            const totalCurrent   = positions.reduce((s, p) => s + p.shares, 0);
+            const wgtEntry       = positions.reduce((s, p) => s + p.entryPrice * (p.initialShares || p.shares), 0) / totalShares;
+            const wgtStop        = positions.reduce((s, p) => s + p.initialStop * (p.initialShares || p.shares), 0) / totalShares;
+            const wgtCurrentPrice = positions.reduce((s, p) => s + p.currentPrice * p.shares, 0) / totalCurrent;
+            const totalUnrealized = positions.reduce((s, p) => s + calculatePositionMetrics(p).unrealizedPnL, 0);
+            const maxRiskLvl     = Math.max(...positions.map(p => p.initialWeight || 0));
+            const wgtInitialR    = positions.reduce((s, p) => s + calculatePositionMetrics(p).initialR, 0) / positions.length;
+
+            // Auto-suggest contracts based on total current shares
+            const contEl = document.getElementById(`hedgeContracts${n}`);
+            if (contEl && !contEl.value) contEl.value = Math.max(1, Math.round(totalCurrent / 100));
 
             sumEl.style.display = 'grid';
+            const isMulti = positions.length > 1;
             sumEl.innerHTML = [
-                { label:'Entry',      value:`$${pos.entryPrice.toFixed(2)}` },
-                { label:'Price',      value:`$${pos.currentPrice.toFixed(2)}` },
-                { label:'Shares',     value:pos.shares.toLocaleString() },
-                { label:'Unrealized', value:unrealized>=0?`+$${unrealized.toFixed(0)}`:`-$${Math.abs(unrealized).toFixed(0)}`, color:unrealized>=0?'#15803d':'#dc2626' },
-                { label:'Current R',  value:`${metrics.initialR.toFixed(2)}R`, color:metrics.initialR>=0?'#15803d':'#dc2626' },
-                { label:'Risk Lvl',   value:`${pos.initialWeight||0}%` },
+                { label: isMulti ? 'Wtd Avg Entry' : 'Entry',     value:`$${wgtEntry.toFixed(2)}` },
+                { label: 'Current Price',                          value:`$${wgtCurrentPrice.toFixed(2)}` },
+                { label: isMulti ? 'Total Shares' : 'Shares',     value:totalCurrent.toLocaleString() },
+                { label: 'Unrealized',  value:totalUnrealized>=0?`+$${totalUnrealized.toFixed(0)}`:`-$${Math.abs(totalUnrealized).toFixed(0)}`, color:totalUnrealized>=0?'#15803d':'#dc2626' },
+                { label: 'Avg R',       value:`${wgtInitialR.toFixed(2)}R`, color:wgtInitialR>=0?'#15803d':'#dc2626' },
+                { label: isMulti ? 'Wtd Avg Stop' : 'Stop',       value:`$${wgtStop.toFixed(2)}` },
             ].map(c => `<div style="padding:6px; background:white; border-radius:5px; border:1px solid #bfdbfe; text-align:center;">
                 <div style="font-size:0.62em; color:#9ca3af; margin-bottom:1px;">${c.label}</div>
                 <div style="font-size:0.88em; font-weight:700; color:${c.color||'#1e40af'};">${c.value}</div>
             </div>`).join('');
+
+            // Store combined data on a virtual position object for calculateHedge
+            listEl._combinedPos = {
+                entryPrice:   wgtEntry,
+                currentPrice: wgtCurrentPrice,
+                initialStop:  wgtStop,
+                shares:       totalCurrent,
+                initialShares: totalShares,
+                unrealizedPnL: totalUnrealized,
+                initialWeight: maxRiskLvl,
+                symbol: positions.map(p => p.symbol).join('+'),
+                partialSells: [],
+            };
+
             calculateHedge(n);
         }
 
         function calculateHedge(n) {
-            const sel      = document.getElementById(`hedgePositionSelect${n}`);
-            const posId    = parseInt(sel?.value);
-            const pos      = openPositions.find(p => p.id === posId);
-            if (!pos) return;
+            const listEl   = document.getElementById(`hedgeCheckboxList${n}`);
+            const combined = listEl?._combinedPos;
+            if (!combined) return;
+
+            const pos = combined; // treat combined as a single virtual position
             const premium   = parseFloat(document.getElementById(`hedgePremiumPerShare${n}`).value);
             const strike    = parseFloat(document.getElementById(`hedgeStrike${n}`).value);
             const contracts = parseInt(document.getElementById(`hedgeContracts${n}`).value);
@@ -6768,11 +6797,10 @@
                 document.getElementById(`hedgeEmptyState${n}`).style.display = 'block';
                 return;
             }
-            const metrics      = calculatePositionMetrics(pos);
             const currentPrice = pos.currentPrice;
             const entry        = pos.entryPrice;
             const shares       = pos.initialShares || pos.shares;
-            const unrealized   = metrics.unrealizedPnL;
+            const unrealized   = pos.unrealizedPnL !== undefined ? pos.unrealizedPnL : calculatePositionMetrics(pos).unrealizedPnL;
             const initialRisk$ = (entry - pos.initialStop) * shares;
             const totalCost    = contracts * premium * 100;
             const sharesHedged = contracts * 100;
@@ -6970,27 +6998,27 @@
                 </div>`;
             };
 
-            document.getElementById('rewardCrit1').outerHTML =
-                `<div id="rewardCrit1">${critStyle(crit1Met,
-                    'Banked Profits',
-                    `$${bankedProfits.toFixed(0)} net banked`,
-                    crit1Met
-                        ? `Milestone ${claimingMilestone} unlocked ($${(claimingMilestone * milestoneSize).toLocaleString()} threshold)`
-                        : `Need $${Math.max(0, claimingMilestone * milestoneSize - bankedProfits).toFixed(0)} more for Milestone ${claimingMilestone}`)}</div>`;
-
-            document.getElementById('rewardCrit2').outerHTML =
-                `<div id="rewardCrit2">${critStyle(crit2Met,
-                    `Actual Account Progress`,
-                    `${ytdFloorPct.toFixed(1)}%`,
-                    crit2Met
-                        ? `✓ $${ytdFloor.toFixed(0)} floor (Milestone ${claimingMilestone} needs ≥${solidThresholdPct}%)`
-                        : `Need $${Math.max(0, solidThreshold - ytdFloor).toFixed(0)} more (need ≥${solidThresholdPct}% for Milestone ${claimingMilestone})`)}</div>`;
-
-            document.getElementById('rewardCrit3').outerHTML =
-                `<div id="rewardCrit3">${critStyle(crit3Met,
-                    'Exposure ≤ 100%',
-                    `${totalExposure.toFixed(1)}% exposure`,
-                    crit3Met ? 'No margin in use' : `${(totalExposure - 100).toFixed(1)}% above 100% — on margin`)}</div>`;
+            // Render criteria into the grid wrapper directly to avoid outerHTML issues with hidden elements
+            const critGrid = document.querySelector('#rewardReadinessBody .reward-crit-grid');
+            if (critGrid) {
+                critGrid.innerHTML =
+                    `<div id="rewardCrit1">${critStyle(crit1Met,
+                        'Banked Profits',
+                        `$${bankedProfits.toFixed(0)} net banked`,
+                        crit1Met
+                            ? `Milestone ${claimingMilestone} unlocked ($${(claimingMilestone * milestoneSize).toLocaleString()} threshold)`
+                            : `Need $${Math.max(0, claimingMilestone * milestoneSize - bankedProfits).toFixed(0)} more for Milestone ${claimingMilestone}`)}</div>` +
+                    `<div id="rewardCrit2">${critStyle(crit2Met,
+                        `Actual Account Progress`,
+                        `${ytdFloorPct.toFixed(1)}%`,
+                        crit2Met
+                            ? `✓ $${ytdFloor.toFixed(0)} floor (Milestone ${claimingMilestone} needs ≥${solidThresholdPct}%)`
+                            : `Need $${Math.max(0, solidThreshold - ytdFloor).toFixed(0)} more (need ≥${solidThresholdPct}% for Milestone ${claimingMilestone})`)}</div>` +
+                    `<div id="rewardCrit3">${critStyle(crit3Met,
+                        'Exposure ≤ 100%',
+                        `${totalExposure.toFixed(1)}% exposure`,
+                        crit3Met ? 'No margin in use' : `${(totalExposure - 100).toFixed(1)}% above 100% — on margin`)}</div>`;
+            }
 
             // All green banner
             const allGreenEl = document.getElementById('rewardAllGreen');
