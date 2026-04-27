@@ -4177,8 +4177,8 @@
                     belowAvg = entry.accountValue < tenDayAvg;
                 }
                 
-                // YTD P&L% = (accountValue - startingAccount) / startingAccount
-                const ytdPct = ((entry.accountValue - startingAccount) / startingAccount) * 100;
+                // YTD P&L% — same formula as main YTD stat (adjusted for cash flows)
+                const ytdPct = ((entry.accountValue - startingAccount - getNetCashFlows()) / startingAccount) * 100;
                 const ytdColor = ytdPct >= 0 ? '#15803d' : '#dc2626';
                 
                 // Alternating row colors
@@ -6998,27 +6998,26 @@
                 </div>`;
             };
 
-            // Render criteria into the grid wrapper directly to avoid outerHTML issues with hidden elements
-            const critGrid = document.querySelector('#rewardReadinessBody .reward-crit-grid');
-            if (critGrid) {
-                critGrid.innerHTML =
-                    `<div id="rewardCrit1">${critStyle(crit1Met,
-                        'Banked Profits',
-                        `$${bankedProfits.toFixed(0)} net banked`,
-                        crit1Met
-                            ? `Milestone ${claimingMilestone} unlocked ($${(claimingMilestone * milestoneSize).toLocaleString()} threshold)`
-                            : `Need $${Math.max(0, claimingMilestone * milestoneSize - bankedProfits).toFixed(0)} more for Milestone ${claimingMilestone}`)}</div>` +
-                    `<div id="rewardCrit2">${critStyle(crit2Met,
-                        `Actual Account Progress`,
-                        `${ytdFloorPct.toFixed(1)}%`,
-                        crit2Met
-                            ? `✓ $${ytdFloor.toFixed(0)} floor (Milestone ${claimingMilestone} needs ≥${solidThresholdPct}%)`
-                            : `Need $${Math.max(0, solidThreshold - ytdFloor).toFixed(0)} more (need ≥${solidThresholdPct}% for Milestone ${claimingMilestone})`)}</div>` +
-                    `<div id="rewardCrit3">${critStyle(crit3Met,
-                        'Exposure ≤ 100%',
-                        `${totalExposure.toFixed(1)}% exposure`,
-                        crit3Met ? 'No margin in use' : `${(totalExposure - 100).toFixed(1)}% above 100% — on margin`)}</div>`;
-            }
+            // Render criteria — use innerHTML directly on each element to avoid hidden-element querySelector issues
+            const c1 = document.getElementById('rewardCrit1');
+            const c2 = document.getElementById('rewardCrit2');
+            const c3 = document.getElementById('rewardCrit3');
+            if (c1) c1.innerHTML = critStyle(crit1Met,
+                'Banked Profits',
+                `$${bankedProfits.toFixed(0)} net banked`,
+                crit1Met
+                    ? `Milestone ${claimingMilestone} unlocked ($${(claimingMilestone * milestoneSize).toLocaleString()} threshold)`
+                    : `Need $${Math.max(0, claimingMilestone * milestoneSize - bankedProfits).toFixed(0)} more for Milestone ${claimingMilestone}`);
+            if (c2) c2.innerHTML = critStyle(crit2Met,
+                `Actual Account Progress`,
+                `${ytdFloorPct.toFixed(1)}%`,
+                crit2Met
+                    ? `✓ $${ytdFloor.toFixed(0)} floor (Milestone ${claimingMilestone} needs ≥${solidThresholdPct}%)`
+                    : `Need $${Math.max(0, solidThreshold - ytdFloor).toFixed(0)} more (need ≥${solidThresholdPct}% for Milestone ${claimingMilestone})`);
+            if (c3) c3.innerHTML = critStyle(crit3Met,
+                'Exposure ≤ 100%',
+                `${totalExposure.toFixed(1)}% exposure`,
+                crit3Met ? 'No margin in use' : `${(totalExposure - 100).toFixed(1)}% above 100% — on margin`);
 
             // All green banner
             const allGreenEl = document.getElementById('rewardAllGreen');
