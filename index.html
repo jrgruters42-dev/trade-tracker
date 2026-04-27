@@ -879,11 +879,13 @@
                     <span id="rewardReadinessToggle" style="font-size:0.75em; color:#9ca3af; font-weight:600;">▶ tap to expand</span>
                 </div>
             </div>
+            <!-- Progress bar always visible -->
+            <div style="margin:8px 0 0; background:#e5e7eb; border-radius:4px; height:8px; overflow:hidden;">
+                <div id="rewardProgressBar" style="height:100%; border-radius:4px; background:linear-gradient(90deg,#10b981,#059669); transition:width 0.4s;"></div>
+            </div>
+            <!-- Collapsible: criteria cards + all-green banner -->
             <div id="rewardReadinessBody" style="display:none; margin-top:10px;">
-                <div style="margin:0 0 8px; background:#e5e7eb; border-radius:4px; height:10px; overflow:hidden;">
-                    <div id="rewardProgressBar" style="height:100%; border-radius:4px; background:linear-gradient(90deg,#10b981,#059669); transition:width 0.4s;"></div>
-                </div>
-                <div style="display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin-top:6px;">
+                <div style="display:grid; grid-template-columns:repeat(3,1fr); gap:8px;">
                     <div id="rewardCrit1" style="padding:7px 10px; border-radius:6px; font-size:0.78em; text-align:center;"></div>
                     <div id="rewardCrit2" style="padding:7px 10px; border-radius:6px; font-size:0.78em; text-align:center;"></div>
                     <div id="rewardCrit3" style="padding:7px 10px; border-radius:6px; font-size:0.78em; text-align:center;"></div>
