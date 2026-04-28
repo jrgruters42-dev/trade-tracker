@@ -868,7 +868,7 @@
         </div>
 
         <!-- ── Reward Readiness ─────────────────────────────────────────────── -->
-        <div id="rewardReadinessCard" class="card" style="padding:10px 14px; margin-bottom:8px; display:none; border-left:4px solid #10b981;">
+        <div id="rewardReadinessCard" class="card" style="padding:14px 18px; margin-bottom:8px; display:none; border-left:4px solid #10b981;">
             <div onclick="toggleRewardReadiness()" style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:8px; cursor:pointer;">
                 <div style="display:flex; align-items:center; gap:10px;">
                     <div style="font-size:0.75em; font-weight:700; color:#059669; text-transform:uppercase; letter-spacing:0.5px;">🎁 Reward Readiness</div>
@@ -6992,10 +6992,10 @@
                 const border = met ? '#86efac' : '#fde68a';
                 const color  = met ? '#14532d' : '#92400e';
                 const icon   = met ? '✓' : '○';
-                return `<div style="background:${bg}; border:2px solid ${border}; border-radius:6px; padding:7px 10px; text-align:center;">
-                    <div style="font-size:0.72em; color:${color}; font-weight:700;">${icon} ${label}</div>
-                    <div style="font-size:0.95em; font-weight:800; color:${color}; margin-top:2px;">${value}</div>
-                    <div style="font-size:0.65em; color:#6b7280; margin-top:1px;">${detail}</div>
+                return `<div style="background:${bg}; border:2px solid ${border}; border-radius:8px; padding:12px 14px; text-align:center;">
+                    <div style="font-size:0.78em; color:${color}; font-weight:700; margin-bottom:4px;">${icon} ${label}</div>
+                    <div style="font-size:1.15em; font-weight:800; color:${color}; margin-bottom:4px;">${value}</div>
+                    <div style="font-size:0.72em; color:#6b7280; line-height:1.4;">${detail}</div>
                 </div>`;
             };
 
