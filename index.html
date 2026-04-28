@@ -6799,15 +6799,17 @@
             }
             const currentPrice = pos.currentPrice;
             const entry        = pos.entryPrice;
-            const shares       = pos.initialShares || pos.shares;
-            const unrealized   = pos.unrealizedPnL !== undefined ? pos.unrealizedPnL : calculatePositionMetrics(pos).unrealizedPnL;
-            const initialRisk$ = (entry - pos.initialStop) * shares;
-            const totalCost    = contracts * premium * 100;
-            const sharesHedged = contracts * 100;
+            const currentShares = pos.shares;                        // current remaining shares — what you hold now
+            const initShares    = pos.initialShares || pos.shares;  // original shares — used for risk calc only
+            const shares        = initShares;                        // keep for risk$ calc
+            const unrealized    = pos.unrealizedPnL !== undefined ? pos.unrealizedPnL : calculatePositionMetrics(pos).unrealizedPnL;
+            const initialRisk$  = (entry - pos.initialStop) * shares;
+            const totalCost     = contracts * premium * 100;
+            const sharesHedged  = contracts * 100;
 
             const covEl = document.getElementById(`hedgeCoverageNote${n}`);
-            if (sharesHedged < shares) { covEl.textContent=`⚠ ${sharesHedged}/${shares} covered (${Math.round(sharesHedged/shares*100)}%)`; covEl.style.color='#d97706'; }
-            else if (sharesHedged > shares) { covEl.textContent=`⚠ Over-hedged by ${sharesHedged-shares} shares`; covEl.style.color='#d97706'; }
+            if (sharesHedged < currentShares) { covEl.textContent=`⚠ ${sharesHedged}/${currentShares} covered (${Math.round(sharesHedged/currentShares*100)}%)`; covEl.style.color='#d97706'; }
+            else if (sharesHedged > currentShares) { covEl.textContent=`⚠ Over-hedged by ${sharesHedged-currentShares} shares`; covEl.style.color='#d97706'; }
             else { covEl.textContent='✓ Full coverage'; covEl.style.color='#15803d'; }
 
             const optPctOfPrice   = (premium / currentPrice) * 100;
