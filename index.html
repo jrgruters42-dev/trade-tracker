@@ -849,6 +849,11 @@
                     <span id="recommendedRisk" style="font-size:1.4em; font-weight:800; color:#6b7280; margin-left:6px;">—</span>
                     <div id="recommendedRiskReason" style="font-size:0.65em; color:#9ca3af;"></div>
                 </div>
+                <div style="text-align:right; white-space:nowrap; border-left:1px solid #e5e7eb; padding-left:12px;">
+                    <span style="font-size:0.68em; color:#9ca3af; text-transform:uppercase; letter-spacing:0.4px;">Avg Open R</span>
+                    <span id="avgOpenR" style="font-size:1.4em; font-weight:800; color:#6b7280; margin-left:6px;">—</span>
+                    <div style="font-size:0.65em; color:#9ca3af;">avg unrealized R</div>
+                </div>
             </div>
         </div>
 
@@ -6516,6 +6521,20 @@
             const reasonEl = document.getElementById('recommendedRiskReason');
             if (levelEl)  { levelEl.textContent = level; levelEl.style.color = levelColor; }
             if (reasonEl) reasonEl.textContent = reason;
+
+            // Avg Open R — average unrealized R across all open positions
+            const avgOpenREl = document.getElementById('avgOpenR');
+            if (avgOpenREl) {
+                if (openPositions.length === 0) {
+                    avgOpenREl.textContent = '—';
+                    avgOpenREl.style.color = '#6b7280';
+                } else {
+                    const rValues = openPositions.map(p => calculatePositionMetrics(p).initialR);
+                    const avgR = rValues.reduce((s, r) => s + r, 0) / rValues.length;
+                    avgOpenREl.textContent = `${avgR.toFixed(1)}R`;
+                    avgOpenREl.style.color = avgR >= 6 ? '#dc2626' : avgR >= 3 ? '#d97706' : '#15803d';
+                }
+            }
 
             // Color-code checkbox labels
             ['chkNetNewHighs','chkJNK','chkQQQ'].forEach(id => {
