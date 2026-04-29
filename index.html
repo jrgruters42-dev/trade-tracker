@@ -1897,25 +1897,21 @@
 
     <!-- Trade Chart Modal -->
     <div id="tradeChartModal" class="modal" style="display:none;">
-        <div class="modal-content" style="max-width:1100px; width:96vw; padding:0; overflow:hidden;">
+        <div class="modal-content" style="max-width:1150px; width:96vw; padding:0; overflow:hidden;">
             <div style="display:flex; align-items:center; justify-content:space-between; padding:12px 16px; background:#1e40af; color:white;">
                 <div style="display:flex; align-items:center; gap:12px;">
                     <span id="tradeChartTitle" style="font-size:1.1em; font-weight:800;"></span>
-                    <a id="tradeChartTVLink" href="#" target="_blank"
-                       style="font-size:0.75em; padding:3px 10px; background:rgba(255,255,255,0.2); border-radius:12px; color:white; text-decoration:none; font-weight:600;">
-                        Open in TradingView ↗
-                    </a>
+                    <span id="tradeChartLoading" style="font-size:0.78em; opacity:0.8;"></span>
                 </div>
                 <span class="close" onclick="closeModal('tradeChartModal')" style="color:white; font-size:1.4em; cursor:pointer;">&times;</span>
             </div>
-            <div style="display:flex; height:520px;">
-                <!-- Chart iframe -->
-                <div style="flex:1; min-width:0;">
-                    <iframe id="tradeChartFrame" src="" frameborder="0" allowtransparency="true"
-                            style="width:100%; height:100%; border:none;"></iframe>
+            <div style="display:flex; height:540px;">
+                <!-- Custom chart -->
+                <div style="flex:1; min-width:0; position:relative; background:#131722;">
+                    <div id="tradeChartContainer" style="width:100%; height:100%;"></div>
                 </div>
                 <!-- Trade details panel -->
-                <div id="tradeChartDetails" style="width:240px; flex-shrink:0; overflow-y:auto; padding:14px; background:#f9fafb; border-left:1px solid #e5e7eb; font-size:0.82em;"></div>
+                <div id="tradeChartDetails" style="width:230px; flex-shrink:0; overflow-y:auto; padding:14px; background:#f9fafb; border-left:1px solid #e5e7eb; font-size:0.82em;"></div>
             </div>
         </div>
     </div>
@@ -7371,44 +7367,186 @@
         }
 
         // ── Trade Chart Modal ─────────────────────────────────────────────────
-        function openTradeChart(index) {
+        // ── Trade Chart Modal (Lightweight Charts + Yahoo Finance) ──────────
+        let lwChart = null;
+        let lwCandleSeries = null;
+
+        async function openTradeChart(index) {
             const trade = closedTrades[index];
             if (!trade) return;
 
-            // Build TradingView widget URL — daily chart, 3 months range
-            const symbol = encodeURIComponent(trade.symbol);
-            const widgetUrl = `https://www.tradingview.com/widgetembed/?frameElementId=tv_chart&symbol=${symbol}&interval=D&range=3M&theme=light&style=1&locale=en&toolbar_bg=f1f3f6&enable_publishing=false&hide_top_toolbar=false&hide_legend=false&save_image=false&hide_volume=false`;
+            document.getElementById('tradeChartModal').style.display = 'flex';
+            document.getElementById('tradeChartTitle').textContent = `${trade.symbol} — Trade Review`;
+            document.getElementById('tradeChartLoading').textContent = 'Loading chart data...';
+            document.getElementById('tradeChartContainer').innerHTML = '';
 
-            document.getElementById('tradeChartFrame').src = widgetUrl;
-            document.getElementById('tradeChartTitle').textContent = `${trade.symbol} — Trade Chart`;
-            document.getElementById('tradeChartTVLink').href = `https://www.tradingview.com/chart/?symbol=${symbol}`;
+            // Destroy previous chart if exists
+            if (lwChart) { try { lwChart.remove(); } catch(e) {} lwChart = null; }
 
-            // Build details panel
-            const pnlColor  = trade.rMultiple >= 0 ? '#15803d' : '#dc2626';
-            const pnlSign   = trade.rMultiple >= 0 ? '+' : '';
-            const holdDays  = trade.exitDate && trade.entryDate
+            // Build details panel first (instant)
+            buildTradeChartDetails(trade);
+
+            // Load Lightweight Charts library if not already loaded
+            if (!window.LightweightCharts) {
+                await new Promise((resolve, reject) => {
+                    const s = document.createElement('script');
+                    s.src = 'https://unpkg.com/lightweight-charts@4.1.3/dist/lightweight-charts.standalone.production.js';
+                    s.onload = resolve;
+                    s.onerror = reject;
+                    document.head.appendChild(s);
+                });
+            }
+
+            // Fetch 6 months of daily OHLCV from Yahoo Finance via proxy
+            const endDate   = Math.floor(Date.now() / 1000);
+            const startDate = endDate - (180 * 24 * 60 * 60);
+            const url = `https://query1.finance.yahoo.com/v8/finance/chart/${trade.symbol}?interval=1d&period1=${startDate}&period2=${endDate}&includePrePost=false`;
+
+            let ohlcv = [];
+            try {
+                const resp = await fetch(url);
+                const data = await resp.json();
+                const result = data?.chart?.result?.[0];
+                if (!result) throw new Error('No data');
+                const ts     = result.timestamps;
+                const q      = result.indicators.quote[0];
+                ohlcv = ts.map((t, i) => ({
+                    time:  t - (t % 86400),  // normalize to day
+                    open:  parseFloat(q.open[i]?.toFixed(2))  || null,
+                    high:  parseFloat(q.high[i]?.toFixed(2))  || null,
+                    low:   parseFloat(q.low[i]?.toFixed(2))   || null,
+                    close: parseFloat(q.close[i]?.toFixed(2)) || null,
+                })).filter(d => d.open && d.high && d.low && d.close);
+            } catch(e) {
+                document.getElementById('tradeChartLoading').textContent = '⚠ Could not load price data';
+                return;
+            }
+            document.getElementById('tradeChartLoading').textContent = '';
+
+            // Create chart
+            const container = document.getElementById('tradeChartContainer');
+            lwChart = LightweightCharts.createChart(container, {
+                layout: { background: { color: '#131722' }, textColor: '#d1d4dc' },
+                grid:   { vertLines: { color: '#1e2130' }, horzLines: { color: '#1e2130' } },
+                crosshair: { mode: LightweightCharts.CrosshairMode.Normal },
+                rightPriceScale: { borderColor: '#2a2e3a' },
+                timeScale: { borderColor: '#2a2e3a', timeVisible: true, secondsVisible: false },
+                width:  container.clientWidth,
+                height: container.clientHeight,
+            });
+
+            // Candlestick series
+            const candleSeries = lwChart.addCandlestickSeries({
+                upColor: '#26a69a', downColor: '#ef5350',
+                borderUpColor: '#26a69a', borderDownColor: '#ef5350',
+                wickUpColor: '#26a69a', wickDownColor: '#ef5350',
+            });
+            candleSeries.setData(ohlcv);
+
+            // 21 EMA
+            const emaData = calcEMA(ohlcv, 21);
+            const emaSeries = lwChart.addLineSeries({ color: '#f59e0b', lineWidth: 1.5, priceLineVisible: false, lastValueVisible: false });
+            emaSeries.setData(emaData);
+
+            // 50 SMA
+            const smaData = calcSMA(ohlcv, 50);
+            const smaSeries = lwChart.addLineSeries({ color: '#6366f1', lineWidth: 1.5, priceLineVisible: false, lastValueVisible: false });
+            smaSeries.setData(smaData);
+
+            // Markers — entry, partials, exit
+            const markers = [];
+            const toUnix = dateStr => {
+                if (!dateStr) return null;
+                const d = new Date(dateStr + 'T12:00:00Z');
+                return Math.floor(d.getTime() / 1000);
+            };
+            const snapToData = (unix) => {
+                if (!unix) return null;
+                // find closest available candle time
+                let closest = ohlcv.reduce((a, b) =>
+                    Math.abs(b.time - unix) < Math.abs(a.time - unix) ? b : a, ohlcv[0]);
+                return closest?.time || null;
+            };
+
+            const entryTime = snapToData(toUnix(trade.entryDate));
+            if (entryTime) markers.push({
+                time: entryTime, position: 'belowBar', color: '#26a69a',
+                shape: 'arrowUp', text: `Entry $${trade.entryPrice.toFixed(2)}`, size: 1.5,
+            });
+
+            // Partial sells
+            if (trade.partialSells?.length) {
+                trade.partialSells.forEach((ps, i) => {
+                    const t = snapToData(toUnix(ps.date?.split('T')[0]));
+                    if (t) markers.push({
+                        time: t, position: 'aboveBar', color: '#f59e0b',
+                        shape: 'arrowDown', text: `Partial ${i+1} $${parseFloat(ps.price).toFixed(2)}`, size: 1.2,
+                    });
+                });
+            }
+
+            const exitTime = snapToData(toUnix(trade.exitDate));
+            if (exitTime) markers.push({
+                time: exitTime, position: 'aboveBar', color: '#ef5350',
+                shape: 'arrowDown', text: `Exit $${trade.exitPrice.toFixed(2)}`, size: 1.5,
+            });
+
+            markers.sort((a, b) => a.time - b.time);
+            candleSeries.setMarkers(markers);
+
+            // Zoom to trade window (entry - 2wk to exit + 2wk)
+            const bufferSecs = 14 * 86400;
+            const fromTime = entryTime ? entryTime - bufferSecs : ohlcv[0].time;
+            const toTime   = exitTime  ? exitTime  + bufferSecs : ohlcv[ohlcv.length-1].time;
+            lwChart.timeScale().setVisibleRange({ from: fromTime, to: toTime });
+
+            // Responsive resize
+            new ResizeObserver(() => {
+                if (lwChart) lwChart.applyOptions({ width: container.clientWidth, height: container.clientHeight });
+            }).observe(container);
+        }
+
+        function calcEMA(ohlcv, period) {
+            const k = 2 / (period + 1);
+            let ema = null;
+            return ohlcv.map(d => {
+                if (ema === null) { ema = d.close; }
+                else { ema = d.close * k + ema * (1 - k); }
+                return { time: d.time, value: parseFloat(ema.toFixed(4)) };
+            }).slice(period - 1);
+        }
+
+        function calcSMA(ohlcv, period) {
+            const result = [];
+            for (let i = period - 1; i < ohlcv.length; i++) {
+                const avg = ohlcv.slice(i - period + 1, i + 1).reduce((s, d) => s + d.close, 0) / period;
+                result.push({ time: ohlcv[i].time, value: parseFloat(avg.toFixed(4)) });
+            }
+            return result;
+        }
+
+        function buildTradeChartDetails(trade) {
+            const pnlColor = trade.rMultiple >= 0 ? '#15803d' : '#dc2626';
+            const pnlSign  = trade.rMultiple >= 0 ? '+' : '';
+            const holdDays = trade.exitDate && trade.entryDate
                 ? Math.round((new Date(trade.exitDate) - new Date(trade.entryDate)) / (1000*60*60*24))
                 : null;
 
-            // Partial sells
             let partialsHTML = '';
-            if (trade.partialSells && trade.partialSells.length > 0) {
+            if (trade.partialSells?.length) {
                 partialsHTML = `
                     <div style="margin-top:12px; padding-top:10px; border-top:1px solid #e5e7eb;">
-                        <div style="font-weight:700; color:#374151; margin-bottom:6px;">Partial Sells</div>
+                        <div style="font-weight:700; color:#374151; margin-bottom:6px;">🟠 Partial Sells</div>
                         ${trade.partialSells.map((ps, i) => {
-                            const psDate = ps.date ? new Date(ps.date).toLocaleDateString() : '—';
-                            const psPnl  = ((ps.price - trade.entryPrice) / trade.entryPrice * 100).toFixed(1);
+                            const psDate  = ps.date ? new Date(ps.date).toLocaleDateString() : '—';
+                            const psPnlPct = ((ps.price - trade.entryPrice) / trade.entryPrice * 100).toFixed(1);
                             const psColor = ps.price >= trade.entryPrice ? '#15803d' : '#dc2626';
-                            return `<div style="padding:6px 8px; background:white; border-radius:5px; border:1px solid #e5e7eb; margin-bottom:4px;">
-                                <div style="display:flex; justify-content:space-between;">
-                                    <span style="color:#6b7280;">Partial ${i+1}</span>
+                            return `<div style="padding:6px 8px; background:white; border-radius:5px; border:1px solid #fde68a; margin-bottom:4px;">
+                                <div style="display:flex; justify-content:space-between; font-size:0.9em;">
+                                    <span style="color:#6b7280;">${psDate}</span>
                                     <span style="font-weight:700;">${ps.shares} sh</span>
                                 </div>
-                                <div style="display:flex; justify-content:space-between; margin-top:2px;">
-                                    <span style="color:#6b7280;">${psDate}</span>
-                                    <span style="font-weight:700; color:${psColor};">@ $${parseFloat(ps.price).toFixed(2)} (${psPnl >= 0 ? '+' : ''}${psPnl}%)</span>
-                                </div>
+                                <div style="font-weight:700; color:${psColor};">$${parseFloat(ps.price).toFixed(2)} (${psPnlPct >= 0 ? '+' : ''}${psPnlPct}%)</div>
                             </div>`;
                         }).join('')}
                     </div>`;
@@ -7416,55 +7554,41 @@
 
             document.getElementById('tradeChartDetails').innerHTML = `
                 <div style="font-weight:800; font-size:1em; color:#1e40af; margin-bottom:10px;">${trade.symbol}</div>
-
-                <div style="display:grid; grid-template-columns:1fr 1fr; gap:6px; margin-bottom:10px;">
-                    <div style="padding:6px 8px; background:white; border-radius:5px; border:1px solid #e5e7eb; text-align:center;">
-                        <div style="font-size:0.68em; color:#9ca3af;">Entry</div>
-                        <div style="font-weight:700;">$${trade.entryPrice.toFixed(2)}</div>
-                        <div style="font-size:0.68em; color:#9ca3af;">${trade.entryDate || '—'}</div>
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:5px; margin-bottom:8px;">
+                    <div style="padding:6px; background:white; border-radius:5px; border:1px solid #e5e7eb; text-align:center;">
+                        <div style="font-size:0.65em; color:#9ca3af;">🟢 Entry</div>
+                        <div style="font-weight:700; font-size:0.9em;">$${trade.entryPrice.toFixed(2)}</div>
+                        <div style="font-size:0.65em; color:#9ca3af;">${trade.entryDate || '—'}</div>
                     </div>
-                    <div style="padding:6px 8px; background:white; border-radius:5px; border:1px solid #e5e7eb; text-align:center;">
-                        <div style="font-size:0.68em; color:#9ca3af;">Exit</div>
-                        <div style="font-weight:700;">$${trade.exitPrice.toFixed(2)}</div>
-                        <div style="font-size:0.68em; color:#9ca3af;">${trade.exitDate || '—'}</div>
+                    <div style="padding:6px; background:white; border-radius:5px; border:1px solid #e5e7eb; text-align:center;">
+                        <div style="font-size:0.65em; color:#9ca3af;">🔴 Exit</div>
+                        <div style="font-weight:700; font-size:0.9em;">$${trade.exitPrice.toFixed(2)}</div>
+                        <div style="font-size:0.65em; color:#9ca3af;">${trade.exitDate || '—'}</div>
                     </div>
-                </div>
-
-                <div style="display:grid; grid-template-columns:1fr 1fr; gap:6px; margin-bottom:10px;">
-                    <div style="padding:6px 8px; background:white; border-radius:5px; border:1px solid #e5e7eb; text-align:center;">
-                        <div style="font-size:0.68em; color:#9ca3af;">Initial Stop</div>
-                        <div style="font-weight:700;">$${(trade.initialStop||0).toFixed(2)}</div>
+                    <div style="padding:6px; background:white; border-radius:5px; border:1px solid #e5e7eb; text-align:center;">
+                        <div style="font-size:0.65em; color:#9ca3af;">Stop</div>
+                        <div style="font-weight:700; font-size:0.9em;">$${(trade.initialStop||0).toFixed(2)}</div>
                     </div>
-                    <div style="padding:6px 8px; background:white; border-radius:5px; border:1px solid #e5e7eb; text-align:center;">
-                        <div style="font-size:0.68em; color:#9ca3af;">Hold Time</div>
-                        <div style="font-weight:700;">${holdDays !== null ? holdDays + 'd' : '—'}</div>
+                    <div style="padding:6px; background:white; border-radius:5px; border:1px solid #e5e7eb; text-align:center;">
+                        <div style="font-size:0.65em; color:#9ca3af;">Hold</div>
+                        <div style="font-weight:700; font-size:0.9em;">${holdDays !== null ? holdDays + 'd' : '—'}</div>
                     </div>
                 </div>
-
-                <div style="padding:10px; background:${trade.rMultiple >= 0 ? '#dcfce7' : '#fee2e2'}; border-radius:6px; text-align:center; margin-bottom:10px;">
+                <div style="padding:10px; background:${trade.rMultiple >= 0 ? '#dcfce7' : '#fee2e2'}; border-radius:6px; text-align:center; margin-bottom:8px;">
                     <div style="font-size:0.72em; color:#6b7280;">Result</div>
                     <div style="font-size:1.5em; font-weight:800; color:${pnlColor};">${pnlSign}${trade.rMultiple.toFixed(2)}R</div>
                     <div style="font-size:0.78em; color:${pnlColor}; font-weight:600;">${pnlSign}${trade.portfolioPnlPercent.toFixed(2)}% portfolio</div>
                 </div>
-
-                <div style="padding:8px; background:white; border-radius:5px; border:1px solid #e5e7eb; text-align:center; margin-bottom:6px;">
-                    <div style="font-size:0.68em; color:#9ca3af;">Shares</div>
-                    <div style="font-weight:700;">${(trade.initialShares || trade.accountWeight || '—')}</div>
+                <div style="padding:8px; background:#f0f9ff; border-radius:5px; border:1px solid #bfdbfe; font-size:0.72em; color:#1e40af; line-height:1.8;">
+                    <strong>Legend</strong><br>
+                    🟡 21 EMA<br>
+                    🟣 50 SMA<br>
+                    ▲ Entry (green)<br>
+                    ▼ Exit (red)<br>
+                    ▼ Partial (orange)
                 </div>
-
-                ${trade.notes ? `<div style="padding:8px; background:#fefce8; border-radius:5px; border:1px solid #fde68a; font-size:0.78em; color:#78350f; line-height:1.4;"><strong>Notes:</strong> ${trade.notes}</div>` : ''}
-
-                ${partialsHTML}
-
-                <div style="margin-top:12px; padding:8px; background:#f0f9ff; border-radius:5px; border:1px solid #bfdbfe; font-size:0.72em; color:#1e40af; line-height:1.5;">
-                    💡 Key levels to find on chart:<br>
-                    Entry: <strong>$${trade.entryPrice.toFixed(2)}</strong><br>
-                    Exit: <strong>$${trade.exitPrice.toFixed(2)}</strong><br>
-                    Stop: <strong>$${(trade.initialStop||0).toFixed(2)}</strong>
-                    ${trade.partialSells?.length ? '<br>Partials: ' + trade.partialSells.map(ps => `<strong>$${parseFloat(ps.price).toFixed(2)}</strong>`).join(', ') : ''}
-                </div>`;
-
-            document.getElementById('tradeChartModal').style.display = 'flex';
+                ${trade.notes ? `<div style="margin-top:8px; padding:8px; background:#fefce8; border-radius:5px; border:1px solid #fde68a; font-size:0.78em; color:#78350f; line-height:1.4;"><strong>Notes:</strong> ${trade.notes}</div>` : ''}
+                ${partialsHTML}`;
         }
 
         function updateAllDisplays() {
