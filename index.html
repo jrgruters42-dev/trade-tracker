@@ -7397,28 +7397,33 @@
                 });
             }
 
-            // Fetch 6 months of daily OHLCV from Yahoo Finance via proxy
+            // Fetch 6 months of daily OHLCV — use CORS proxy since Yahoo blocks direct browser requests
             const endDate   = Math.floor(Date.now() / 1000);
             const startDate = endDate - (180 * 24 * 60 * 60);
-            const url = `https://query1.finance.yahoo.com/v8/finance/chart/${trade.symbol}?interval=1d&period1=${startDate}&period2=${endDate}&includePrePost=false`;
+            const yahooUrl  = `https://query1.finance.yahoo.com/v8/finance/chart/${trade.symbol}?interval=1d&period1=${startDate}&period2=${endDate}&includePrePost=false`;
+            const proxyUrl  = `https://api.allorigins.win/get?url=${encodeURIComponent(yahooUrl)}`;
 
             let ohlcv = [];
             try {
-                const resp = await fetch(url);
-                const data = await resp.json();
+                const resp = await fetch(proxyUrl);
+                if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+                const wrapper = await resp.json();
+                const data   = JSON.parse(wrapper.contents);
                 const result = data?.chart?.result?.[0];
-                if (!result) throw new Error('No data');
-                const ts     = result.timestamps;
-                const q      = result.indicators.quote[0];
+                if (!result) throw new Error('No chart data returned');
+                const ts = result.timestamps || result.timestamp;
+                const q  = result.indicators.quote[0];
                 ohlcv = ts.map((t, i) => ({
-                    time:  t - (t % 86400),  // normalize to day
-                    open:  parseFloat(q.open[i]?.toFixed(2))  || null,
-                    high:  parseFloat(q.high[i]?.toFixed(2))  || null,
-                    low:   parseFloat(q.low[i]?.toFixed(2))   || null,
-                    close: parseFloat(q.close[i]?.toFixed(2)) || null,
+                    time:  t - (t % 86400),
+                    open:  q.open[i]  != null ? parseFloat(q.open[i].toFixed(2))  : null,
+                    high:  q.high[i]  != null ? parseFloat(q.high[i].toFixed(2))  : null,
+                    low:   q.low[i]   != null ? parseFloat(q.low[i].toFixed(2))   : null,
+                    close: q.close[i] != null ? parseFloat(q.close[i].toFixed(2)) : null,
                 })).filter(d => d.open && d.high && d.low && d.close);
+                if (ohlcv.length === 0) throw new Error('Empty data set');
             } catch(e) {
-                document.getElementById('tradeChartLoading').textContent = '⚠ Could not load price data';
+                document.getElementById('tradeChartLoading').textContent = `⚠ Could not load price data: ${e.message}`;
+                console.error('Chart load error:', e);
                 return;
             }
             document.getElementById('tradeChartLoading').textContent = '';
