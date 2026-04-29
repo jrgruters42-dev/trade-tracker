@@ -7397,32 +7397,40 @@
                 });
             }
 
-            // Fetch 6 months of daily OHLCV — use CORS proxy since Yahoo blocks direct browser requests
-            const endDate   = Math.floor(Date.now() / 1000);
-            const startDate = endDate - (180 * 24 * 60 * 60);
-            const yahooUrl  = `https://query1.finance.yahoo.com/v8/finance/chart/${trade.symbol}?interval=1d&period1=${startDate}&period2=${endDate}&includePrePost=false`;
-            const proxyUrl  = `https://api.allorigins.win/get?url=${encodeURIComponent(yahooUrl)}`;
+            // Fetch 6 months of daily OHLCV via Alpha Vantage (key already stored in app)
+            const avKey = document.getElementById('alphaVantageKey')?.value?.trim();
+            if (!avKey) {
+                document.getElementById('tradeChartLoading').textContent = '⚠ Add your Alpha Vantage key in Account Setup to load charts';
+                return;
+            }
+
+            const avUrl = `https://www.alphavantage.co/query?function=TIME_SERIES_DAILY&symbol=${trade.symbol}&outputsize=compact&apikey=${avKey}`;
 
             let ohlcv = [];
             try {
-                const resp = await fetch(proxyUrl);
+                const resp = await fetch(avUrl);
                 if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
-                const wrapper = await resp.json();
-                const data   = JSON.parse(wrapper.contents);
-                const result = data?.chart?.result?.[0];
-                if (!result) throw new Error('No chart data returned');
-                const ts = result.timestamps || result.timestamp;
-                const q  = result.indicators.quote[0];
-                ohlcv = ts.map((t, i) => ({
-                    time:  t - (t % 86400),
-                    open:  q.open[i]  != null ? parseFloat(q.open[i].toFixed(2))  : null,
-                    high:  q.high[i]  != null ? parseFloat(q.high[i].toFixed(2))  : null,
-                    low:   q.low[i]   != null ? parseFloat(q.low[i].toFixed(2))   : null,
-                    close: q.close[i] != null ? parseFloat(q.close[i].toFixed(2)) : null,
-                })).filter(d => d.open && d.high && d.low && d.close);
+                const data = await resp.json();
+                if (data['Note']) throw new Error('API limit reached — try again in a minute');
+                if (data['Error Message']) throw new Error('Symbol not found');
+                const series = data['Time Series (Daily)'];
+                if (!series) throw new Error('No data returned');
+                
+                // Convert to array, sort oldest first, take last 180 days
+                ohlcv = Object.entries(series)
+                    .map(([date, v]) => ({
+                        time:  date,
+                        open:  parseFloat(v['1. open']),
+                        high:  parseFloat(v['2. high']),
+                        low:   parseFloat(v['3. low']),
+                        close: parseFloat(v['4. close']),
+                    }))
+                    .sort((a, b) => a.time.localeCompare(b.time))
+                    .slice(-130); // ~6 months of trading days
+
                 if (ohlcv.length === 0) throw new Error('Empty data set');
             } catch(e) {
-                document.getElementById('tradeChartLoading').textContent = `⚠ Could not load price data: ${e.message}`;
+                document.getElementById('tradeChartLoading').textContent = `⚠ ${e.message}`;
                 console.error('Chart load error:', e);
                 return;
             }
@@ -7460,29 +7468,26 @@
 
             // Markers — entry, partials, exit
             const markers = [];
-            const toUnix = dateStr => {
+            const snapToData = (dateStr) => {
                 if (!dateStr) return null;
-                const d = new Date(dateStr + 'T12:00:00Z');
-                return Math.floor(d.getTime() / 1000);
-            };
-            const snapToData = (unix) => {
-                if (!unix) return null;
-                // find closest available candle time
-                let closest = ohlcv.reduce((a, b) =>
-                    Math.abs(b.time - unix) < Math.abs(a.time - unix) ? b : a, ohlcv[0]);
-                return closest?.time || null;
+                const target = dateStr.substring(0, 10); // normalize to YYYY-MM-DD
+                // find exact match or closest available date
+                if (ohlcv.find(d => d.time === target)) return target;
+                // find closest
+                return ohlcv.reduce((best, d) =>
+                    Math.abs(d.time.localeCompare(target)) < Math.abs(best.time.localeCompare(target)) ? d : best
+                , ohlcv[0])?.time || null;
             };
 
-            const entryTime = snapToData(toUnix(trade.entryDate));
+            const entryTime = snapToData(trade.entryDate);
             if (entryTime) markers.push({
                 time: entryTime, position: 'belowBar', color: '#26a69a',
                 shape: 'arrowUp', text: `Entry $${trade.entryPrice.toFixed(2)}`, size: 1.5,
             });
 
-            // Partial sells
             if (trade.partialSells?.length) {
                 trade.partialSells.forEach((ps, i) => {
-                    const t = snapToData(toUnix(ps.date?.split('T')[0]));
+                    const t = snapToData(ps.date?.split('T')[0]);
                     if (t) markers.push({
                         time: t, position: 'aboveBar', color: '#f59e0b',
                         shape: 'arrowDown', text: `Partial ${i+1} $${parseFloat(ps.price).toFixed(2)}`, size: 1.2,
@@ -7490,7 +7495,7 @@
                 });
             }
 
-            const exitTime = snapToData(toUnix(trade.exitDate));
+            const exitTime = snapToData(trade.exitDate);
             if (exitTime) markers.push({
                 time: exitTime, position: 'aboveBar', color: '#ef5350',
                 shape: 'arrowDown', text: `Exit $${trade.exitPrice.toFixed(2)}`, size: 1.5,
@@ -7499,10 +7504,15 @@
             markers.sort((a, b) => a.time - b.time);
             candleSeries.setMarkers(markers);
 
-            // Zoom to trade window (entry - 2wk to exit + 2wk)
-            const bufferSecs = 14 * 86400;
-            const fromTime = entryTime ? entryTime - bufferSecs : ohlcv[0].time;
-            const toTime   = exitTime  ? exitTime  + bufferSecs : ohlcv[ohlcv.length-1].time;
+            // Zoom to trade window with 2-week buffer
+            const addDays = (dateStr, days) => {
+                if (!dateStr) return null;
+                const d = new Date(dateStr);
+                d.setDate(d.getDate() + days);
+                return d.toISOString().substring(0, 10);
+            };
+            const fromTime = addDays(entryTime, -14) || ohlcv[0].time;
+            const toTime   = addDays(exitTime,   14) || ohlcv[ohlcv.length-1].time;
             lwChart.timeScale().setVisibleRange({ from: fromTime, to: toTime });
 
             // Responsive resize
