@@ -873,7 +873,7 @@
         </div>
 
         <!-- ── Reward Readiness ─────────────────────────────────────────────── -->
-        <div id="rewardReadinessCard" class="card" style="padding:14px 18px; margin-bottom:8px; display:none; border-left:4px solid #10b981;">
+        <div id="rewardReadinessCard" class="card" style="padding:10px 14px; margin-bottom:8px; display:none; border-left:4px solid #10b981;">
             <div onclick="toggleRewardReadiness()" style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:8px; cursor:pointer;">
                 <div style="display:flex; align-items:center; gap:10px;">
                     <div style="font-size:0.75em; font-weight:700; color:#059669; text-transform:uppercase; letter-spacing:0.5px;">🎁 Reward Readiness</div>
@@ -1797,7 +1797,6 @@
                                 <th>Date</th>
                                 <th>Account Equity</th>
                                 <th>Daily % Change</th>
-                                <th>YTD P&L%</th>
                                 <th>10-Day Avg</th>
                                 <th>Drawdown %</th>
                                 <th>Exposure %</th>
@@ -1894,27 +1893,6 @@
     </div>
 
     <!-- Tax Tracker Tab -->
-
-    <!-- Trade Chart Modal -->
-    <div id="tradeChartModal" class="modal" style="display:none;">
-        <div class="modal-content" style="max-width:1150px; width:96vw; padding:0; overflow:hidden;">
-            <div style="display:flex; align-items:center; justify-content:space-between; padding:12px 16px; background:#1e40af; color:white;">
-                <div style="display:flex; align-items:center; gap:12px;">
-                    <span id="tradeChartTitle" style="font-size:1.1em; font-weight:800;"></span>
-                    <span id="tradeChartLoading" style="font-size:0.78em; opacity:0.8;"></span>
-                </div>
-                <span class="close" onclick="closeModal('tradeChartModal')" style="color:white; font-size:1.4em; cursor:pointer;">&times;</span>
-            </div>
-            <div style="display:flex; height:540px;">
-                <!-- Custom chart -->
-                <div style="flex:1; min-width:0; position:relative; background:#131722;">
-                    <div id="tradeChartContainer" style="width:100%; height:100%;"></div>
-                </div>
-                <!-- Trade details panel -->
-                <div id="tradeChartDetails" style="width:230px; flex-shrink:0; overflow-y:auto; padding:14px; background:#f9fafb; border-left:1px solid #e5e7eb; font-size:0.82em;"></div>
-            </div>
-        </div>
-    </div>
 
     <!-- Firebase Setup Modal -->
     <div id="firebaseSetupModal" class="modal">
@@ -2193,36 +2171,88 @@
 
     <!-- Hedge Modal -->
     <div id="hedgeModal" class="modal">
-        <div class="modal-content" style="max-width:420px;">
+        <div class="modal-content" style="max-width:520px;">
             <div class="modal-header">
-                <h2>🛡️ Log Put Hedge</h2>
+                <h2>🛡️ Hedge Manager — <span id="hedgeModalSymbol"></span></h2>
                 <span class="close" onclick="closeModal('hedgeModal')">&times;</span>
             </div>
-            <p style="font-size:0.85em; color:#6b7280; margin-bottom:14px;">Log a put option bought or sold as a hedge for this position. The net cost/proceeds adjust the position's effective entry price and P&L.</p>
             <input type="hidden" id="hedgePosId">
+            <div id="hedgeExistingList" style="margin-bottom:14px;"></div>
+            <div style="background:#f0f9ff; border-radius:8px; padding:12px; border:2px solid #bfdbfe;">
+                <div style="font-size:0.8em; font-weight:700; color:#1e40af; margin-bottom:10px; text-transform:uppercase; letter-spacing:0.5px;">+ Log New Put Hedge</div>
+                <div class="form-grid" style="grid-template-columns:1fr 1fr; gap:10px;">
+                    <div class="form-group">
+                        <label style="font-size:0.8em;">Strike Price ($)</label>
+                        <input type="number" id="hedgeStrikeNew" placeholder="e.g. 145.00" step="0.01" style="padding:8px; width:100%; border:2px solid #e5e7eb; border-radius:6px;">
+                    </div>
+                    <div class="form-group">
+                        <label style="font-size:0.8em;">Contracts</label>
+                        <input type="number" id="hedgeContractsNew" placeholder="e.g. 5" step="1" min="1" style="padding:8px; width:100%; border:2px solid #e5e7eb; border-radius:6px;">
+                    </div>
+                    <div class="form-group">
+                        <label style="font-size:0.8em;">Premium / Share ($)</label>
+                        <input type="number" id="hedgePremiumPerShareNew" placeholder="e.g. 3.50" step="0.01"
+                               oninput="updateHedgeNewTotal()" style="padding:8px; width:100%; border:2px solid #e5e7eb; border-radius:6px;">
+                    </div>
+                    <div class="form-group">
+                        <label style="font-size:0.8em;">Total Cost ($) <span style="color:#9ca3af;">(auto)</span></label>
+                        <input type="number" id="hedgePremium" placeholder="auto-calculated" step="0.01"
+                               oninput="updateHedgeNewPerShare()" style="padding:8px; width:100%; border:2px solid #e5e7eb; border-radius:6px;">
+                    </div>
+                    <div class="form-group">
+                        <label style="font-size:0.8em;">Expiry Date</label>
+                        <input type="date" id="hedgeExpiry" style="padding:8px; width:100%; border:2px solid #e5e7eb; border-radius:6px;">
+                    </div>
+                    <div class="form-group">
+                        <label style="font-size:0.8em;">Date Purchased</label>
+                        <input type="date" id="hedgeDate" style="padding:8px; width:100%; border:2px solid #e5e7eb; border-radius:6px;">
+                    </div>
+                    <div class="form-group" style="grid-column:1/-1;">
+                        <label style="font-size:0.8em;">Notes (optional)</label>
+                        <input type="text" id="hedgeNotes" placeholder="e.g. protection against earnings" style="padding:8px; width:100%; border:2px solid #e5e7eb; border-radius:6px;">
+                    </div>
+                </div>
+                <div id="hedgePreview" style="margin:8px 0; padding:8px; background:white; border-radius:6px; font-size:0.82em; min-height:32px;"></div>
+                <button onclick="saveHedge()" class="btn-success" style="width:100%; padding:10px; font-size:0.9em; font-weight:700;">Add Hedge</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Close Hedge Modal -->
+    <div id="closeHedgeModal" class="modal">
+        <div class="modal-content" style="max-width:380px;">
+            <div class="modal-header">
+                <h2 id="closeHedgeTitle">Close Hedge</h2>
+                <span class="close" onclick="closeModal('closeHedgeModal')">&times;</span>
+            </div>
+            <input type="hidden" id="closeHedgePosId">
+            <input type="hidden" id="closeHedgeId">
+            <div id="closeHedgeSummary" style="padding:10px; background:#fef9c3; border-radius:6px; font-size:0.85em; margin-bottom:12px;"></div>
             <div class="form-grid" style="grid-template-columns:1fr 1fr; gap:10px;">
-                <div class="form-group">
-                    <label>Action</label>
-                    <select id="hedgeAction" style="padding:8px; width:100%; border:2px solid #e5e7eb; border-radius:6px;">
-                        <option value="buy">Buy Put (cost — increases basis)</option>
-                        <option value="sell">Sell/Expire Put (proceeds — reduces cost or locks profit)</option>
+                <div class="form-group" style="grid-column:1/-1;">
+                    <label>How was it closed?</label>
+                    <select id="closeHedgeType" onchange="updateCloseHedgePreview()" style="padding:8px; width:100%; border:2px solid #e5e7eb; border-radius:6px;">
+                        <option value="expired">Expired Worthless (full loss)</option>
+                        <option value="sold_gain">Sold for Gain</option>
+                        <option value="sold_loss">Sold for Partial Loss</option>
                     </select>
                 </div>
-                <div class="form-group">
-                    <label>Total Premium ($)</label>
-                    <input type="number" id="hedgePremium" placeholder="e.g. 250" step="0.01" min="0" style="padding:8px; width:100%; border:2px solid #e5e7eb; border-radius:6px;">
+                <div class="form-group" style="grid-column:1/-1;" id="closeHedgeProceedsRow">
+                    <label>Proceeds Received ($)</label>
+                    <input type="number" id="closeHedgeProceeds" placeholder="e.g. 180" step="0.01"
+                           oninput="updateCloseHedgePreview()" style="padding:8px; width:100%; border:2px solid #e5e7eb; border-radius:6px;">
                 </div>
                 <div class="form-group">
-                    <label>Date</label>
-                    <input type="date" id="hedgeDate" style="padding:8px; width:100%; border:2px solid #e5e7eb; border-radius:6px;">
+                    <label>Close Date</label>
+                    <input type="date" id="closeHedgeDate" style="padding:8px; width:100%; border:2px solid #e5e7eb; border-radius:6px;">
                 </div>
                 <div class="form-group">
                     <label>Notes (optional)</label>
-                    <input type="text" id="hedgeNotes" placeholder="e.g. 5 contracts @ $50" style="padding:8px; width:100%; border:2px solid #e5e7eb; border-radius:6px;">
+                    <input type="text" id="closeHedgeNotes" style="padding:8px; width:100%; border:2px solid #e5e7eb; border-radius:6px;">
                 </div>
             </div>
-            <div id="hedgePreview" style="margin:10px 0; padding:10px; background:#f0f9ff; border-radius:6px; font-size:0.85em;"></div>
-            <button onclick="saveHedge()" class="btn-success" style="width:100%; padding:10px; font-size:1em; font-weight:700;">Save Hedge</button>
+            <div id="closeHedgePreview" style="margin:8px 0; padding:8px; background:#f0f9ff; border-radius:6px; font-size:0.82em;"></div>
+            <button onclick="executeCloseHedge()" class="btn-success" style="width:100%; padding:10px; font-size:0.9em; font-weight:700;">Close Hedge</button>
         </div>
     </div>
 
@@ -2791,12 +2821,10 @@
                 }
             }
             
-            // Calculate hedge net cost (buys increase cost, sells reduce it)
+            // Calculate hedge net cost (premium paid minus any proceeds from closing)
             let hedgeNetCost = 0;
             if (pos.hedges && pos.hedges.length > 0) {
-                hedgeNetCost = pos.hedges.reduce((sum, h) => {
-                    return sum + (h.action === 'buy' ? h.premium : -h.premium);
-                }, 0);
+                hedgeNetCost = pos.hedges.reduce((sum, h) => sum + (h.premium || 0) - (h.proceeds || 0), 0);
             }
 
             const positionValue = pos.currentPrice * pos.shares;
@@ -3196,7 +3224,7 @@
                                 <button class="btn-secondary" style="padding: 3px 6px; font-size: 0.75em; white-space: nowrap;" onclick="openEditPositionModal(${pos.id})">Edit</button>
                                 <button class="btn-success" style="padding: 3px 6px; font-size: 0.75em; white-space: nowrap;" onclick="openPartialSellModal(${pos.id})">Part</button>
                                 <button class="btn-secondary" style="padding: 3px 6px; font-size: 0.75em; white-space: nowrap;" onclick="openUpdateStopModal(${pos.id})">Stop</button>
-                                <button class="btn-secondary" style="padding: 3px 6px; font-size: 0.75em; white-space: nowrap; background:#7c3aed; color:white;" onclick="openHedgeModal(${pos.id})" title="${getHedgeTooltip(pos)}">${pos.hedges && pos.hedges.length > 0 ? 'Hedge 🛡' : 'Hedge'}</button>
+                                <button class="btn-secondary" style="padding: 3px 6px; font-size: 0.75em; white-space: nowrap; background:#7c3aed; color:white;" onclick="openHedgeModal(${pos.id})" title="${getHedgeTooltip(pos)}">${getHedgeBadge(pos)}</button>
                                 <button class="btn-danger" style="padding: 3px 6px; font-size: 0.75em; white-space: nowrap;" onclick="openClosePositionModal(${pos.id})">Close</button>
                                 <button class="btn-danger" style="padding: 3px 6px; font-size: 0.75em; white-space: nowrap;" onclick="deletePosition(${pos.id})">Del</button>
                             </div>
@@ -3738,7 +3766,7 @@
                 
                 html += `
                     <tr>
-                        <td><strong style="cursor:pointer; color:#1e40af; text-decoration:underline dotted;" onclick="openTradeChart(${trade.originalIndex})" title="Click to view chart">${trade.symbol}</strong></td>
+                        <td><strong>${trade.symbol}</strong></td>
                         <td>$${trade.entryPrice.toFixed(2)}</td>
                         <td>$${trade.exitPrice.toFixed(2)}</td>
                         <td>${trade.accountWeight.toFixed(2)}%</td>
@@ -4183,12 +4211,9 @@
             }
             
             if (dailyEquityEntries.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="10" class="empty-state">No daily entries yet. Click "Add Today\'s Entry" to start tracking.</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="9" class="empty-state">No daily entries yet. Click "Add Today\'s Entry" to start tracking.</td></tr>';
                 return;
             }
-
-            // Starting account for YTD% calculation
-            const startingAccount = parseFloat(document.getElementById('startingAccount').value) || 250000;
             
             let html = '';
             
@@ -4202,10 +4227,6 @@
                     tenDayAvg = last10.reduce((sum, e) => sum + e.accountValue, 0) / 10;
                     belowAvg = entry.accountValue < tenDayAvg;
                 }
-                
-                // YTD P&L% — same formula as main YTD stat (adjusted for cash flows)
-                const ytdPct = ((entry.accountValue - startingAccount - getNetCashFlows()) / startingAccount) * 100;
-                const ytdColor = ytdPct >= 0 ? '#15803d' : '#dc2626';
                 
                 // Alternating row colors
                 const rowBg = index % 2 === 0 ? 'background: #f9fafb;' : 'background: white;';
@@ -4222,7 +4243,6 @@
                         <td>${entry.date}</td>
                         <td>$${entry.accountValue.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
                         <td class="${entry.dailyChange >= 0 ? 'profit' : 'loss'}">${entry.dailyChange.toFixed(2)}%</td>
-                        <td style="font-weight:600; color:${ytdColor};">${ytdPct >= 0 ? '+' : ''}${ytdPct.toFixed(2)}%</td>
                         <td style="${belowAvgStyle}">${tenDayAvg > 0 ? '$' + tenDayAvg.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}) : '-'}</td>
                         <td>${entry.drawdown.toFixed(2)}%</td>
                         <td>${entry.exposure.toFixed(2)}%</td>
@@ -5021,11 +5041,11 @@
                 pos.partialSells.push({ shares, price, date: new Date().toISOString() });
                 pos.shares -= shares;
                 
-                closeModal('partialSellModal');
-                this.reset();
                 saveToFirebase();
                 saveDailySnapshot();
                 updateAllDisplays();
+                closeModal('partialSellModal');
+                this.reset();
             } else {
                 alert('Invalid partial sell amount');
             }
@@ -6364,44 +6384,192 @@
         }
 
         // ── Hedge (Put Options) ───────────────────────────────────────────────
+        function getHedgeBadge(pos) {
+            if (!pos.hedges || pos.hedges.length === 0) return 'Hedge';
+            const today   = new Date();
+            const open    = pos.hedges.filter(h => !h.closed);
+            const expired = open.filter(h => h.expiry && new Date(h.expiry) < today);
+            const soon    = open.filter(h => {
+                if (!h.expiry) return false;
+                const d = Math.round((new Date(h.expiry) - today) / (1000*60*60*24));
+                return d >= 0 && d <= 7;
+            });
+            if (expired.length) return 'Hedge [!]';
+            if (soon.length)    return 'Hedge [exp]';
+            if (open.length)    return 'Hedge [on]';
+            return 'Hedge [done]';
+        }
+
+        function getHedgeTooltip(pos) {
+            if (!pos.hedges || pos.hedges.length === 0) return 'No hedges logged — click to add';
+            const open = pos.hedges.filter(h => !h.closed);
+            const net  = pos.hedges.reduce((s, h) => s + (h.premium || 0) - (h.proceeds || 0), 0);
+            return `${open.length} open hedge(s) | Net cost to basis: $${net.toFixed(0)}`;
+        }
+
+        function getHedgeNetCostPerShare(pos) {
+            if (!pos.hedges || !pos.initialShares) return 0;
+            return pos.hedges.reduce((s, h) => s + (h.premium || 0) - (h.proceeds || 0), 0) / pos.initialShares;
+        }
+
+        function updateHedgeNewTotal() {
+            const perShare  = parseFloat(document.getElementById('hedgePremiumPerShareNew').value) || 0;
+            const contracts = parseInt(document.getElementById('hedgeContractsNew').value) || 0;
+            if (perShare && contracts) document.getElementById('hedgePremium').value = (perShare * contracts * 100).toFixed(2);
+            updateHedgePreviewDisplay();
+        }
+
+        function updateHedgeNewPerShare() {
+            const total     = parseFloat(document.getElementById('hedgePremium').value) || 0;
+            const contracts = parseInt(document.getElementById('hedgeContractsNew').value) || 0;
+            if (total && contracts) document.getElementById('hedgePremiumPerShareNew').value = (total / (contracts * 100)).toFixed(4);
+            updateHedgePreviewDisplay();
+        }
+
+        function updateHedgePreviewDisplay() {
+            const posId   = parseInt(document.getElementById('hedgePosId').value);
+            const pos     = openPositions.find(p => p.id === posId);
+            if (!pos) return;
+            const premium   = parseFloat(document.getElementById('hedgePremium').value) || 0;
+            const initSh    = pos.initialShares || pos.shares;
+            const newAdj    = premium / initSh;
+            const existing  = getHedgeNetCostPerShare(pos);
+            const effEntry  = pos.entryPrice + existing + newAdj;
+            const prev = document.getElementById('hedgePreview');
+            if (prev) prev.innerHTML = premium > 0
+                ? `Adds <strong>+$${newAdj.toFixed(2)}/share</strong> to cost basis. New effective entry: <strong>$${effEntry.toFixed(2)}</strong>`
+                : '';
+        }
+
+        function updateHedgePreview(pos) { updateHedgePreviewDisplay(); }
+
         function openHedgeModal(posId) {
             const pos = openPositions.find(p => p.id === posId);
             if (!pos) return;
-            document.getElementById('hedgePosId').value = posId;
-            document.getElementById('hedgeDate').value = new Date().toISOString().split('T')[0];
-            document.getElementById('hedgePremium').value = '';
-            document.getElementById('hedgeNotes').value = '';
-            document.getElementById('hedgeAction').value = 'buy';
-            updateHedgePreview(pos);
+            document.getElementById('hedgePosId').value     = posId;
+            document.getElementById('hedgeModalSymbol').textContent = pos.symbol;
+            document.getElementById('hedgeDate').value      = new Date().toISOString().split('T')[0];
+            document.getElementById('hedgePremium').value   = '';
+            document.getElementById('hedgePremiumPerShareNew').value = '';
+            document.getElementById('hedgeContractsNew').value = Math.max(1, Math.round((pos.initialShares || pos.shares) / 100));
+            document.getElementById('hedgeStrikeNew').value = '';
+            document.getElementById('hedgeExpiry').value    = '';
+            document.getElementById('hedgeNotes').value     = '';
+            document.getElementById('hedgePreview').innerHTML = '';
+            renderExistingHedges(pos);
             document.getElementById('hedgeModal').style.display = 'block';
         }
 
-        function updateHedgePreview(pos) {
-            if (!pos) return;
-            const preview = document.getElementById('hedgePreview');
-            if (!preview) return;
-            const totalHedgeCost = (pos.hedges || []).reduce((sum, h) => {
-                return sum + (h.action === 'buy' ? h.premium : -h.premium);
-            }, 0);
-            const effectiveEntry = pos.entryPrice + (totalHedgeCost / pos.initialShares);
-            preview.innerHTML = `<strong>${pos.symbol}</strong> — Entry: $${pos.entryPrice.toFixed(2)} | 
-                Net hedge cost so far: <strong style="color:${totalHedgeCost > 0 ? '#dc2626' : '#15803d'};">$${totalHedgeCost.toFixed(2)}</strong> | 
-                Effective entry: <strong>$${effectiveEntry.toFixed(2)}</strong> (${totalHedgeCost > 0 ? '+' : ''}${(totalHedgeCost / pos.initialShares).toFixed(2)}/share)`;
+        function renderExistingHedges(pos) {
+            const el = document.getElementById('hedgeExistingList');
+            if (!pos.hedges || pos.hedges.length === 0) { el.innerHTML = ''; return; }
+            const today = new Date();
+            el.innerHTML = '<div style="font-size:0.8em; font-weight:700; color:#374151; margin-bottom:8px; text-transform:uppercase; letter-spacing:0.5px;">Active Hedges</div>' +
+                pos.hedges.map(h => {
+                    const daysLeft  = h.expiry ? Math.round((new Date(h.expiry) - today) / (1000*60*60*24)) : null;
+                    const isExpired = daysLeft !== null && daysLeft < 0 && !h.closed;
+                    const isSoon    = daysLeft !== null && daysLeft >= 0 && daysLeft <= 7 && !h.closed;
+                    const bg        = h.closed ? '#f3f4f6' : isExpired ? '#fee2e2' : isSoon ? '#fef9c3' : '#f0fdf4';
+                    const border    = h.closed ? '#e5e7eb' : isExpired ? '#fca5a5' : isSoon ? '#fde68a' : '#86efac';
+                    const status    = h.closed ? 'Closed' : isExpired ? 'EXPIRED' : isSoon ? `${daysLeft}d left` : daysLeft !== null ? `${daysLeft}d` : 'Open';
+                    const statusColor = h.closed ? '#6b7280' : isExpired ? '#dc2626' : isSoon ? '#92400e' : '#15803d';
+                    const netCost   = (h.premium || 0) - (h.proceeds || 0);
+                    return `<div style="padding:10px; background:${bg}; border:2px solid ${border}; border-radius:8px; margin-bottom:8px; font-size:0.82em;">
+                        <div style="display:flex; justify-content:space-between; margin-bottom:4px;">
+                            <strong>${pos.symbol} Put${h.strike ? ' $'+h.strike : ''}${h.contracts ? ' x'+h.contracts : ''}${h.expiry ? ' exp '+h.expiry : ''}</strong>
+                            <span style="font-weight:700; color:${statusColor};">${status}</span>
+                        </div>
+                        <div style="color:#6b7280;">Cost: <strong style="color:#dc2626;">$${(h.premium||0).toFixed(0)}</strong>
+                            ${h.proceeds ? ` · Proceeds: <strong style="color:#15803d;">$${h.proceeds.toFixed(0)}</strong>` : ''}
+                            · Net: <strong style="color:${netCost>0?'#dc2626':'#15803d'};">$${netCost.toFixed(0)}</strong>
+                            ${h.notes ? ` · <em>${h.notes}</em>` : ''}
+                        </div>
+                        ${!h.closed ? `<div style="margin-top:6px; display:flex; gap:6px;">
+                            <button onclick="openCloseHedgeModal(${pos.id}, ${h.id})" class="btn-danger" style="padding:3px 10px; font-size:0.78em;">${isExpired ? 'Mark Expired' : 'Close / Expire'}</button>
+                            <button onclick="deleteHedge(${pos.id}, ${h.id})" style="padding:3px 8px; font-size:0.78em; background:none; border:1px solid #e5e7eb; border-radius:4px; cursor:pointer; color:#6b7280;">Delete</button>
+                        </div>` : `<div style="margin-top:4px; font-size:0.75em; color:#6b7280;">Closed ${h.closeDate||''} ${h.closeNotes ? '· '+h.closeNotes : ''}</div>`}
+                    </div>`;
+                }).join('');
         }
 
         function saveHedge() {
-            const posId   = parseInt(document.getElementById('hedgePosId').value);
-            const action  = document.getElementById('hedgeAction').value;
-            const premium = parseFloat(document.getElementById('hedgePremium').value);
-            const date    = document.getElementById('hedgeDate').value;
-            const notes   = document.getElementById('hedgeNotes').value;
-            if (!premium || !date) { alert('Please enter premium and date'); return; }
-
+            const posId     = parseInt(document.getElementById('hedgePosId').value);
+            const premium   = parseFloat(document.getElementById('hedgePremium').value);
+            const perShare  = parseFloat(document.getElementById('hedgePremiumPerShareNew').value) || null;
+            const contracts = parseInt(document.getElementById('hedgeContractsNew').value) || null;
+            const strike    = parseFloat(document.getElementById('hedgeStrikeNew').value) || null;
+            const expiry    = document.getElementById('hedgeExpiry').value || null;
+            const date      = document.getElementById('hedgeDate').value;
+            const notes     = document.getElementById('hedgeNotes').value;
+            if (!premium || !date) { alert('Please enter total cost and date'); return; }
             const pos = openPositions.find(p => p.id === posId);
             if (!pos) return;
             if (!pos.hedges) pos.hedges = [];
-            pos.hedges.push({ id: Date.now(), action, premium, date, notes });
+            pos.hedges.push({ id: Date.now(), action: 'buy', premium, perShare, contracts, strike, expiry, date, notes, closed: false, proceeds: 0 });
             closeModal('hedgeModal');
+            saveToFirebase();
+            updateAllDisplays();
+        }
+
+        function openCloseHedgeModal(posId, hedgeId) {
+            const pos   = openPositions.find(p => p.id === posId);
+            const hedge = pos?.hedges?.find(h => h.id === hedgeId);
+            if (!pos || !hedge) return;
+            document.getElementById('closeHedgePosId').value = posId;
+            document.getElementById('closeHedgeId').value    = hedgeId;
+            document.getElementById('closeHedgeDate').value  = new Date().toISOString().split('T')[0];
+            document.getElementById('closeHedgeNotes').value = '';
+            document.getElementById('closeHedgeProceeds').value = '';
+            document.getElementById('closeHedgeTitle').textContent = `Close Hedge — ${pos.symbol} Put${hedge.strike ? ' $'+hedge.strike : ''}`;
+            const daysLeft  = hedge.expiry ? Math.round((new Date(hedge.expiry) - new Date()) / (1000*60*60*24)) : null;
+            const isExpired = daysLeft !== null && daysLeft < 0;
+            document.getElementById('closeHedgeSummary').innerHTML =
+                `Cost paid: <strong>$${hedge.premium.toFixed(0)}</strong>${hedge.expiry ? ' · Expiry: '+hedge.expiry : ''}` +
+                (isExpired ? ' <span style="color:#dc2626; font-weight:700;">(EXPIRED)</span>' : daysLeft !== null ? ` (${daysLeft}d remaining)` : '');
+            if (isExpired) document.getElementById('closeHedgeType').value = 'expired';
+            document.getElementById('closeHedgeProceedsRow').style.display = isExpired ? 'none' : 'block';
+            updateCloseHedgePreview();
+            closeModal('hedgeModal');
+            document.getElementById('closeHedgeModal').style.display = 'block';
+        }
+
+        function updateCloseHedgePreview() {
+            const type     = document.getElementById('closeHedgeType').value;
+            const proceeds = parseFloat(document.getElementById('closeHedgeProceeds').value) || 0;
+            document.getElementById('closeHedgeProceedsRow').style.display = type === 'expired' ? 'none' : 'block';
+            const posId   = parseInt(document.getElementById('closeHedgePosId').value);
+            const hedgeId = parseInt(document.getElementById('closeHedgeId').value);
+            const pos     = openPositions.find(p => p.id === posId);
+            const hedge   = pos?.hedges?.find(h => h.id === hedgeId);
+            if (!pos || !hedge) return;
+            const netCost = hedge.premium - (type === 'expired' ? 0 : proceeds);
+            const adjPerSh = netCost / (pos.initialShares || pos.shares);
+            document.getElementById('closeHedgePreview').innerHTML = type === 'expired'
+                ? `Full $${hedge.premium.toFixed(0)} cost stays in basis.`
+                : `Net cost: $${netCost.toFixed(0)} → +$${adjPerSh.toFixed(2)}/share to effective entry.`;
+        }
+
+        function executeCloseHedge() {
+            const posId    = parseInt(document.getElementById('closeHedgePosId').value);
+            const hedgeId  = parseInt(document.getElementById('closeHedgeId').value);
+            const type     = document.getElementById('closeHedgeType').value;
+            const proceeds = type === 'expired' ? 0 : (parseFloat(document.getElementById('closeHedgeProceeds').value) || 0);
+            const date     = document.getElementById('closeHedgeDate').value;
+            const notes    = document.getElementById('closeHedgeNotes').value;
+            const pos      = openPositions.find(p => p.id === posId);
+            const hedge    = pos?.hedges?.find(h => h.id === hedgeId);
+            if (!pos || !hedge) return;
+            hedge.closed = true; hedge.proceeds = proceeds;
+            hedge.closeType = type; hedge.closeDate = date; hedge.closeNotes = notes;
+            closeModal('closeHedgeModal');
+            saveToFirebase();
+            updateAllDisplays();
+        }
+
+        function deleteHedge(posId, hedgeId) {
+            const pos = openPositions.find(p => p.id === posId);
+            if (!pos) return;
+            pos.hedges = pos.hedges.filter(h => h.id !== hedgeId);
             saveToFirebase();
             updateAllDisplays();
         }
@@ -6543,15 +6711,13 @@
             if (levelEl)  { levelEl.textContent = level; levelEl.style.color = levelColor; }
             if (reasonEl) reasonEl.textContent = reason;
 
-            // Avg Open R — average unrealized R across all open positions
+            // Avg Open R
             const avgOpenREl = document.getElementById('avgOpenR');
             if (avgOpenREl) {
                 if (openPositions.length === 0) {
-                    avgOpenREl.textContent = '—';
-                    avgOpenREl.style.color = '#6b7280';
+                    avgOpenREl.textContent = '—'; avgOpenREl.style.color = '#6b7280';
                 } else {
-                    const rValues = openPositions.map(p => calculatePositionMetrics(p).initialR);
-                    const avgR = rValues.reduce((s, r) => s + r, 0) / rValues.length;
+                    const avgR = openPositions.map(p => calculatePositionMetrics(p).initialR).reduce((s,r)=>s+r,0) / openPositions.length;
                     avgOpenREl.textContent = `${avgR.toFixed(1)}R`;
                     avgOpenREl.style.color = avgR >= 6 ? '#dc2626' : avgR >= 3 ? '#d97706' : '#15803d';
                 }
@@ -6680,8 +6846,11 @@
         function buildHedgeCardHTML(n) {
             return `
                 <div style="background:#f0f9ff; padding:10px; border-radius:8px; border:2px solid #bfdbfe; margin-bottom:12px;">
-                    <div style="font-size:0.72em; font-weight:700; color:#1e40af; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:8px;">Select Position(s) — check multiple to combine</div>
-                    <div id="hedgeCheckboxList${n}" style="display:flex; flex-direction:column; gap:5px; max-height:120px; overflow-y:auto;"></div>
+                    <div style="font-size:0.72em; font-weight:700; color:#1e40af; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:8px;">Select Position</div>
+                    <select id="hedgePositionSelect${n}" onchange="loadHedgePosition(${n})"
+                            style="width:100%; padding:8px; border:2px solid #bfdbfe; border-radius:6px; font-size:0.9em; font-weight:600; color:#1e40af; background:white;">
+                        <option value="">— Choose a position —</option>
+                    </select>
                     <div id="hedgePositionSummary${n}" style="display:none; margin-top:10px; grid-template-columns:repeat(3,1fr); gap:6px;"></div>
                 </div>
                 <div style="background:#fdf4ff; padding:10px; border-radius:8px; border:2px solid #e9d5ff; margin-bottom:12px;">
@@ -6745,89 +6914,59 @@
 
         function populateHedgePositionDropdown() {
             [1,2,3].forEach(n => {
-                const listEl = document.getElementById(`hedgeCheckboxList${n}`);
-                if (!listEl) return;
-                // Remember currently checked IDs
-                const checked = new Set(
-                    [...listEl.querySelectorAll('input[type=checkbox]:checked')].map(cb => cb.value)
-                );
-                listEl.innerHTML = '';
+                const sel = document.getElementById(`hedgePositionSelect${n}`);
+                if (!sel) return;
+                const current = sel.value;
+                sel.innerHTML = '<option value="">\u2014 Choose a position \u2014</option>';
                 openPositions.forEach(pos => {
                     const metrics = calculatePositionMetrics(pos);
+                    const r   = metrics.initialR.toFixed(1);
                     const pnl = metrics.unrealizedPnL >= 0
                         ? `+$${metrics.unrealizedPnL.toFixed(0)}`
                         : `-$${Math.abs(metrics.unrealizedPnL).toFixed(0)}`;
-                    const label = document.createElement('label');
-                    label.style.cssText = 'display:flex; align-items:center; gap:8px; cursor:pointer; font-size:0.85em; padding:4px 6px; border-radius:5px; background:white; border:1px solid #bfdbfe;';
-                    label.innerHTML = `<input type="checkbox" value="${pos.id}" ${checked.has(String(pos.id)) ? 'checked' : ''}
-                        style="width:14px; height:14px; cursor:pointer;" onchange="loadHedgePosition(${n})">
-                        <span style="font-weight:700; color:#1e40af;">${pos.symbol}</span>
-                        <span style="color:#6b7280;">${pos.shares} sh | ${pnl} | ${metrics.initialR.toFixed(1)}R</span>`;
-                    listEl.appendChild(label);
+                    const opt = document.createElement('option');
+                    opt.value = pos.id;
+                    opt.textContent = `${pos.symbol}  |  ${pos.shares} sh  |  ${pnl}  |  ${r}R`;
+                    if (pos.id == current) opt.selected = true;
+                    sel.appendChild(opt);
                 });
             });
         }
 
         function loadHedgePosition(n) {
-            const listEl  = document.getElementById(`hedgeCheckboxList${n}`);
-            const sumEl   = document.getElementById(`hedgePositionSummary${n}`);
-            const checked = [...listEl.querySelectorAll('input[type=checkbox]:checked')].map(cb => parseInt(cb.value));
-            const positions = checked.map(id => openPositions.find(p => p.id === id)).filter(Boolean);
-
+            const sel    = document.getElementById(`hedgePositionSelect${n}`);
+            const posId  = parseInt(sel.value);
+            const pos    = openPositions.find(p => p.id === posId);
+            const sumEl  = document.getElementById(`hedgePositionSummary${n}`);
             document.getElementById(`hedgeResults${n}`).style.display    = 'none';
             document.getElementById(`hedgeEmptyState${n}`).style.display = 'block';
-            if (positions.length === 0) { sumEl.style.display = 'none'; return; }
+            if (!pos) { sumEl.style.display = 'none'; return; }
 
-            // Build combined position using weighted averages
-            const totalShares    = positions.reduce((s, p) => s + (p.initialShares || p.shares), 0);
-            const totalCurrent   = positions.reduce((s, p) => s + p.shares, 0);
-            const wgtEntry       = positions.reduce((s, p) => s + p.entryPrice * (p.initialShares || p.shares), 0) / totalShares;
-            const wgtStop        = positions.reduce((s, p) => s + p.initialStop * (p.initialShares || p.shares), 0) / totalShares;
-            const wgtCurrentPrice = positions.reduce((s, p) => s + p.currentPrice * p.shares, 0) / totalCurrent;
-            const totalUnrealized = positions.reduce((s, p) => s + calculatePositionMetrics(p).unrealizedPnL, 0);
-            const maxRiskLvl     = Math.max(...positions.map(p => p.initialWeight || 0));
-            const wgtInitialR    = positions.reduce((s, p) => s + calculatePositionMetrics(p).initialR, 0) / positions.length;
-
-            // Auto-suggest contracts based on total current shares
-            const contEl = document.getElementById(`hedgeContracts${n}`);
-            if (contEl && !contEl.value) contEl.value = Math.max(1, Math.round(totalCurrent / 100));
+            const metrics    = calculatePositionMetrics(pos);
+            const unrealized = metrics.unrealizedPnL;
+            const contEl     = document.getElementById(`hedgeContracts${n}`);
+            if (contEl && !contEl.value) contEl.value = Math.max(1, Math.round((pos.initialShares || pos.shares) / 100));
 
             sumEl.style.display = 'grid';
-            const isMulti = positions.length > 1;
             sumEl.innerHTML = [
-                { label: isMulti ? 'Wtd Avg Entry' : 'Entry',     value:`$${wgtEntry.toFixed(2)}` },
-                { label: 'Current Price',                          value:`$${wgtCurrentPrice.toFixed(2)}` },
-                { label: isMulti ? 'Total Shares' : 'Shares',     value:totalCurrent.toLocaleString() },
-                { label: 'Unrealized',  value:totalUnrealized>=0?`+$${totalUnrealized.toFixed(0)}`:`-$${Math.abs(totalUnrealized).toFixed(0)}`, color:totalUnrealized>=0?'#15803d':'#dc2626' },
-                { label: 'Avg R',       value:`${wgtInitialR.toFixed(2)}R`, color:wgtInitialR>=0?'#15803d':'#dc2626' },
-                { label: isMulti ? 'Wtd Avg Stop' : 'Stop',       value:`$${wgtStop.toFixed(2)}` },
+                { label:'Entry',      value:`$${pos.entryPrice.toFixed(2)}` },
+                { label:'Price',      value:`$${pos.currentPrice.toFixed(2)}` },
+                { label:'Shares',     value:pos.shares.toLocaleString() },
+                { label:'Unrealized', value:unrealized>=0?`+$${unrealized.toFixed(0)}`:`-$${Math.abs(unrealized).toFixed(0)}`, color:unrealized>=0?'#15803d':'#dc2626' },
+                { label:'Current R',  value:`${metrics.initialR.toFixed(2)}R`, color:metrics.initialR>=0?'#15803d':'#dc2626' },
+                { label:'Risk Lvl',   value:`${pos.initialWeight||0}%` },
             ].map(c => `<div style="padding:6px; background:white; border-radius:5px; border:1px solid #bfdbfe; text-align:center;">
                 <div style="font-size:0.62em; color:#9ca3af; margin-bottom:1px;">${c.label}</div>
                 <div style="font-size:0.88em; font-weight:700; color:${c.color||'#1e40af'};">${c.value}</div>
             </div>`).join('');
-
-            // Store combined data on a virtual position object for calculateHedge
-            listEl._combinedPos = {
-                entryPrice:   wgtEntry,
-                currentPrice: wgtCurrentPrice,
-                initialStop:  wgtStop,
-                shares:       totalCurrent,
-                initialShares: totalShares,
-                unrealizedPnL: totalUnrealized,
-                initialWeight: maxRiskLvl,
-                symbol: positions.map(p => p.symbol).join('+'),
-                partialSells: [],
-            };
-
             calculateHedge(n);
         }
 
         function calculateHedge(n) {
-            const listEl   = document.getElementById(`hedgeCheckboxList${n}`);
-            const combined = listEl?._combinedPos;
-            if (!combined) return;
-
-            const pos = combined; // treat combined as a single virtual position
+            const sel      = document.getElementById(`hedgePositionSelect${n}`);
+            const posId    = parseInt(sel?.value);
+            const pos      = openPositions.find(p => p.id === posId);
+            if (!pos) return;
             const premium   = parseFloat(document.getElementById(`hedgePremiumPerShare${n}`).value);
             const strike    = parseFloat(document.getElementById(`hedgeStrike${n}`).value);
             const contracts = parseInt(document.getElementById(`hedgeContracts${n}`).value);
@@ -6837,15 +6976,16 @@
                 document.getElementById(`hedgeEmptyState${n}`).style.display = 'block';
                 return;
             }
+            const metrics      = calculatePositionMetrics(pos);
             const currentPrice = pos.currentPrice;
             const entry        = pos.entryPrice;
-            const currentShares = pos.shares;                        // current remaining shares — what you hold now
-            const initShares    = pos.initialShares || pos.shares;  // original shares — used for risk calc only
-            const shares        = initShares;                        // keep for risk$ calc
-            const unrealized    = pos.unrealizedPnL !== undefined ? pos.unrealizedPnL : calculatePositionMetrics(pos).unrealizedPnL;
-            const initialRisk$  = (entry - pos.initialStop) * shares;
-            const totalCost     = contracts * premium * 100;
-            const sharesHedged  = contracts * 100;
+            const initShares   = pos.initialShares || pos.shares;  // for risk calc
+            const shares       = initShares;
+            const currentShares = pos.shares;  // what you actually hold now
+            const unrealized   = metrics.unrealizedPnL;
+            const initialRisk$ = (entry - pos.initialStop) * shares;
+            const totalCost    = contracts * premium * 100;
+            const sharesHedged = contracts * 100;
 
             const covEl = document.getElementById(`hedgeCoverageNote${n}`);
             if (sharesHedged < currentShares) { covEl.textContent=`⚠ ${sharesHedged}/${currentShares} covered (${Math.round(sharesHedged/currentShares*100)}%)`; covEl.style.color='#d97706'; }
@@ -6942,7 +7082,6 @@
 
         // ── Reward Readiness Tracker ──────────────────────────────────────────
         function updateRewardReadiness() {
-          try {
             const card = document.getElementById('rewardReadinessCard');
             if (!card) return;
 
@@ -7014,15 +7153,15 @@
             // Progress bar
             document.getElementById('rewardProgressBar').style.width = `${progressPct.toFixed(1)}%`;
 
-            // Suggested reward = claimingMilestone × 10% of milestoneSize, capped at 40% (M4)
-            const rewardPct       = Math.min(40, claimingMilestone * 10) / 100;
-            const suggestedReward = milestoneSize * rewardPct;
-
             // Milestone label (header)
             const nextMilestoneDollars = claimingMilestone * milestoneSize;
             document.getElementById('rewardMilestoneLabel').innerHTML = canClaim
                 ? `🔔 Milestone ${claimingMilestone} available — suggested reward: <strong>$${suggestedReward.toLocaleString(undefined,{maximumFractionDigits:0})}</strong>`
                 : `Working toward Milestone ${claimingMilestone} — $${progressDollars.toFixed(0)} / $${milestoneSize.toLocaleString()} (${progressPct.toFixed(0)}%) · Next reward when reached: $${suggestedReward.toLocaleString(undefined,{maximumFractionDigits:0})}`;
+
+            // Suggested reward = claimingMilestone × 10% of milestoneSize, capped at 40% (M4)
+            const rewardPct        = Math.min(40, claimingMilestone * 10) / 100;
+            const suggestedReward  = milestoneSize * rewardPct;
 
             // Ack button
             const ackBtn = document.getElementById('rewardAckBtn');
@@ -7034,40 +7173,34 @@
                 const border = met ? '#86efac' : '#fde68a';
                 const color  = met ? '#14532d' : '#92400e';
                 const icon   = met ? '✓' : '○';
-                return `<div style="background:${bg}; border:2px solid ${border}; border-radius:8px; padding:12px 14px; text-align:center;">
-                    <div style="font-size:0.78em; color:${color}; font-weight:700; margin-bottom:4px;">${icon} ${label}</div>
-                    <div style="font-size:1.15em; font-weight:800; color:${color}; margin-bottom:4px;">${value}</div>
-                    <div style="font-size:0.72em; color:#6b7280; line-height:1.4;">${detail}</div>
+                return `<div style="background:${bg}; border:2px solid ${border}; border-radius:6px; padding:7px 10px; text-align:center;">
+                    <div style="font-size:0.72em; color:${color}; font-weight:700;">${icon} ${label}</div>
+                    <div style="font-size:0.95em; font-weight:800; color:${color}; margin-top:2px;">${value}</div>
+                    <div style="font-size:0.65em; color:#6b7280; margin-top:1px;">${detail}</div>
                 </div>`;
             };
 
-            // Render criteria — force body visible first to ensure elements are accessible
-            const rewardBody = document.getElementById('rewardReadinessBody');
-            const wasHidden = rewardBody && rewardBody.style.display === 'none';
-            if (rewardBody && wasHidden) rewardBody.style.display = 'block';
-
-            const c1 = document.getElementById('rewardCrit1');
-            const c2 = document.getElementById('rewardCrit2');
-            const c3 = document.getElementById('rewardCrit3');
-            if (c1) c1.innerHTML = critStyle(crit1Met,
-                'Banked Profits',
-                `$${bankedProfits.toFixed(0)} net banked`,
-                crit1Met
-                    ? `Milestone ${claimingMilestone} unlocked ($${(claimingMilestone * milestoneSize).toLocaleString()} threshold)`
-                    : `Need $${Math.max(0, claimingMilestone * milestoneSize - bankedProfits).toFixed(0)} more for Milestone ${claimingMilestone}`);
-            if (c2) c2.innerHTML = critStyle(crit2Met,
-                `Actual Account Progress`,
-                `${ytdFloorPct.toFixed(1)}%`,
-                crit2Met
-                    ? `✓ $${ytdFloor.toFixed(0)} floor (Milestone ${claimingMilestone} needs ≥${solidThresholdPct}%)`
-                    : `Need $${Math.max(0, solidThreshold - ytdFloor).toFixed(0)} more (need ≥${solidThresholdPct}% for Milestone ${claimingMilestone})`);
-            if (c3) c3.innerHTML = critStyle(crit3Met,
-                'Exposure ≤ 100%',
-                `${totalExposure.toFixed(1)}% exposure`,
-                crit3Met ? 'No margin in use' : `${(totalExposure - 100).toFixed(1)}% above 100% — on margin`);
-
-            // Restore hidden state if it was hidden before (user hasn't expanded)
-            if (rewardBody && wasHidden) rewardBody.style.display = 'none';
+            // Render criteria into the grid wrapper directly to avoid outerHTML issues with hidden elements
+            const critGrid = document.querySelector('#rewardReadinessBody .reward-crit-grid');
+            if (critGrid) {
+                critGrid.innerHTML =
+                    `<div id="rewardCrit1">${critStyle(crit1Met,
+                        'Banked Profits',
+                        `$${bankedProfits.toFixed(0)} net banked`,
+                        crit1Met
+                            ? `Milestone ${claimingMilestone} unlocked ($${(claimingMilestone * milestoneSize).toLocaleString()} threshold)`
+                            : `Need $${Math.max(0, claimingMilestone * milestoneSize - bankedProfits).toFixed(0)} more for Milestone ${claimingMilestone}`)}</div>` +
+                    `<div id="rewardCrit2">${critStyle(crit2Met,
+                        `Actual Account Progress`,
+                        `${ytdFloorPct.toFixed(1)}%`,
+                        crit2Met
+                            ? `✓ $${ytdFloor.toFixed(0)} floor (Milestone ${claimingMilestone} needs ≥${solidThresholdPct}%)`
+                            : `Need $${Math.max(0, solidThreshold - ytdFloor).toFixed(0)} more (need ≥${solidThresholdPct}% for Milestone ${claimingMilestone})`)}</div>` +
+                    `<div id="rewardCrit3">${critStyle(crit3Met,
+                        'Exposure ≤ 100%',
+                        `${totalExposure.toFixed(1)}% exposure`,
+                        crit3Met ? 'No margin in use' : `${(totalExposure - 100).toFixed(1)}% above 100% — on margin`)}</div>`;
+            }
 
             // All green banner
             const allGreenEl = document.getElementById('rewardAllGreen');
@@ -7078,9 +7211,6 @@
                 const capped     = claimingMilestone > 4 ? ' (capped)' : '';
                 rewardAmtEl.textContent = `$${suggestedReward.toLocaleString(undefined,{maximumFractionDigits:0})} (${displayPct}%${capped} of $${milestoneSize.toLocaleString(undefined,{maximumFractionDigits:0})})`;
             }
-          } catch(e) {
-            console.error('updateRewardReadiness error:', e);
-          }
         }
 
         function acknowledgeRewardMilestone() {
@@ -7364,246 +7494,6 @@
                 </tr></thead>
                 <tbody>${rows}</tbody>
             </table>`;
-        }
-
-        // ── Trade Chart Modal ─────────────────────────────────────────────────
-        // ── Trade Chart Modal (Lightweight Charts + Yahoo Finance) ──────────
-        let lwChart = null;
-        let lwCandleSeries = null;
-
-        async function openTradeChart(index) {
-            const trade = closedTrades[index];
-            if (!trade) return;
-
-            document.getElementById('tradeChartModal').style.display = 'flex';
-            document.getElementById('tradeChartTitle').textContent = `${trade.symbol} — Trade Review`;
-            document.getElementById('tradeChartLoading').textContent = 'Loading chart data...';
-            document.getElementById('tradeChartContainer').innerHTML = '';
-
-            // Destroy previous chart if exists
-            if (lwChart) { try { lwChart.remove(); } catch(e) {} lwChart = null; }
-
-            // Build details panel first (instant)
-            buildTradeChartDetails(trade);
-
-            // Load Lightweight Charts library if not already loaded
-            if (!window.LightweightCharts) {
-                await new Promise((resolve, reject) => {
-                    const s = document.createElement('script');
-                    s.src = 'https://unpkg.com/lightweight-charts@4.1.3/dist/lightweight-charts.standalone.production.js';
-                    s.onload = resolve;
-                    s.onerror = reject;
-                    document.head.appendChild(s);
-                });
-            }
-
-            // Fetch 6 months of daily OHLCV via Alpha Vantage (key already stored in app)
-            const avKey = document.getElementById('alphaVantageKey')?.value?.trim();
-            if (!avKey) {
-                document.getElementById('tradeChartLoading').textContent = '⚠ Add your Alpha Vantage key in Account Setup to load charts';
-                return;
-            }
-
-            const avUrl = `https://www.alphavantage.co/query?function=TIME_SERIES_DAILY&symbol=${trade.symbol}&outputsize=compact&apikey=${avKey}`;
-
-            let ohlcv = [];
-            try {
-                const resp = await fetch(avUrl);
-                if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
-                const data = await resp.json();
-                if (data['Note']) throw new Error('API limit reached — try again in a minute');
-                if (data['Error Message']) throw new Error('Symbol not found');
-                const series = data['Time Series (Daily)'];
-                if (!series) throw new Error('No data returned');
-                
-                // Convert to array, sort oldest first, take last 180 days
-                ohlcv = Object.entries(series)
-                    .map(([date, v]) => ({
-                        time:  date,
-                        open:  parseFloat(v['1. open']),
-                        high:  parseFloat(v['2. high']),
-                        low:   parseFloat(v['3. low']),
-                        close: parseFloat(v['4. close']),
-                    }))
-                    .sort((a, b) => a.time.localeCompare(b.time))
-                    .slice(-130); // ~6 months of trading days
-
-                if (ohlcv.length === 0) throw new Error('Empty data set');
-            } catch(e) {
-                document.getElementById('tradeChartLoading').textContent = `⚠ ${e.message}`;
-                console.error('Chart load error:', e);
-                return;
-            }
-            document.getElementById('tradeChartLoading').textContent = '';
-
-            // Create chart
-            const container = document.getElementById('tradeChartContainer');
-            lwChart = LightweightCharts.createChart(container, {
-                layout: { background: { color: '#131722' }, textColor: '#d1d4dc' },
-                grid:   { vertLines: { color: '#1e2130' }, horzLines: { color: '#1e2130' } },
-                crosshair: { mode: LightweightCharts.CrosshairMode.Normal },
-                rightPriceScale: { borderColor: '#2a2e3a' },
-                timeScale: { borderColor: '#2a2e3a', timeVisible: true, secondsVisible: false },
-                width:  container.clientWidth,
-                height: container.clientHeight,
-            });
-
-            // Candlestick series
-            const candleSeries = lwChart.addCandlestickSeries({
-                upColor: '#26a69a', downColor: '#ef5350',
-                borderUpColor: '#26a69a', borderDownColor: '#ef5350',
-                wickUpColor: '#26a69a', wickDownColor: '#ef5350',
-            });
-            candleSeries.setData(ohlcv);
-
-            // 21 EMA
-            const emaData = calcEMA(ohlcv, 21);
-            const emaSeries = lwChart.addLineSeries({ color: '#f59e0b', lineWidth: 1.5, priceLineVisible: false, lastValueVisible: false });
-            emaSeries.setData(emaData);
-
-            // 50 SMA
-            const smaData = calcSMA(ohlcv, 50);
-            const smaSeries = lwChart.addLineSeries({ color: '#6366f1', lineWidth: 1.5, priceLineVisible: false, lastValueVisible: false });
-            smaSeries.setData(smaData);
-
-            // Markers — entry, partials, exit
-            const markers = [];
-            const snapToData = (dateStr) => {
-                if (!dateStr) return null;
-                const target = dateStr.substring(0, 10); // normalize to YYYY-MM-DD
-                // find exact match or closest available date
-                if (ohlcv.find(d => d.time === target)) return target;
-                // find closest
-                return ohlcv.reduce((best, d) =>
-                    Math.abs(d.time.localeCompare(target)) < Math.abs(best.time.localeCompare(target)) ? d : best
-                , ohlcv[0])?.time || null;
-            };
-
-            const entryTime = snapToData(trade.entryDate);
-            if (entryTime) markers.push({
-                time: entryTime, position: 'belowBar', color: '#26a69a',
-                shape: 'arrowUp', text: `Entry $${trade.entryPrice.toFixed(2)}`, size: 1.5,
-            });
-
-            if (trade.partialSells?.length) {
-                trade.partialSells.forEach((ps, i) => {
-                    const t = snapToData(ps.date?.split('T')[0]);
-                    if (t) markers.push({
-                        time: t, position: 'aboveBar', color: '#f59e0b',
-                        shape: 'arrowDown', text: `Partial ${i+1} $${parseFloat(ps.price).toFixed(2)}`, size: 1.2,
-                    });
-                });
-            }
-
-            const exitTime = snapToData(trade.exitDate);
-            if (exitTime) markers.push({
-                time: exitTime, position: 'aboveBar', color: '#ef5350',
-                shape: 'arrowDown', text: `Exit $${trade.exitPrice.toFixed(2)}`, size: 1.5,
-            });
-
-            markers.sort((a, b) => a.time - b.time);
-            candleSeries.setMarkers(markers);
-
-            // Zoom to trade window with 2-week buffer
-            const addDays = (dateStr, days) => {
-                if (!dateStr) return null;
-                const d = new Date(dateStr);
-                d.setDate(d.getDate() + days);
-                return d.toISOString().substring(0, 10);
-            };
-            const fromTime = addDays(entryTime, -14) || ohlcv[0].time;
-            const toTime   = addDays(exitTime,   14) || ohlcv[ohlcv.length-1].time;
-            lwChart.timeScale().setVisibleRange({ from: fromTime, to: toTime });
-
-            // Responsive resize
-            new ResizeObserver(() => {
-                if (lwChart) lwChart.applyOptions({ width: container.clientWidth, height: container.clientHeight });
-            }).observe(container);
-        }
-
-        function calcEMA(ohlcv, period) {
-            const k = 2 / (period + 1);
-            let ema = null;
-            return ohlcv.map(d => {
-                if (ema === null) { ema = d.close; }
-                else { ema = d.close * k + ema * (1 - k); }
-                return { time: d.time, value: parseFloat(ema.toFixed(4)) };
-            }).slice(period - 1);
-        }
-
-        function calcSMA(ohlcv, period) {
-            const result = [];
-            for (let i = period - 1; i < ohlcv.length; i++) {
-                const avg = ohlcv.slice(i - period + 1, i + 1).reduce((s, d) => s + d.close, 0) / period;
-                result.push({ time: ohlcv[i].time, value: parseFloat(avg.toFixed(4)) });
-            }
-            return result;
-        }
-
-        function buildTradeChartDetails(trade) {
-            const pnlColor = trade.rMultiple >= 0 ? '#15803d' : '#dc2626';
-            const pnlSign  = trade.rMultiple >= 0 ? '+' : '';
-            const holdDays = trade.exitDate && trade.entryDate
-                ? Math.round((new Date(trade.exitDate) - new Date(trade.entryDate)) / (1000*60*60*24))
-                : null;
-
-            let partialsHTML = '';
-            if (trade.partialSells?.length) {
-                partialsHTML = `
-                    <div style="margin-top:12px; padding-top:10px; border-top:1px solid #e5e7eb;">
-                        <div style="font-weight:700; color:#374151; margin-bottom:6px;">🟠 Partial Sells</div>
-                        ${trade.partialSells.map((ps, i) => {
-                            const psDate  = ps.date ? new Date(ps.date).toLocaleDateString() : '—';
-                            const psPnlPct = ((ps.price - trade.entryPrice) / trade.entryPrice * 100).toFixed(1);
-                            const psColor = ps.price >= trade.entryPrice ? '#15803d' : '#dc2626';
-                            return `<div style="padding:6px 8px; background:white; border-radius:5px; border:1px solid #fde68a; margin-bottom:4px;">
-                                <div style="display:flex; justify-content:space-between; font-size:0.9em;">
-                                    <span style="color:#6b7280;">${psDate}</span>
-                                    <span style="font-weight:700;">${ps.shares} sh</span>
-                                </div>
-                                <div style="font-weight:700; color:${psColor};">$${parseFloat(ps.price).toFixed(2)} (${psPnlPct >= 0 ? '+' : ''}${psPnlPct}%)</div>
-                            </div>`;
-                        }).join('')}
-                    </div>`;
-            }
-
-            document.getElementById('tradeChartDetails').innerHTML = `
-                <div style="font-weight:800; font-size:1em; color:#1e40af; margin-bottom:10px;">${trade.symbol}</div>
-                <div style="display:grid; grid-template-columns:1fr 1fr; gap:5px; margin-bottom:8px;">
-                    <div style="padding:6px; background:white; border-radius:5px; border:1px solid #e5e7eb; text-align:center;">
-                        <div style="font-size:0.65em; color:#9ca3af;">🟢 Entry</div>
-                        <div style="font-weight:700; font-size:0.9em;">$${trade.entryPrice.toFixed(2)}</div>
-                        <div style="font-size:0.65em; color:#9ca3af;">${trade.entryDate || '—'}</div>
-                    </div>
-                    <div style="padding:6px; background:white; border-radius:5px; border:1px solid #e5e7eb; text-align:center;">
-                        <div style="font-size:0.65em; color:#9ca3af;">🔴 Exit</div>
-                        <div style="font-weight:700; font-size:0.9em;">$${trade.exitPrice.toFixed(2)}</div>
-                        <div style="font-size:0.65em; color:#9ca3af;">${trade.exitDate || '—'}</div>
-                    </div>
-                    <div style="padding:6px; background:white; border-radius:5px; border:1px solid #e5e7eb; text-align:center;">
-                        <div style="font-size:0.65em; color:#9ca3af;">Stop</div>
-                        <div style="font-weight:700; font-size:0.9em;">$${(trade.initialStop||0).toFixed(2)}</div>
-                    </div>
-                    <div style="padding:6px; background:white; border-radius:5px; border:1px solid #e5e7eb; text-align:center;">
-                        <div style="font-size:0.65em; color:#9ca3af;">Hold</div>
-                        <div style="font-weight:700; font-size:0.9em;">${holdDays !== null ? holdDays + 'd' : '—'}</div>
-                    </div>
-                </div>
-                <div style="padding:10px; background:${trade.rMultiple >= 0 ? '#dcfce7' : '#fee2e2'}; border-radius:6px; text-align:center; margin-bottom:8px;">
-                    <div style="font-size:0.72em; color:#6b7280;">Result</div>
-                    <div style="font-size:1.5em; font-weight:800; color:${pnlColor};">${pnlSign}${trade.rMultiple.toFixed(2)}R</div>
-                    <div style="font-size:0.78em; color:${pnlColor}; font-weight:600;">${pnlSign}${trade.portfolioPnlPercent.toFixed(2)}% portfolio</div>
-                </div>
-                <div style="padding:8px; background:#f0f9ff; border-radius:5px; border:1px solid #bfdbfe; font-size:0.72em; color:#1e40af; line-height:1.8;">
-                    <strong>Legend</strong><br>
-                    🟡 21 EMA<br>
-                    🟣 50 SMA<br>
-                    ▲ Entry (green)<br>
-                    ▼ Exit (red)<br>
-                    ▼ Partial (orange)
-                </div>
-                ${trade.notes ? `<div style="margin-top:8px; padding:8px; background:#fefce8; border-radius:5px; border:1px solid #fde68a; font-size:0.78em; color:#78350f; line-height:1.4;"><strong>Notes:</strong> ${trade.notes}</div>` : ''}
-                ${partialsHTML}`;
         }
 
         function updateAllDisplays() {
