@@ -2238,9 +2238,10 @@
                     </select>
                 </div>
                 <div class="form-group" style="grid-column:1/-1;" id="closeHedgeProceedsRow">
-                    <label>Proceeds Received ($)</label>
-                    <input type="number" id="closeHedgeProceeds" placeholder="e.g. 180" step="0.01"
+                    <label>Total proceeds received from selling ($)</label>
+                    <input type="number" id="closeHedgeProceeds" placeholder="e.g. 1800" step="0.01"
                            oninput="updateCloseHedgePreview()" style="padding:8px; width:100%; border:2px solid #e5e7eb; border-radius:6px;">
+                    <div style="font-size:0.75em; color:#6b7280; margin-top:4px;">Total dollars received for all contracts combined — not per contract. Net cost = premium paid minus this amount.</div>
                 </div>
                 <div class="form-group">
                     <label>Close Date</label>
@@ -2821,15 +2822,21 @@
                 }
             }
             
-            // Calculate hedge net cost (premium paid minus any proceeds from closing)
+            // Calculate hedge net cost per share (premium paid minus proceeds from closing)
+            // This gets baked into adjustedPrice so P&L% reflects true all-in cost basis
+            // R-multiple denominator stays on original entry/stop — hedge is a post-entry decision
             let hedgeNetCost = 0;
             if (pos.hedges && pos.hedges.length > 0) {
                 hedgeNetCost = pos.hedges.reduce((sum, h) => sum + (h.premium || 0) - (h.proceeds || 0), 0);
             }
+            const hedgeNetCostPerShare = pos.initialShares > 0 ? hedgeNetCost / pos.initialShares : 0;
+
+            // Add hedge net cost per share to adjustedPrice so it becomes the true all-in basis
+            adjustedPrice += hedgeNetCostPerShare;
 
             const positionValue = pos.currentPrice * pos.shares;
-            // Hedge cost reduces overall P&L (put premium increases effective cost)
-            const unrealizedPnL = (pos.currentPrice - adjustedPrice) * pos.shares - hedgeNetCost;
+            // unrealizedPnL uses adjustedPrice which already includes hedge costs
+            const unrealizedPnL = (pos.currentPrice - adjustedPrice) * pos.shares;
             const totalPnL = realizedPnL + unrealizedPnL;
             const totalCost = pos.entryPrice * pos.initialShares;
             
