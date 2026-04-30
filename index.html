@@ -2179,8 +2179,15 @@
             <input type="hidden" id="hedgePosId">
             <div id="hedgeExistingList" style="margin-bottom:14px;"></div>
             <div style="background:#f0f9ff; border-radius:8px; padding:12px; border:2px solid #bfdbfe;">
-                <div style="font-size:0.8em; font-weight:700; color:#1e40af; margin-bottom:10px; text-transform:uppercase; letter-spacing:0.5px;">+ Log New Put Hedge</div>
+                <div style="font-size:0.8em; font-weight:700; color:#1e40af; margin-bottom:10px; text-transform:uppercase; letter-spacing:0.5px;" id="hedgeFormTitle">+ Log New Option</div>
                 <div class="form-grid" style="grid-template-columns:1fr 1fr; gap:10px;">
+                    <div class="form-group" style="grid-column:1/-1;">
+                        <label style="font-size:0.8em;">Option Type</label>
+                        <select id="hedgeOptionType" onchange="updateHedgeFormLabels()" style="padding:8px; width:100%; border:2px solid #bfdbfe; border-radius:6px; font-weight:700; color:#1e40af;">
+                            <option value="put">🛡️ Put (Bought) — protective hedge, increases cost basis</option>
+                            <option value="call">📞 Covered Call (Sold) — income, decreases cost basis</option>
+                        </select>
+                    </div>
                     <div class="form-group">
                         <label style="font-size:0.8em;">Strike Price ($)</label>
                         <input type="number" id="hedgeStrikeNew" placeholder="e.g. 145.00" step="0.01" style="padding:8px; width:100%; border:2px solid #e5e7eb; border-radius:6px;">
@@ -2190,12 +2197,12 @@
                         <input type="number" id="hedgeContractsNew" placeholder="e.g. 5" step="1" min="1" style="padding:8px; width:100%; border:2px solid #e5e7eb; border-radius:6px;">
                     </div>
                     <div class="form-group">
-                        <label style="font-size:0.8em;">Premium / Share ($)</label>
+                        <label style="font-size:0.8em;" id="hedgePremiumPerShareLabel">Premium / Share ($)</label>
                         <input type="number" id="hedgePremiumPerShareNew" placeholder="e.g. 3.50" step="0.01"
                                oninput="updateHedgeNewTotal()" style="padding:8px; width:100%; border:2px solid #e5e7eb; border-radius:6px;">
                     </div>
                     <div class="form-group">
-                        <label style="font-size:0.8em;">Total Cost ($) <span style="color:#9ca3af;">(auto)</span></label>
+                        <label style="font-size:0.8em;" id="hedgePremiumTotalLabel">Total ($) <span style="color:#9ca3af;">(auto)</span></label>
                         <input type="number" id="hedgePremium" placeholder="auto-calculated" step="0.01"
                                oninput="updateHedgeNewPerShare()" style="padding:8px; width:100%; border:2px solid #e5e7eb; border-radius:6px;">
                     </div>
@@ -2204,16 +2211,16 @@
                         <input type="date" id="hedgeExpiry" style="padding:8px; width:100%; border:2px solid #e5e7eb; border-radius:6px;">
                     </div>
                     <div class="form-group">
-                        <label style="font-size:0.8em;">Date Purchased</label>
+                        <label style="font-size:0.8em;" id="hedgeDateLabel">Date Purchased / Sold</label>
                         <input type="date" id="hedgeDate" style="padding:8px; width:100%; border:2px solid #e5e7eb; border-radius:6px;">
                     </div>
                     <div class="form-group" style="grid-column:1/-1;">
                         <label style="font-size:0.8em;">Notes (optional)</label>
-                        <input type="text" id="hedgeNotes" placeholder="e.g. protection against earnings" style="padding:8px; width:100%; border:2px solid #e5e7eb; border-radius:6px;">
+                        <input type="text" id="hedgeNotes" placeholder="e.g. sold call at resistance" style="padding:8px; width:100%; border:2px solid #e5e7eb; border-radius:6px;">
                     </div>
                 </div>
                 <div id="hedgePreview" style="margin:8px 0; padding:8px; background:white; border-radius:6px; font-size:0.82em; min-height:32px;"></div>
-                <button onclick="saveHedge()" class="btn-success" style="width:100%; padding:10px; font-size:0.9em; font-weight:700;">Add Hedge</button>
+                <button onclick="saveHedge()" class="btn-success" style="width:100%; padding:10px; font-size:0.9em; font-weight:700;" id="hedgeSaveBtn">Add Option</button>
             </div>
         </div>
     </div>
@@ -2232,16 +2239,16 @@
                 <div class="form-group" style="grid-column:1/-1;">
                     <label>How was it closed?</label>
                     <select id="closeHedgeType" onchange="updateCloseHedgePreview()" style="padding:8px; width:100%; border:2px solid #e5e7eb; border-radius:6px;">
-                        <option value="expired">Expired Worthless (full loss)</option>
-                        <option value="sold_gain">Sold for Gain</option>
-                        <option value="sold_loss">Sold for Partial Loss</option>
+                        <option value="expired">Expired Worthless</option>
+                        <option value="sold_gain">Closed for Gain</option>
+                        <option value="sold_loss">Closed for Partial Loss</option>
                     </select>
                 </div>
                 <div class="form-group" style="grid-column:1/-1;" id="closeHedgeProceedsRow">
-                    <label>Total proceeds received from selling ($)</label>
+                    <label id="closeHedgeProceedsLabel">Total proceeds received from selling ($)</label>
                     <input type="number" id="closeHedgeProceeds" placeholder="e.g. 1800" step="0.01"
                            oninput="updateCloseHedgePreview()" style="padding:8px; width:100%; border:2px solid #e5e7eb; border-radius:6px;">
-                    <div style="font-size:0.75em; color:#6b7280; margin-top:4px;">Total dollars received for all contracts combined — not per contract. Net cost = premium paid minus this amount.</div>
+                    <div id="closeHedgeProceedsHint" style="font-size:0.75em; color:#6b7280; margin-top:4px;">Total dollars received for all contracts combined — not per contract.</div>
                 </div>
                 <div class="form-group">
                     <label>Close Date</label>
@@ -2822,12 +2829,16 @@
                 }
             }
             
-            // Calculate hedge net cost per share (premium paid minus proceeds from closing)
-            // This gets baked into adjustedPrice so P&L% reflects true all-in cost basis
-            // R-multiple denominator stays on original entry/stop — hedge is a post-entry decision
+            // Calculate hedge net cost per share — baked into adjustedPrice
+            // Put (bought): premium paid minus proceeds from closing = positive cost (raises basis)
+            // Call (sold): premium received minus buy-back cost = negative cost (lowers basis)
             let hedgeNetCost = 0;
             if (pos.hedges && pos.hedges.length > 0) {
-                hedgeNetCost = pos.hedges.reduce((sum, h) => sum + (h.premium || 0) - (h.proceeds || 0), 0);
+                hedgeNetCost = pos.hedges.reduce((sum, h) => {
+                    const isCall  = h.optionType === 'call';
+                    const net     = (h.premium || 0) - (h.proceeds || 0);
+                    return sum + (isCall ? -net : net);  // calls reduce basis, puts increase it
+                }, 0);
             }
             const hedgeNetCostPerShare = pos.initialShares > 0 ? hedgeNetCost / pos.initialShares : 0;
 
@@ -6414,6 +6425,22 @@
         }
 
         // ── Hedge (Put Options) ───────────────────────────────────────────────
+        function updateHedgeFormLabels() {
+            const type = document.getElementById('hedgeOptionType')?.value || 'put';
+            const isCall = type === 'call';
+            const titleEl   = document.getElementById('hedgeFormTitle');
+            const perShLbl  = document.getElementById('hedgePremiumPerShareLabel');
+            const totalLbl  = document.getElementById('hedgePremiumTotalLabel');
+            const dateLbl   = document.getElementById('hedgeDateLabel');
+            const saveBtn   = document.getElementById('hedgeSaveBtn');
+            if (titleEl)  titleEl.textContent  = isCall ? '+ Log New Covered Call' : '+ Log New Put Hedge';
+            if (perShLbl) perShLbl.textContent = isCall ? 'Premium Received / Share ($)' : 'Premium / Share ($)';
+            if (totalLbl) totalLbl.innerHTML   = isCall ? 'Total Received ($) <span style="color:#9ca3af;">(auto)</span>' : 'Total Cost ($) <span style="color:#9ca3af;">(auto)</span>';
+            if (dateLbl)  dateLbl.textContent  = isCall ? 'Date Sold' : 'Date Purchased';
+            if (saveBtn)  saveBtn.textContent  = isCall ? 'Add Covered Call' : 'Add Put Hedge';
+            updateHedgePreviewDisplay();
+        }
+
         function getHedgeBadge(pos) {
             if (!pos.hedges || pos.hedges.length === 0) return 'Hedge';
             const today   = new Date();
@@ -6439,7 +6466,12 @@
 
         function getHedgeNetCostPerShare(pos) {
             if (!pos.hedges || !pos.initialShares) return 0;
-            return pos.hedges.reduce((s, h) => s + (h.premium || 0) - (h.proceeds || 0), 0) / pos.initialShares;
+            const net = pos.hedges.reduce((s, h) => {
+                const isCall = h.optionType === 'call';
+                const n = (h.premium || 0) - (h.proceeds || 0);
+                return s + (isCall ? -n : n);
+            }, 0);
+            return net / pos.initialShares;
         }
 
         function updateHedgeNewTotal() {
@@ -6460,58 +6492,47 @@
             const posId   = parseInt(document.getElementById('hedgePosId').value);
             const pos     = openPositions.find(p => p.id === posId);
             if (!pos) return;
-            const premium   = parseFloat(document.getElementById('hedgePremium').value) || 0;
-            const initSh    = pos.initialShares || pos.shares;
-            const newAdj    = premium / initSh;
-            const existing  = getHedgeNetCostPerShare(pos);
-            const effEntry  = pos.entryPrice + existing + newAdj;
+            const premium  = parseFloat(document.getElementById('hedgePremium').value) || 0;
+            const optType  = document.getElementById('hedgeOptionType')?.value || 'put';
+            const isCall   = optType === 'call';
+            const initSh   = pos.initialShares || pos.shares;
+            const newAdj   = isCall ? -(premium / initSh) : (premium / initSh);
+            const existing = getHedgeNetCostPerShare(pos);
+            const effEntry = pos.entryPrice + existing + newAdj;
             const prev = document.getElementById('hedgePreview');
             if (prev) prev.innerHTML = premium > 0
-                ? `Adds <strong>+$${newAdj.toFixed(2)}/share</strong> to cost basis. New effective entry: <strong>$${effEntry.toFixed(2)}</strong>`
+                ? `${isCall ? 'Reduces' : 'Adds'} <strong>${isCall ? '-' : '+'}$${Math.abs(newAdj).toFixed(2)}/share</strong> to cost basis. Effective entry: <strong>$${effEntry.toFixed(2)}</strong>`
                 : '';
         }
 
         function updateHedgePreview(pos) { updateHedgePreviewDisplay(); }
 
-        function openHedgeModal(posId) {
-            const pos = openPositions.find(p => p.id === posId);
-            if (!pos) return;
-            document.getElementById('hedgePosId').value     = posId;
-            document.getElementById('hedgeModalSymbol').textContent = pos.symbol;
-            document.getElementById('hedgeDate').value      = new Date().toISOString().split('T')[0];
-            document.getElementById('hedgePremium').value   = '';
-            document.getElementById('hedgePremiumPerShareNew').value = '';
-            document.getElementById('hedgeContractsNew').value = Math.max(1, Math.round((pos.initialShares || pos.shares) / 100));
-            document.getElementById('hedgeStrikeNew').value = '';
-            document.getElementById('hedgeExpiry').value    = '';
-            document.getElementById('hedgeNotes').value     = '';
-            document.getElementById('hedgePreview').innerHTML = '';
-            renderExistingHedges(pos);
-            document.getElementById('hedgeModal').style.display = 'block';
-        }
-
         function renderExistingHedges(pos) {
             const el = document.getElementById('hedgeExistingList');
             if (!pos.hedges || pos.hedges.length === 0) { el.innerHTML = ''; return; }
             const today = new Date();
-            el.innerHTML = '<div style="font-size:0.8em; font-weight:700; color:#374151; margin-bottom:8px; text-transform:uppercase; letter-spacing:0.5px;">Active Hedges</div>' +
+            el.innerHTML = '<div style="font-size:0.8em; font-weight:700; color:#374151; margin-bottom:8px; text-transform:uppercase; letter-spacing:0.5px;">Logged Options</div>' +
                 pos.hedges.map(h => {
+                    const isCall    = h.optionType === 'call';
                     const daysLeft  = h.expiry ? Math.round((new Date(h.expiry) - today) / (1000*60*60*24)) : null;
                     const isExpired = daysLeft !== null && daysLeft < 0 && !h.closed;
                     const isSoon    = daysLeft !== null && daysLeft >= 0 && daysLeft <= 7 && !h.closed;
-                    const bg        = h.closed ? '#f3f4f6' : isExpired ? '#fee2e2' : isSoon ? '#fef9c3' : '#f0fdf4';
-                    const border    = h.closed ? '#e5e7eb' : isExpired ? '#fca5a5' : isSoon ? '#fde68a' : '#86efac';
+                    const bg        = h.closed ? '#f3f4f6' : isExpired ? '#fee2e2' : isSoon ? '#fef9c3' : (isCall ? '#fdf4ff' : '#f0fdf4');
+                    const border    = h.closed ? '#e5e7eb' : isExpired ? '#fca5a5' : isSoon ? '#fde68a' : (isCall ? '#e9d5ff' : '#86efac');
                     const status    = h.closed ? 'Closed' : isExpired ? 'EXPIRED' : isSoon ? `${daysLeft}d left` : daysLeft !== null ? `${daysLeft}d` : 'Open';
-                    const statusColor = h.closed ? '#6b7280' : isExpired ? '#dc2626' : isSoon ? '#92400e' : '#15803d';
+                    const statusColor = h.closed ? '#6b7280' : isExpired ? '#dc2626' : isSoon ? '#92400e' : (isCall ? '#7c3aed' : '#15803d');
                     const netCost   = (h.premium || 0) - (h.proceeds || 0);
+                    const typeLabel = isCall ? 'Call (sold)' : 'Put (bought)';
+                    const costLabel = isCall ? 'Premium received' : 'Cost';
+                    const costColor = isCall ? '#15803d' : '#dc2626';
                     return `<div style="padding:10px; background:${bg}; border:2px solid ${border}; border-radius:8px; margin-bottom:8px; font-size:0.82em;">
                         <div style="display:flex; justify-content:space-between; margin-bottom:4px;">
-                            <strong>${pos.symbol} Put${h.strike ? ' $'+h.strike : ''}${h.contracts ? ' x'+h.contracts : ''}${h.expiry ? ' exp '+h.expiry : ''}</strong>
+                            <strong>${pos.symbol} ${typeLabel}${h.strike ? ' $'+h.strike : ''}${h.contracts ? ' x'+h.contracts : ''}${h.expiry ? ' exp '+h.expiry : ''}</strong>
                             <span style="font-weight:700; color:${statusColor};">${status}</span>
                         </div>
-                        <div style="color:#6b7280;">Cost: <strong style="color:#dc2626;">$${(h.premium||0).toFixed(0)}</strong>
-                            ${h.proceeds ? ` · Proceeds: <strong style="color:#15803d;">$${h.proceeds.toFixed(0)}</strong>` : ''}
-                            · Net: <strong style="color:${netCost>0?'#dc2626':'#15803d'};">$${netCost.toFixed(0)}</strong>
+                        <div style="color:#6b7280;">${costLabel}: <strong style="color:${costColor};">$${(h.premium||0).toFixed(0)}</strong>
+                            ${h.proceeds ? ` · Buy-back cost: <strong style="color:#dc2626;">$${h.proceeds.toFixed(0)}</strong>` : ''}
+                            · Net basis impact: <strong style="color:${isCall ? (netCost>0?'#15803d':'#dc2626') : (netCost>0?'#dc2626':'#15803d')};">${isCall?'-':'+'}$${netCost.toFixed(0)}</strong>
                             ${h.notes ? ` · <em>${h.notes}</em>` : ''}
                         </div>
                         ${!h.closed ? `<div style="margin-top:6px; display:flex; gap:6px;">
@@ -6531,11 +6552,12 @@
             const expiry    = document.getElementById('hedgeExpiry').value || null;
             const date      = document.getElementById('hedgeDate').value;
             const notes     = document.getElementById('hedgeNotes').value;
-            if (!premium || !date) { alert('Please enter total cost and date'); return; }
+            const optType   = document.getElementById('hedgeOptionType')?.value || 'put';
+            if (!premium || !date) { alert('Please enter total amount and date'); return; }
             const pos = openPositions.find(p => p.id === posId);
             if (!pos) return;
             if (!pos.hedges) pos.hedges = [];
-            pos.hedges.push({ id: Date.now(), action: 'buy', premium, perShare, contracts, strike, expiry, date, notes, closed: false, proceeds: 0 });
+            pos.hedges.push({ id: Date.now(), action: 'buy', optionType: optType, premium, perShare, contracts, strike, expiry, date, notes, closed: false, proceeds: 0 });
             closeModal('hedgeModal');
             saveToFirebase();
             updateAllDisplays();
