@@ -7183,15 +7183,15 @@
             // Progress bar
             document.getElementById('rewardProgressBar').style.width = `${progressPct.toFixed(1)}%`;
 
+            // Suggested reward = claimingMilestone × 10% of milestoneSize, capped at 40% (M4)
+            const rewardPct       = Math.min(40, claimingMilestone * 10) / 100;
+            const suggestedReward = milestoneSize * rewardPct;
+
             // Milestone label (header)
             const nextMilestoneDollars = claimingMilestone * milestoneSize;
             document.getElementById('rewardMilestoneLabel').innerHTML = canClaim
                 ? `🔔 Milestone ${claimingMilestone} available — suggested reward: <strong>$${suggestedReward.toLocaleString(undefined,{maximumFractionDigits:0})}</strong>`
                 : `Working toward Milestone ${claimingMilestone} — $${progressDollars.toFixed(0)} / $${milestoneSize.toLocaleString()} (${progressPct.toFixed(0)}%) · Next reward when reached: $${suggestedReward.toLocaleString(undefined,{maximumFractionDigits:0})}`;
-
-            // Suggested reward = claimingMilestone × 10% of milestoneSize, capped at 40% (M4)
-            const rewardPct        = Math.min(40, claimingMilestone * 10) / 100;
-            const suggestedReward  = milestoneSize * rewardPct;
 
             // Ack button
             const ackBtn = document.getElementById('rewardAckBtn');
