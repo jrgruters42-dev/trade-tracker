@@ -3189,7 +3189,30 @@
                 }
                 
                 // Build QTY tooltip showing original shares and partial sell history
-                let qtyTooltip = '';
+                // Build adjusted price tooltip showing full basis history
+                let adjTooltip = `Entry: $${pos.entryPrice.toFixed(2)}`;
+                if (pos.partialSells && pos.partialSells.length > 0) {
+                    adjTooltip += '\n\nPartial Sells (cost basis impact):';
+                    pos.partialSells.forEach((sell, i) => {
+                        const sellDate  = new Date(sell.date).toLocaleDateString();
+                        const basisImpact = ((sell.price - pos.entryPrice) * sell.shares / (pos.initialShares || pos.shares));
+                        adjTooltip += `\n- Sell ${i+1}: ${sell.shares} sh @ $${sell.price.toFixed(2)} on ${sellDate}`;
+                        adjTooltip += ` (${basisImpact >= 0 ? '-' : '+'}$${Math.abs(basisImpact).toFixed(2)}/sh to basis)`;
+                    });
+                }
+                if (pos.hedges && pos.hedges.length > 0) {
+                    adjTooltip += '\n\nHedges (cost basis impact):';
+                    const initSh = pos.initialShares || pos.shares;
+                    pos.hedges.forEach((h, i) => {
+                        const net      = (h.premium || 0) - (h.proceeds || 0);
+                        const perSh    = initSh > 0 ? net / initSh : 0;
+                        const status   = h.closed ? `closed ${h.closeDate || ''}` : h.expiry ? `exp ${h.expiry}` : 'open';
+                        adjTooltip += `\n- Hedge ${i+1}: $${(h.premium||0).toFixed(0)} cost`;
+                        if (h.proceeds) adjTooltip += ` / $${h.proceeds.toFixed(0)} proceeds`;
+                        adjTooltip += ` = ${perSh >= 0 ? '+' : ''}$${perSh.toFixed(2)}/sh (${status})`;
+                    });
+                }
+                adjTooltip += `\n\nAdjusted: $${metrics.adjustedPrice.toFixed(2)}`;
                 let originalShares = pos.initialShares || pos.shares;
                 
                 // Add back partial sells if no initialShares field
@@ -3214,7 +3237,7 @@
                         <td style="${symbolStyle}"><strong><span onclick="openHarvestModal(${pos.id})" style="cursor:pointer; border-bottom:2px dotted currentColor; padding-bottom:1px;" title="Click to open Harvest Calculator">${pos.symbol}</span></strong></td>
                         <td>$${pos.currentPrice.toFixed(2)}</td>
                         <td>$${pos.entryPrice.toFixed(2)}</td>
-                        <td>$${metrics.adjustedPrice.toFixed(2)}</td>
+                        <td title="${adjTooltip}" style="cursor:help; border-bottom:1px dotted #9ca3af;">$${metrics.adjustedPrice.toFixed(2)}</td>
                         <td title="${qtyTooltip}" style="cursor: help;">${pos.shares}</td>
                         <td>$${pos.initialStop.toFixed(2)}</td>
                         <td style="background: #dbeafe;">$${pos.currentStop.toFixed(2)}</td>
