@@ -6507,6 +6507,27 @@
 
         function updateHedgePreview(pos) { updateHedgePreviewDisplay(); }
 
+        function updateHedgePreview(pos) { updateHedgePreviewDisplay(); }
+
+        function openHedgeModal(posId) {
+            const pos = openPositions.find(p => p.id === posId);
+            if (!pos) return;
+            document.getElementById('hedgePosId').value     = posId;
+            document.getElementById('hedgeModalSymbol').textContent = pos.symbol;
+            document.getElementById('hedgeDate').value      = new Date().toISOString().split('T')[0];
+            document.getElementById('hedgePremium').value   = '';
+            document.getElementById('hedgePremiumPerShareNew').value = '';
+            document.getElementById('hedgeContractsNew').value = Math.max(1, Math.round((pos.initialShares || pos.shares) / 100));
+            document.getElementById('hedgeStrikeNew').value = '';
+            document.getElementById('hedgeExpiry').value    = '';
+            document.getElementById('hedgeNotes').value     = '';
+            document.getElementById('hedgeOptionType').value = 'put';
+            document.getElementById('hedgePreview').innerHTML = '';
+            updateHedgeFormLabels();
+            renderExistingHedges(pos);
+            document.getElementById('hedgeModal').style.display = 'block';
+        }
+
         function renderExistingHedges(pos) {
             const el = document.getElementById('hedgeExistingList');
             if (!pos.hedges || pos.hedges.length === 0) { el.innerHTML = ''; return; }
