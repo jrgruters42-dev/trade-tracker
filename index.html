@@ -2830,14 +2830,20 @@
             }
             
             // Calculate hedge net cost per share — baked into adjustedPrice
-            // Put (bought): premium paid minus proceeds from closing = positive cost (raises basis)
-            // Call (sold): premium received minus buy-back cost = negative cost (lowers basis)
+            // Put (bought): premium paid minus proceeds = positive cost (raises basis)
+            // Call (sold): mark-to-market = -(premium received - current call value)
+            //   Call gained value against you → positive (raises basis = hurts)
+            //   Call lost value in your favor → negative (lowers basis = helps)
             let hedgeNetCost = 0;
             if (pos.hedges && pos.hedges.length > 0) {
                 hedgeNetCost = pos.hedges.reduce((sum, h) => {
-                    const isCall  = h.optionType === 'call';
-                    const net     = (h.premium || 0) - (h.proceeds || 0);
-                    return sum + (isCall ? -net : net);  // calls reduce basis, puts increase it
+                    const isCall = h.optionType === 'call';
+                    if (isCall) {
+                        const currentVal = h.closed ? 0 : (h.currentPrice || 0);
+                        return sum - (h.premium - currentVal); // mark-to-market
+                    } else {
+                        return sum + (h.premium || 0) - (h.proceeds || 0);
+                    }
                 }, 0);
             }
             const hedgeNetCostPerShare = pos.initialShares > 0 ? hedgeNetCost / pos.initialShares : 0;
@@ -6464,12 +6470,28 @@
             return `${open.length} open hedge(s) | Net cost to basis: $${net.toFixed(0)}`;
         }
 
+        function updateCallCurrentPrice(posId, hedgeId, value) {
+            const pos   = openPositions.find(p => p.id === posId);
+            const hedge = pos?.hedges?.find(h => h.id === hedgeId);
+            if (!pos || !hedge) return;
+            hedge.currentPrice = parseFloat(value) || 0;
+            saveToFirebase();
+            updateAllDisplays();
+            // Re-render the hedge list so P&L updates immediately
+            renderExistingHedges(pos);
+        }
+
         function getHedgeNetCostPerShare(pos) {
             if (!pos.hedges || !pos.initialShares) return 0;
             const net = pos.hedges.reduce((s, h) => {
                 const isCall = h.optionType === 'call';
-                const n = (h.premium || 0) - (h.proceeds || 0);
-                return s + (isCall ? -n : n);
+                if (isCall) {
+                    // Mark-to-market: basis impact = -(premium received - current call value)
+                    const currentVal = h.closed ? 0 : (h.currentPrice || 0);
+                    return s - (h.premium - currentVal);
+                } else {
+                    return s + (h.premium || 0) - (h.proceeds || 0);
+                }
             }, 0);
             return net / pos.initialShares;
         }
@@ -6542,7 +6564,13 @@
                     const border    = h.closed ? '#e5e7eb' : isExpired ? '#fca5a5' : isSoon ? '#fde68a' : (isCall ? '#e9d5ff' : '#86efac');
                     const status    = h.closed ? 'Closed' : isExpired ? 'EXPIRED' : isSoon ? `${daysLeft}d left` : daysLeft !== null ? `${daysLeft}d` : 'Open';
                     const statusColor = h.closed ? '#6b7280' : isExpired ? '#dc2626' : isSoon ? '#92400e' : (isCall ? '#7c3aed' : '#15803d');
-                    const netCost   = (h.premium || 0) - (h.proceeds || 0);
+                    // For calls: net basis impact = -(premium - currentCallPrice)
+                    // currentCallPrice defaults to 0 if closed/expired, else use stored value
+                    const currentCallPrice = h.closed ? 0 : (h.currentPrice || 0);
+                    const netBasisImpact = isCall
+                        ? -(h.premium - currentCallPrice) / (pos.initialShares || pos.shares)   // negative = basis reduction
+                        : ((h.premium || 0) - (h.proceeds || 0)) / (pos.initialShares || pos.shares); // positive = basis increase
+                    const callPnL = isCall ? (h.premium - currentCallPrice) : null; // positive = working for you
                     const typeLabel = isCall ? 'Call (sold)' : 'Put (bought)';
                     const costLabel = isCall ? 'Premium received' : 'Cost';
                     const costColor = isCall ? '#15803d' : '#dc2626';
@@ -6551,12 +6579,21 @@
                             <strong>${pos.symbol} ${typeLabel}${h.strike ? ' $'+h.strike : ''}${h.contracts ? ' x'+h.contracts : ''}${h.expiry ? ' exp '+h.expiry : ''}</strong>
                             <span style="font-weight:700; color:${statusColor};">${status}</span>
                         </div>
-                        <div style="color:#6b7280;">${costLabel}: <strong style="color:${costColor};">$${(h.premium||0).toFixed(0)}</strong>
-                            ${h.proceeds ? ` · Buy-back cost: <strong style="color:#dc2626;">$${h.proceeds.toFixed(0)}</strong>` : ''}
-                            · Net basis impact: <strong style="color:${isCall ? (netCost>0?'#15803d':'#dc2626') : (netCost>0?'#dc2626':'#15803d')};">${isCall?'-':'+'}$${netCost.toFixed(0)}</strong>
+                        <div style="color:#6b7280; margin-bottom:${isCall && !h.closed ? '8px' : '0'};">
+                            ${costLabel}: <strong style="color:${costColor};">$${(h.premium||0).toFixed(2)}</strong>
+                            ${isCall && !h.closed ? `· Current value: <strong style="color:${currentCallPrice > h.premium ? '#dc2626' : '#15803d'};">$${currentCallPrice.toFixed(2)}</strong>` : ''}
+                            ${isCall && !h.closed ? `· P&L: <strong style="color:${callPnL >= 0 ? '#15803d' : '#dc2626'};">${callPnL >= 0 ? '+' : ''}$${callPnL.toFixed(2)}</strong>` : ''}
+                            · Basis: <strong style="color:${netBasisImpact <= 0 ? '#15803d' : '#dc2626'};">${netBasisImpact <= 0 ? '' : '+'}$${netBasisImpact.toFixed(2)}/sh</strong>
                             ${h.notes ? ` · <em>${h.notes}</em>` : ''}
                         </div>
-                        ${!h.closed ? `<div style="margin-top:6px; display:flex; gap:6px;">
+                        ${isCall && !h.closed ? `<div style="display:flex; align-items:center; gap:8px; margin-bottom:6px;">
+                            <label style="font-size:0.78em; color:#6b7280; white-space:nowrap;">Current call price ($):</label>
+                            <input type="number" value="${currentCallPrice || ''}" placeholder="e.g. 8.50" step="0.01" min="0"
+                                   style="width:90px; padding:4px 6px; border:2px solid #e9d5ff; border-radius:5px; font-size:0.85em; font-weight:700;"
+                                   onchange="updateCallCurrentPrice(${pos.id}, ${h.id}, this.value)">
+                            <span style="font-size:0.72em; color:#9ca3af;">Updates basis in real time</span>
+                        </div>` : ''}
+                        ${!h.closed ? `<div style="display:flex; gap:6px;">
                             <button onclick="openCloseHedgeModal(${pos.id}, ${h.id})" class="btn-danger" style="padding:3px 10px; font-size:0.78em;">${isExpired ? 'Mark Expired' : 'Close / Expire'}</button>
                             <button onclick="deleteHedge(${pos.id}, ${h.id})" style="padding:3px 8px; font-size:0.78em; background:none; border:1px solid #e5e7eb; border-radius:4px; cursor:pointer; color:#6b7280;">Delete</button>
                         </div>` : `<div style="margin-top:4px; font-size:0.75em; color:#6b7280;">Closed ${h.closeDate||''} ${h.closeNotes ? '· '+h.closeNotes : ''}</div>`}
