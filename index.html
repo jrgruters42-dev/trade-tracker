@@ -6481,7 +6481,7 @@
 
         function updateCallCurrentPrice(posId, hedgeId, value) {
             const pos   = openPositions.find(p => p.id === posId);
-            const hedge = pos?.hedges?.find(h => h.id === hedgeId);
+            const hedge = pos?.hedges?.find(h => h.id == hedgeId);
             if (!pos || !hedge) return;
             hedge.currentPrice = parseFloat(value) || 0;
             saveToFirebase();
@@ -6632,7 +6632,7 @@
 
         function openCloseHedgeModal(posId, hedgeId) {
             const pos   = openPositions.find(p => p.id === posId);
-            const hedge = pos?.hedges?.find(h => h.id === hedgeId);
+            const hedge = pos?.hedges?.find(h => h.id == hedgeId);
             if (!pos || !hedge) return;
             const isCall = hedge.optionType === 'call';
 
@@ -6678,7 +6678,7 @@
             const posId   = parseInt(document.getElementById('closeHedgePosId').value);
             const hedgeId = parseInt(document.getElementById('closeHedgeId').value);
             const pos     = openPositions.find(p => p.id === posId);
-            const hedge   = pos?.hedges?.find(h => h.id === hedgeId);
+            const hedge   = pos?.hedges?.find(h => h.id == hedgeId);
             if (!pos || !hedge) return;
             const isCall  = hedge.optionType === 'call';
             const initSh  = pos.initialShares || pos.shares;
@@ -6708,22 +6708,21 @@
 
         function executeCloseHedge() {
             const posId    = parseInt(document.getElementById('closeHedgePosId').value);
-            const hedgeId  = parseInt(document.getElementById('closeHedgeId').value);
+            const hedgeId  = document.getElementById('closeHedgeId').value; // keep as string to match Firebase
             const type     = document.getElementById('closeHedgeType').value;
-            // Always use absolute value — negative entries are user error
             const amount   = type === 'expired' ? 0 : Math.abs(parseFloat(document.getElementById('closeHedgeProceeds').value) || 0);
             const date     = document.getElementById('closeHedgeDate').value;
             const notes    = document.getElementById('closeHedgeNotes').value;
             const pos      = openPositions.find(p => p.id === posId);
-            const hedge    = pos?.hedges?.find(h => h.id === hedgeId);
-            if (!pos || !hedge) return;
+            const hedge    = pos?.hedges?.find(h => h.id == hedgeId); // loose == handles string/number mismatch
+            if (!pos || !hedge) { alert('Could not find hedge — please try again'); return; }
 
-            hedge.closed    = true;
-            hedge.proceeds  = amount;  // for calls: buy-back cost; for puts: sale proceeds
-            hedge.closeType = type;
-            hedge.closeDate = date;
+            hedge.closed     = true;
+            hedge.proceeds   = amount;
+            hedge.closeType  = type;
+            hedge.closeDate  = date;
             hedge.closeNotes = notes;
-            hedge.currentPrice = 0;   // clear mark-to-market since it's closed
+            hedge.currentPrice = 0;
 
             closeModal('closeHedgeModal');
             saveToFirebase();
