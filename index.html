@@ -6605,7 +6605,10 @@
                         ${!h.closed ? `<div style="display:flex; gap:6px;">
                             <button onclick="openCloseHedgeModal(${pos.id}, ${h.id})" class="btn-danger" style="padding:3px 10px; font-size:0.78em;">${isExpired ? 'Mark Expired' : 'Close / Expire'}</button>
                             <button onclick="deleteHedge(${pos.id}, ${h.id})" style="padding:3px 8px; font-size:0.78em; background:none; border:1px solid #e5e7eb; border-radius:4px; cursor:pointer; color:#6b7280;">Delete</button>
-                        </div>` : `<div style="margin-top:4px; font-size:0.75em; color:#6b7280;">Closed ${h.closeDate||''} ${h.closeNotes ? '· '+h.closeNotes : ''}</div>`}
+                        </div>` : `<div style="display:flex; align-items:center; justify-content:space-between; margin-top:4px;">
+                            <div style="font-size:0.75em; color:#6b7280;">Closed ${h.closeDate||''} ${h.closeNotes ? '· '+h.closeNotes : ''}</div>
+                            <button onclick="deleteHedge(${pos.id}, ${h.id})" style="padding:2px 8px; font-size:0.75em; background:none; border:1px solid #e5e7eb; border-radius:4px; cursor:pointer; color:#9ca3af;">Delete</button>
+                        </div>`}
                     </div>`;
                 }).join('');
         }
