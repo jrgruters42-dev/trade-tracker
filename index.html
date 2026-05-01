@@ -2830,18 +2830,27 @@
             }
             
             // Calculate hedge net cost per share — baked into adjustedPrice
-            // Put (bought): premium paid minus proceeds = positive cost (raises basis)
-            // Call (sold): mark-to-market = -(premium received - current call value)
-            //   Call gained value against you → positive (raises basis = hurts)
-            //   Call lost value in your favor → negative (lowers basis = helps)
+            // Put (bought): premium paid minus sale proceeds = net cost (positive = raises basis)
+            // Call (sold, open): mark-to-market = -(premium received - current call value)
+            // Call (sold, closed): net = -(premium received - buy-back cost)
+            //   If buy-back > premium (loss on call) → raises basis
+            //   If buy-back < premium (gain on call) → lowers basis further
             let hedgeNetCost = 0;
             if (pos.hedges && pos.hedges.length > 0) {
                 hedgeNetCost = pos.hedges.reduce((sum, h) => {
                     const isCall = h.optionType === 'call';
                     if (isCall) {
-                        const currentVal = h.closed ? 0 : (h.currentPrice || 0);
-                        return sum - (h.premium - currentVal); // mark-to-market
+                        if (h.closed) {
+                            // Settled: net P&L on call = premium received - buy-back cost
+                            // Negative net P&L (loss) → raises basis; positive → lowers basis
+                            return sum - (h.premium - (h.proceeds || 0));
+                        } else {
+                            // Open: mark-to-market
+                            const currentVal = h.currentPrice || 0;
+                            return sum - (h.premium - currentVal);
+                        }
                     } else {
+                        // Put: premium paid minus sale proceeds = net cost (raises basis)
                         return sum + (h.premium || 0) - (h.proceeds || 0);
                     }
                 }, 0);
@@ -6625,17 +6634,36 @@
             const pos   = openPositions.find(p => p.id === posId);
             const hedge = pos?.hedges?.find(h => h.id === hedgeId);
             if (!pos || !hedge) return;
+            const isCall = hedge.optionType === 'call';
+
             document.getElementById('closeHedgePosId').value = posId;
             document.getElementById('closeHedgeId').value    = hedgeId;
             document.getElementById('closeHedgeDate').value  = new Date().toISOString().split('T')[0];
             document.getElementById('closeHedgeNotes').value = '';
             document.getElementById('closeHedgeProceeds').value = '';
-            document.getElementById('closeHedgeTitle').textContent = `Close Hedge — ${pos.symbol} Put${hedge.strike ? ' $'+hedge.strike : ''}`;
+            document.getElementById('closeHedgeTitle').textContent =
+                `Close ${isCall ? 'Covered Call' : 'Put Hedge'} — ${pos.symbol}${hedge.strike ? ' $'+hedge.strike : ''}`;
+
             const daysLeft  = hedge.expiry ? Math.round((new Date(hedge.expiry) - new Date()) / (1000*60*60*24)) : null;
             const isExpired = daysLeft !== null && daysLeft < 0;
-            document.getElementById('closeHedgeSummary').innerHTML =
-                `Cost paid: <strong>$${hedge.premium.toFixed(0)}</strong>${hedge.expiry ? ' · Expiry: '+hedge.expiry : ''}` +
-                (isExpired ? ' <span style="color:#dc2626; font-weight:700;">(EXPIRED)</span>' : daysLeft !== null ? ` (${daysLeft}d remaining)` : '');
+
+            // Summary shows what was originally received/paid
+            document.getElementById('closeHedgeSummary').innerHTML = isCall
+                ? `Premium received: <strong>$${hedge.premium.toFixed(2)}</strong>${hedge.expiry ? ' · Expiry: '+hedge.expiry : ''}` +
+                  (isExpired ? ' <span style="color:#dc2626; font-weight:700;">(EXPIRED)</span>' : daysLeft !== null ? ` (${daysLeft}d remaining)` : '')
+                : `Cost paid: <strong>$${hedge.premium.toFixed(2)}</strong>${hedge.expiry ? ' · Expiry: '+hedge.expiry : ''}` +
+                  (isExpired ? ' <span style="color:#dc2626; font-weight:700;">(EXPIRED)</span>' : daysLeft !== null ? ` (${daysLeft}d remaining)` : '');
+
+            // Update field label based on type
+            const proceedsLabel = document.getElementById('closeHedgeProceedsLabel');
+            const proceedsHint  = document.getElementById('closeHedgeProceedsHint');
+            if (proceedsLabel) proceedsLabel.textContent = isCall
+                ? 'Buy-back cost ($) — what you paid to close the call'
+                : 'Total proceeds received from selling ($)';
+            if (proceedsHint) proceedsHint.textContent = isCall
+                ? 'Enter the total dollars you paid to buy back all contracts. Must be positive.'
+                : 'Total dollars received for all contracts combined — not per contract.';
+
             if (isExpired) document.getElementById('closeHedgeType').value = 'expired';
             document.getElementById('closeHedgeProceedsRow').style.display = isExpired ? 'none' : 'block';
             updateCloseHedgePreview();
@@ -6645,32 +6673,58 @@
 
         function updateCloseHedgePreview() {
             const type     = document.getElementById('closeHedgeType').value;
-            const proceeds = parseFloat(document.getElementById('closeHedgeProceeds').value) || 0;
+            const amount   = Math.abs(parseFloat(document.getElementById('closeHedgeProceeds').value) || 0); // always positive
             document.getElementById('closeHedgeProceedsRow').style.display = type === 'expired' ? 'none' : 'block';
             const posId   = parseInt(document.getElementById('closeHedgePosId').value);
             const hedgeId = parseInt(document.getElementById('closeHedgeId').value);
             const pos     = openPositions.find(p => p.id === posId);
             const hedge   = pos?.hedges?.find(h => h.id === hedgeId);
             if (!pos || !hedge) return;
-            const netCost = hedge.premium - (type === 'expired' ? 0 : proceeds);
-            const adjPerSh = netCost / (pos.initialShares || pos.shares);
-            document.getElementById('closeHedgePreview').innerHTML = type === 'expired'
-                ? `Full $${hedge.premium.toFixed(0)} cost stays in basis.`
-                : `Net cost: $${netCost.toFixed(0)} → +$${adjPerSh.toFixed(2)}/share to effective entry.`;
+            const isCall  = hedge.optionType === 'call';
+            const initSh  = pos.initialShares || pos.shares;
+
+            let netImpact, preview;
+            if (type === 'expired') {
+                netImpact = isCall ? -hedge.premium : hedge.premium; // call: full premium kept; put: full cost stays
+                preview = isCall
+                    ? `Call expired worthless — full $${hedge.premium.toFixed(2)} premium stays as basis reduction (-$${(hedge.premium/initSh).toFixed(2)}/sh).`
+                    : `Put expired worthless — full $${hedge.premium.toFixed(2)} cost stays in basis (+$${(hedge.premium/initSh).toFixed(2)}/sh).`;
+            } else if (isCall) {
+                // Call buy-back: you received premium, paid buy-back cost
+                // Net P&L on call = premium received - buy-back cost
+                const callPnL   = hedge.premium - amount;
+                const perSh     = callPnL / initSh;
+                preview = callPnL >= 0
+                    ? `Call closed at a gain of $${callPnL.toFixed(2)} (received $${hedge.premium.toFixed(2)}, paid $${amount.toFixed(2)} to close). Basis reduces by $${Math.abs(perSh).toFixed(2)}/sh.`
+                    : `Call closed at a loss of $${Math.abs(callPnL).toFixed(2)} (received $${hedge.premium.toFixed(2)}, paid $${amount.toFixed(2)} to close). Basis increases by $${Math.abs(perSh).toFixed(2)}/sh.`;
+            } else {
+                // Put sold for proceeds
+                const netCost = hedge.premium - amount;
+                const perSh   = netCost / initSh;
+                preview = `Net put cost: $${netCost.toFixed(2)} (+$${perSh.toFixed(2)}/sh to basis).`;
+            }
+            document.getElementById('closeHedgePreview').innerHTML = preview;
         }
 
         function executeCloseHedge() {
             const posId    = parseInt(document.getElementById('closeHedgePosId').value);
             const hedgeId  = parseInt(document.getElementById('closeHedgeId').value);
             const type     = document.getElementById('closeHedgeType').value;
-            const proceeds = type === 'expired' ? 0 : (parseFloat(document.getElementById('closeHedgeProceeds').value) || 0);
+            // Always use absolute value — negative entries are user error
+            const amount   = type === 'expired' ? 0 : Math.abs(parseFloat(document.getElementById('closeHedgeProceeds').value) || 0);
             const date     = document.getElementById('closeHedgeDate').value;
             const notes    = document.getElementById('closeHedgeNotes').value;
             const pos      = openPositions.find(p => p.id === posId);
             const hedge    = pos?.hedges?.find(h => h.id === hedgeId);
             if (!pos || !hedge) return;
-            hedge.closed = true; hedge.proceeds = proceeds;
-            hedge.closeType = type; hedge.closeDate = date; hedge.closeNotes = notes;
+
+            hedge.closed    = true;
+            hedge.proceeds  = amount;  // for calls: buy-back cost; for puts: sale proceeds
+            hedge.closeType = type;
+            hedge.closeDate = date;
+            hedge.closeNotes = notes;
+            hedge.currentPrice = 0;   // clear mark-to-market since it's closed
+
             closeModal('closeHedgeModal');
             saveToFirebase();
             updateAllDisplays();
