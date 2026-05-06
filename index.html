@@ -2875,7 +2875,7 @@
                     }
                 }, 0);
             }
-            const hedgeNetCostPerShare = pos.initialShares > 0 ? hedgeNetCost / pos.initialShares : 0;
+            const hedgeNetCostPerShare = pos.shares > 0 ? hedgeNetCost / pos.shares : 0;
 
             // Add hedge net cost per share to adjustedPrice so it becomes the true all-in basis
             adjustedPrice += hedgeNetCostPerShare;
@@ -3248,7 +3248,7 @@
                 }
                 if (pos.hedges && pos.hedges.length > 0) {
                     adjTooltip += '\n\nHedges (cost basis impact):';
-                    const initSh = pos.initialShares || pos.shares;
+                    const initSh = pos.shares;  // current shares for per-share display
                     pos.hedges.forEach((h, i) => {
                         const net      = (h.premium || 0) - (h.proceeds || 0);
                         const perSh    = initSh > 0 ? net / initSh : 0;
@@ -6518,7 +6518,7 @@
         }
 
         function getHedgeNetCostPerShare(pos) {
-            if (!pos.hedges || !pos.initialShares) return 0;
+            if (!pos.hedges || !pos.shares) return 0;
             const net = pos.hedges.reduce((s, h) => {
                 const isCall = h.optionType === 'call';
                 if (isCall) {
@@ -6529,7 +6529,7 @@
                     return s + (h.premium || 0) - (h.proceeds || 0);
                 }
             }, 0);
-            return net / pos.initialShares;
+            return net / pos.shares;  // use CURRENT shares
         }
 
         function updateHedgeNewTotal() {
@@ -6553,7 +6553,7 @@
             const premium  = parseFloat(document.getElementById('hedgePremium').value) || 0;
             const optType  = document.getElementById('hedgeOptionType')?.value || 'put';
             const isCall   = optType === 'call';
-            const initSh   = pos.initialShares || pos.shares;
+            const initSh   = pos.shares;  // use CURRENT shares for per-share basis calc
             const newAdj   = isCall ? -(premium / initSh) : (premium / initSh);
             const existing = getHedgeNetCostPerShare(pos);
             const effEntry = pos.entryPrice + existing + newAdj;
@@ -6711,7 +6711,7 @@
             const hedge   = pos?.hedges?.find(h => h.id == hedgeId);
             if (!pos || !hedge) return;
             const isCall  = hedge.optionType === 'call';
-            const initSh  = pos.initialShares || pos.shares;
+            const initSh  = pos.shares;  // current shares for per-share display
 
             let netImpact, preview;
             if (type === 'expired') {
