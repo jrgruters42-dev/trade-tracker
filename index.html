@@ -2127,6 +2127,10 @@
                         <input type="date" id="editClosedExitDate" required>
                     </div>
                     <div class="form-group">
+                        <label>Entry Date <span style="color:#9ca3af; font-weight:400; font-size:0.85em;">(for chart)</span></label>
+                        <input type="date" id="editClosedEntryDate">
+                    </div>
+                    <div class="form-group">
                         <label>Account Weight (%)</label>
                         <input type="number" id="editClosedAccountWeight" step="0.01" required>
                     </div>
@@ -4742,6 +4746,7 @@
             document.getElementById('editClosedInitialStop').value = trade.initialStop || trade.entryPrice * 0.97;
             document.getElementById('editClosedInitialShares').value = trade.initialShares || '';
             document.getElementById('editClosedExitDate').value = trade.exitDate;
+            document.getElementById('editClosedEntryDate').value = trade.entryDate || '';
             document.getElementById('editClosedAccountWeight').value = trade.accountWeight;
             document.getElementById('editClosedPortfolioPnl').value = parseFloat((trade.portfolioPnlPercent || 0).toFixed(4));
             document.getElementById('editClosedRMultiple').value = parseFloat((trade.rMultiple || 0).toFixed(4));
@@ -5294,6 +5299,7 @@
                 trade.exitPrice    = exitPrice;
                 trade.initialStop  = initialStop;
                 trade.exitDate     = document.getElementById('editClosedExitDate').value;
+                trade.entryDate    = document.getElementById('editClosedEntryDate').value || trade.entryDate || null;
                 trade.accountWeight = accountWeight;
                 trade.notes        = document.getElementById('editClosedNotes').value;
                 if (initialShares) trade.initialShares = initialShares;
@@ -7787,7 +7793,7 @@
             if (entryTime) {
                 markers.push({ time: entryTime, position: 'belowBar', color: '#26a69a', shape: 'arrowUp', text: `Entry $${trade.entryPrice.toFixed(2)}`, size: 1.5 });
             } else {
-                candleSeries.createPriceLine({ price: trade.entryPrice, color: '#26a69a', lineWidth: 1, lineStyle: LightweightCharts.LineStyle.Dashed, axisLabelVisible: true, title: `Entry $${trade.entryPrice.toFixed(2)}` });
+                candleSeries.createPriceLine({ price: trade.entryPrice, color: '#26a69a', lineWidth: 1, lineStyle: 2, axisLabelVisible: true, title: `Entry $${trade.entryPrice.toFixed(2)}` });
             }
 
             if (trade.partialSells?.length) {
