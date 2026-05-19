@@ -1797,9 +1797,8 @@
                                 <th>Date</th>
                                 <th>Account Equity</th>
                                 <th>Daily % Change</th>
-                                <th>YTD P&L%</th>
                                 <th>10-Day Avg</th>
-                                <th>Drawdown %</th>
+                                <th>DD from Peak</th>
                                 <th>Exposure %</th>
                                 <th>FOMO</th>
                                 <th>Notes</th>
@@ -1894,25 +1893,6 @@
     </div>
 
     <!-- Tax Tracker Tab -->
-
-    <!-- Trade Chart Modal -->
-    <div id="tradeChartModal" class="modal" style="display:none;">
-        <div class="modal-content" style="max-width:1150px; width:96vw; padding:0; overflow:hidden;">
-            <div style="display:flex; align-items:center; justify-content:space-between; padding:12px 16px; background:#1e40af; color:white;">
-                <div style="display:flex; align-items:center; gap:12px;">
-                    <span id="tradeChartTitle" style="font-size:1.1em; font-weight:800;"></span>
-                    <span id="tradeChartLoading" style="font-size:0.78em; opacity:0.8;"></span>
-                </div>
-                <span class="close" onclick="closeModal('tradeChartModal')" style="color:white; font-size:1.4em; cursor:pointer;">&times;</span>
-            </div>
-            <div style="display:flex; height:540px;">
-                <div style="flex:1; min-width:0; position:relative; background:#131722;">
-                    <div id="tradeChartContainer" style="width:100%; height:100%;"></div>
-                </div>
-                <div id="tradeChartDetails" style="width:230px; flex-shrink:0; overflow-y:auto; padding:14px; background:#f9fafb; border-left:1px solid #e5e7eb; font-size:0.82em;"></div>
-            </div>
-        </div>
-    </div>
 
     <!-- Firebase Setup Modal -->
     <div id="firebaseSetupModal" class="modal">
@@ -2125,10 +2105,6 @@
                     <div class="form-group">
                         <label>Exit Date</label>
                         <input type="date" id="editClosedExitDate" required>
-                    </div>
-                    <div class="form-group">
-                        <label>Entry Date <span style="color:#9ca3af; font-weight:400; font-size:0.85em;">(for chart)</span></label>
-                        <input type="date" id="editClosedEntryDate">
                     </div>
                     <div class="form-group">
                         <label>Account Weight (%)</label>
@@ -2879,7 +2855,7 @@
                     }
                 }, 0);
             }
-            const hedgeNetCostPerShare = pos.shares > 0 ? hedgeNetCost / pos.shares : 0;
+            const hedgeNetCostPerShare = pos.initialShares > 0 ? hedgeNetCost / pos.initialShares : 0;
 
             // Add hedge net cost per share to adjustedPrice so it becomes the true all-in basis
             adjustedPrice += hedgeNetCostPerShare;
@@ -3252,7 +3228,7 @@
                 }
                 if (pos.hedges && pos.hedges.length > 0) {
                     adjTooltip += '\n\nHedges (cost basis impact):';
-                    const initSh = pos.shares;  // current shares for per-share display
+                    const initSh = pos.initialShares || pos.shares;
                     pos.hedges.forEach((h, i) => {
                         const net      = (h.premium || 0) - (h.proceeds || 0);
                         const perSh    = initSh > 0 ? net / initSh : 0;
@@ -3846,7 +3822,7 @@
                 
                 html += `
                     <tr>
-                        <td><strong style="cursor:pointer; color:#1e40af; text-decoration:underline dotted;" onclick="openTradeChart(${trade.originalIndex})" title="Click to view chart">${trade.symbol}</strong></td>
+                        <td><strong>${trade.symbol}</strong></td>
                         <td>$${trade.entryPrice.toFixed(2)}</td>
                         <td>$${trade.exitPrice.toFixed(2)}</td>
                         <td>${trade.accountWeight.toFixed(2)}%</td>
@@ -4248,18 +4224,17 @@
             
             const accountValue = prompt(`Account Value for ${targetDate}:`, '');
             if (!accountValue) return;
-            
-            const drawdown = prompt(`Drawdown % for ${targetDate} (optional):`, '0');
+
             const exposure = prompt(`Exposure % for ${targetDate} (optional):`, '0');
             const fomo = prompt(`FOMO for ${targetDate} (optional):`, '');
             const notes = prompt(`Notes for ${targetDate} (optional):`, '');
-            
+
             // Create new entry
             const newEntry = {
                 date: targetDate,
                 accountValue: parseFloat(accountValue),
                 dailyChange: 0, // Will be calculated
-                drawdown: parseFloat(drawdown) || 0,
+                drawdown: 0,    // Legacy field — DD from Peak is now auto-calculated on display
                 exposure: parseFloat(exposure) || 0,
                 fomo: fomo || '',
                 notes: notes || ''
@@ -4294,19 +4269,34 @@
                 tbody.innerHTML = '<tr><td colspan="9" class="empty-state">No daily entries yet. Click "Add Today\'s Entry" to start tracking.</td></tr>';
                 return;
             }
-            
+
+            // Pre-compute running peak for DD from peak calculation
+            // Entries are sorted newest-first for display, so we need oldest-first for peak calc
+            const sortedAsc = [...dailyEquityEntries].sort((a, b) => a.date.localeCompare(b.date));
+            const peakByDate = {};
+            let runningPeak = 0;
+            sortedAsc.forEach(e => {
+                if (e.accountValue > runningPeak) runningPeak = e.accountValue;
+                peakByDate[e.date] = runningPeak;
+            });
+
             let html = '';
-            
+
             dailyEquityEntries.forEach((entry, index) => {
                 // Calculate 10-day moving average
                 let tenDayAvg = 0;
                 let belowAvg = false;
-                
+
                 if (index <= dailyEquityEntries.length - 10) {
                     const last10 = dailyEquityEntries.slice(index, index + 10);
                     tenDayAvg = last10.reduce((sum, e) => sum + e.accountValue, 0) / 10;
                     belowAvg = entry.accountValue < tenDayAvg;
                 }
+
+                // DD from Peak = (peak - current) / peak × 100
+                const peak = peakByDate[entry.date] || entry.accountValue;
+                const ddFromPeak = peak > 0 ? ((peak - entry.accountValue) / peak) * 100 : 0;
+                const ddColor = ddFromPeak >= 10 ? '#dc2626' : ddFromPeak >= 5 ? '#d97706' : '#374151';
                 
                 // Alternating row colors
                 const rowBg = index % 2 === 0 ? 'background: #f9fafb;' : 'background: white;';
@@ -4317,20 +4307,14 @@
                 // Escape HTML in notes for display
                 const notesDisplay = entry.notes || '';
                 const notesPreview = notesDisplay.length > 30 ? notesDisplay.substring(0, 30) + '...' : notesDisplay;
-
-                // YTD P&L% — same formula as main YTD stat (adjusted for cash flows)
-                const startingAccount = parseFloat(document.getElementById('startingAccount').value) || 250000;
-                const ytdPct = ((entry.accountValue - startingAccount - getNetCashFlows()) / startingAccount) * 100;
-                const ytdColor = ytdPct >= 0 ? '#15803d' : '#dc2626';
-
+                
                 html += `
                     <tr style="${rowBg}">
                         <td>${entry.date}</td>
                         <td>$${entry.accountValue.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
                         <td class="${entry.dailyChange >= 0 ? 'profit' : 'loss'}">${entry.dailyChange.toFixed(2)}%</td>
-                        <td style="font-weight:600; color:${ytdColor};">${ytdPct >= 0 ? '+' : ''}${ytdPct.toFixed(2)}%</td>
                         <td style="${belowAvgStyle}">${tenDayAvg > 0 ? '$' + tenDayAvg.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}) : '-'}</td>
-                        <td>${entry.drawdown.toFixed(2)}%</td>
+                        <td style="color:${ddColor}; font-weight:${ddFromPeak >= 5 ? '700' : '400'};">${ddFromPeak > 0 ? '-' : ''}${ddFromPeak.toFixed(2)}%</td>
                         <td>${entry.exposure.toFixed(2)}%</td>
                         <td><input type="text" value="${entry.fomo}" onchange="updateDailyEquityEntry('${entry.date}', 'fomo', this.value)" style="width: 80px; padding: 4px;"></td>
                         <td class="notes-cell">
@@ -4746,7 +4730,6 @@
             document.getElementById('editClosedInitialStop').value = trade.initialStop || trade.entryPrice * 0.97;
             document.getElementById('editClosedInitialShares').value = trade.initialShares || '';
             document.getElementById('editClosedExitDate').value = trade.exitDate;
-            document.getElementById('editClosedEntryDate').value = trade.entryDate || '';
             document.getElementById('editClosedAccountWeight').value = trade.accountWeight;
             document.getElementById('editClosedPortfolioPnl').value = parseFloat((trade.portfolioPnlPercent || 0).toFixed(4));
             document.getElementById('editClosedRMultiple').value = parseFloat((trade.rMultiple || 0).toFixed(4));
@@ -5127,12 +5110,12 @@
                 if (!pos.partialSells) pos.partialSells = [];
                 pos.partialSells.push({ shares, price, date: new Date().toISOString() });
                 pos.shares -= shares;
-
-                closeModal('partialSellModal');
-                this.reset();
+                
                 saveToFirebase();
                 saveDailySnapshot();
                 updateAllDisplays();
+                closeModal('partialSellModal');
+                this.reset();
             } else {
                 alert('Invalid partial sell amount');
             }
@@ -5227,7 +5210,6 @@
                     initialRiskPercent: metrics.initialRiskPercent,
                     rMultiple: rMultiple,
                     exitDate: exitDate,
-                    entryDate: pos.entryDate || null,
                     notes: notes || '',
                     hadPartials: (pos.partialSells && pos.partialSells.length > 0) ? true : false,
                     partialSells: pos.partialSells || []
@@ -5299,7 +5281,6 @@
                 trade.exitPrice    = exitPrice;
                 trade.initialStop  = initialStop;
                 trade.exitDate     = document.getElementById('editClosedExitDate').value;
-                trade.entryDate    = document.getElementById('editClosedEntryDate').value || trade.entryDate || null;
                 trade.accountWeight = accountWeight;
                 trade.notes        = document.getElementById('editClosedNotes').value;
                 if (initialShares) trade.initialShares = initialShares;
@@ -6514,7 +6495,7 @@
 
         function updateCallCurrentPrice(posId, hedgeId, value) {
             const pos   = openPositions.find(p => p.id === posId);
-            const hedge = pos?.hedges?.find(h => h.id == hedgeId);
+            const hedge = pos?.hedges?.find(h => h.id === hedgeId);
             if (!pos || !hedge) return;
             hedge.currentPrice = parseFloat(value) || 0;
             saveToFirebase();
@@ -6524,7 +6505,7 @@
         }
 
         function getHedgeNetCostPerShare(pos) {
-            if (!pos.hedges || !pos.shares) return 0;
+            if (!pos.hedges || !pos.initialShares) return 0;
             const net = pos.hedges.reduce((s, h) => {
                 const isCall = h.optionType === 'call';
                 if (isCall) {
@@ -6535,7 +6516,7 @@
                     return s + (h.premium || 0) - (h.proceeds || 0);
                 }
             }, 0);
-            return net / pos.shares;  // use CURRENT shares
+            return net / pos.initialShares;
         }
 
         function updateHedgeNewTotal() {
@@ -6559,7 +6540,7 @@
             const premium  = parseFloat(document.getElementById('hedgePremium').value) || 0;
             const optType  = document.getElementById('hedgeOptionType')?.value || 'put';
             const isCall   = optType === 'call';
-            const initSh   = pos.shares;  // use CURRENT shares for per-share basis calc
+            const initSh   = pos.initialShares || pos.shares;
             const newAdj   = isCall ? -(premium / initSh) : (premium / initSh);
             const existing = getHedgeNetCostPerShare(pos);
             const effEntry = pos.entryPrice + existing + newAdj;
@@ -6638,10 +6619,7 @@
                         ${!h.closed ? `<div style="display:flex; gap:6px;">
                             <button onclick="openCloseHedgeModal(${pos.id}, ${h.id})" class="btn-danger" style="padding:3px 10px; font-size:0.78em;">${isExpired ? 'Mark Expired' : 'Close / Expire'}</button>
                             <button onclick="deleteHedge(${pos.id}, ${h.id})" style="padding:3px 8px; font-size:0.78em; background:none; border:1px solid #e5e7eb; border-radius:4px; cursor:pointer; color:#6b7280;">Delete</button>
-                        </div>` : `<div style="display:flex; align-items:center; justify-content:space-between; margin-top:4px;">
-                            <div style="font-size:0.75em; color:#6b7280;">Closed ${h.closeDate||''} ${h.closeNotes ? '· '+h.closeNotes : ''}</div>
-                            <button onclick="deleteHedge(${pos.id}, ${h.id})" style="padding:2px 8px; font-size:0.75em; background:none; border:1px solid #e5e7eb; border-radius:4px; cursor:pointer; color:#9ca3af;">Delete</button>
-                        </div>`}
+                        </div>` : `<div style="margin-top:4px; font-size:0.75em; color:#6b7280;">Closed ${h.closeDate||''} ${h.closeNotes ? '· '+h.closeNotes : ''}</div>`}
                     </div>`;
                 }).join('');
         }
@@ -6668,7 +6646,7 @@
 
         function openCloseHedgeModal(posId, hedgeId) {
             const pos   = openPositions.find(p => p.id === posId);
-            const hedge = pos?.hedges?.find(h => h.id == hedgeId);
+            const hedge = pos?.hedges?.find(h => h.id === hedgeId);
             if (!pos || !hedge) return;
             const isCall = hedge.optionType === 'call';
 
@@ -6714,10 +6692,10 @@
             const posId   = parseInt(document.getElementById('closeHedgePosId').value);
             const hedgeId = parseInt(document.getElementById('closeHedgeId').value);
             const pos     = openPositions.find(p => p.id === posId);
-            const hedge   = pos?.hedges?.find(h => h.id == hedgeId);
+            const hedge   = pos?.hedges?.find(h => h.id === hedgeId);
             if (!pos || !hedge) return;
             const isCall  = hedge.optionType === 'call';
-            const initSh  = pos.shares;  // current shares for per-share display
+            const initSh  = pos.initialShares || pos.shares;
 
             let netImpact, preview;
             if (type === 'expired') {
@@ -6751,7 +6729,7 @@
             const date     = document.getElementById('closeHedgeDate').value;
             const notes    = document.getElementById('closeHedgeNotes').value;
             const pos      = openPositions.find(p => p.id === posId);
-            const hedge    = pos?.hedges?.find(h => h.id == hedgeId);
+            const hedge    = pos?.hedges?.find(h => h.id === hedgeId);
             if (!pos || !hedge) return;
 
             hedge.closed    = true;
@@ -7694,216 +7672,6 @@
                 </tr></thead>
                 <tbody>${rows}</tbody>
             </table>`;
-        }
-
-        // ── Trade Chart Modal (Lightweight Charts + Alpha Vantage) ────────────
-        let lwChart = null;
-
-        async function openTradeChart(index) {
-            const trade = closedTrades[index];
-            if (!trade) return;
-
-            document.getElementById('tradeChartModal').style.display = 'flex';
-            document.getElementById('tradeChartTitle').textContent = `${trade.symbol} — Trade Review`;
-            document.getElementById('tradeChartLoading').textContent = 'Loading chart data...';
-            document.getElementById('tradeChartContainer').innerHTML = '';
-
-            if (lwChart) { try { lwChart.remove(); } catch(e) {} lwChart = null; }
-
-            buildTradeChartDetails(trade);
-
-            // Load Lightweight Charts library if not already loaded
-            if (!window.LightweightCharts) {
-                await new Promise((resolve, reject) => {
-                    const s = document.createElement('script');
-                    s.src = 'https://unpkg.com/lightweight-charts@4.1.3/dist/lightweight-charts.standalone.production.js';
-                    s.onload = resolve; s.onerror = reject;
-                    document.head.appendChild(s);
-                });
-            }
-
-            const avKey = document.getElementById('alphaVantageKey')?.value?.trim();
-            if (!avKey) {
-                document.getElementById('tradeChartLoading').textContent = '⚠ Add your Alpha Vantage key in Account Setup to load charts';
-                return;
-            }
-
-            const avUrl = `https://www.alphavantage.co/query?function=TIME_SERIES_DAILY&symbol=${trade.symbol}&outputsize=compact&apikey=${avKey}`;
-            let ohlcv = [];
-            try {
-                const resp = await fetch(avUrl);
-                if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
-                const data = await resp.json();
-                if (data['Note']) throw new Error('API limit reached — try again in a minute');
-                if (data['Error Message']) throw new Error('Symbol not found');
-                const series = data['Time Series (Daily)'];
-                if (!series) throw new Error('No data returned');
-                ohlcv = Object.entries(series)
-                    .map(([date, v]) => ({
-                        time:  date,
-                        open:  parseFloat(v['1. open']),
-                        high:  parseFloat(v['2. high']),
-                        low:   parseFloat(v['3. low']),
-                        close: parseFloat(v['4. close']),
-                    }))
-                    .sort((a, b) => a.time.localeCompare(b.time))
-                    .slice(-130);
-                if (ohlcv.length === 0) throw new Error('Empty data set');
-            } catch(e) {
-                document.getElementById('tradeChartLoading').textContent = `⚠ ${e.message}`;
-                return;
-            }
-            document.getElementById('tradeChartLoading').textContent = '';
-
-            const container = document.getElementById('tradeChartContainer');
-            lwChart = LightweightCharts.createChart(container, {
-                layout: { background: { color: '#131722' }, textColor: '#d1d4dc' },
-                grid:   { vertLines: { color: '#1e2130' }, horzLines: { color: '#1e2130' } },
-                crosshair: { mode: LightweightCharts.CrosshairMode.Normal },
-                rightPriceScale: { borderColor: '#2a2e3a', mode: 1 },
-                timeScale: { borderColor: '#2a2e3a', timeVisible: true },
-                width: container.clientWidth, height: container.clientHeight,
-            });
-
-            const candleSeries = lwChart.addCandlestickSeries({
-                upColor: '#26a69a', downColor: '#ef5350',
-                borderUpColor: '#26a69a', borderDownColor: '#ef5350',
-                wickUpColor: '#26a69a', wickDownColor: '#ef5350',
-            });
-            candleSeries.setData(ohlcv);
-
-            const emaSeries = lwChart.addLineSeries({ color: '#f59e0b', lineWidth: 1.5, priceLineVisible: false, lastValueVisible: false });
-            emaSeries.setData(calcEMA(ohlcv, 21));
-
-            const smaSeries = lwChart.addLineSeries({ color: '#6366f1', lineWidth: 1.5, priceLineVisible: false, lastValueVisible: false });
-            smaSeries.setData(calcSMA(ohlcv, 50));
-
-            // Markers
-            const snapToData = (dateStr) => {
-                if (!dateStr) return null;
-                const target = dateStr.substring(0, 10);
-                if (ohlcv.find(d => d.time === target)) return target;
-                return ohlcv.reduce((best, d) =>
-                    Math.abs(d.time.localeCompare(target)) < Math.abs(best.time.localeCompare(target)) ? d : best
-                , ohlcv[0])?.time || null;
-            };
-
-            const markers = [];
-            const entryTime = snapToData(trade.entryDate);
-            if (entryTime) {
-                markers.push({ time: entryTime, position: 'belowBar', color: '#26a69a', shape: 'arrowUp', text: `Entry $${trade.entryPrice.toFixed(2)}`, size: 1.5 });
-            } else {
-                candleSeries.createPriceLine({ price: trade.entryPrice, color: '#26a69a', lineWidth: 1, lineStyle: 2, axisLabelVisible: true, title: `Entry $${trade.entryPrice.toFixed(2)}` });
-            }
-
-            if (trade.partialSells?.length) {
-                trade.partialSells.forEach((ps, i) => {
-                    const t = snapToData(ps.date?.split('T')[0]);
-                    if (t) markers.push({ time: t, position: 'aboveBar', color: '#f59e0b', shape: 'arrowDown', text: `Partial ${i+1} $${parseFloat(ps.price).toFixed(2)}`, size: 1.2 });
-                });
-            }
-
-            const exitTime = snapToData(trade.exitDate);
-            if (exitTime) markers.push({ time: exitTime, position: 'aboveBar', color: '#ef5350', shape: 'arrowDown', text: `Exit $${trade.exitPrice.toFixed(2)}`, size: 1.5 });
-
-            markers.sort((a, b) => a.time.localeCompare(b.time));
-            candleSeries.setMarkers(markers);
-
-            // Zoom to trade window
-            const addDays = (dateStr, days) => {
-                if (!dateStr) return null;
-                const d = new Date(dateStr); d.setDate(d.getDate() + days);
-                return d.toISOString().substring(0, 10);
-            };
-            const fromTime = addDays(entryTime, -14) || ohlcv[0].time;
-            const toTime   = addDays(exitTime,   14) || ohlcv[ohlcv.length-1].time;
-            lwChart.timeScale().setVisibleRange({ from: fromTime, to: toTime });
-
-            new ResizeObserver(() => {
-                if (lwChart) lwChart.applyOptions({ width: container.clientWidth, height: container.clientHeight });
-            }).observe(container);
-        }
-
-        function calcEMA(ohlcv, period) {
-            const k = 2 / (period + 1);
-            let ema = null;
-            return ohlcv.map(d => {
-                ema = ema === null ? d.close : d.close * k + ema * (1 - k);
-                return { time: d.time, value: parseFloat(ema.toFixed(4)) };
-            }).slice(period - 1);
-        }
-
-        function calcSMA(ohlcv, period) {
-            const result = [];
-            for (let i = period - 1; i < ohlcv.length; i++) {
-                const avg = ohlcv.slice(i - period + 1, i + 1).reduce((s, d) => s + d.close, 0) / period;
-                result.push({ time: ohlcv[i].time, value: parseFloat(avg.toFixed(4)) });
-            }
-            return result;
-        }
-
-        function buildTradeChartDetails(trade) {
-            const pnlColor = trade.rMultiple >= 0 ? '#15803d' : '#dc2626';
-            const pnlSign  = trade.rMultiple >= 0 ? '+' : '';
-            const holdDays = trade.exitDate && trade.entryDate
-                ? Math.round((new Date(trade.exitDate) - new Date(trade.entryDate)) / (1000*60*60*24))
-                : null;
-
-            let partialsHTML = '';
-            if (trade.partialSells?.length) {
-                partialsHTML = `<div style="margin-top:12px; padding-top:10px; border-top:1px solid #e5e7eb;">
-                    <div style="font-weight:700; color:#374151; margin-bottom:6px;">Partial Sells</div>
-                    ${trade.partialSells.map((ps, i) => {
-                        const psDate  = ps.date ? new Date(ps.date).toLocaleDateString() : '—';
-                        const psPct   = ((ps.price - trade.entryPrice) / trade.entryPrice * 100).toFixed(1);
-                        const psColor = ps.price >= trade.entryPrice ? '#15803d' : '#dc2626';
-                        return `<div style="padding:6px 8px; background:white; border-radius:5px; border:1px solid #fde68a; margin-bottom:4px;">
-                            <div style="display:flex; justify-content:space-between; font-size:0.9em;">
-                                <span style="color:#6b7280;">${psDate}</span>
-                                <span style="font-weight:700;">${ps.shares} sh</span>
-                            </div>
-                            <div style="font-weight:700; color:${psColor};">$${parseFloat(ps.price).toFixed(2)} (${psPct >= 0 ? '+' : ''}${psPct}%)</div>
-                        </div>`;
-                    }).join('')}
-                </div>`;
-            }
-
-            document.getElementById('tradeChartDetails').innerHTML = `
-                <div style="font-weight:800; font-size:1em; color:#1e40af; margin-bottom:10px;">${trade.symbol}</div>
-                <div style="display:grid; grid-template-columns:1fr 1fr; gap:5px; margin-bottom:8px;">
-                    <div style="padding:6px; background:white; border-radius:5px; border:1px solid #e5e7eb; text-align:center;">
-                        <div style="font-size:0.65em; color:#9ca3af;">Entry</div>
-                        <div style="font-weight:700; font-size:0.9em;">$${trade.entryPrice.toFixed(2)}</div>
-                        <div style="font-size:0.65em; color:#9ca3af;">${trade.entryDate || '—'}</div>
-                    </div>
-                    <div style="padding:6px; background:white; border-radius:5px; border:1px solid #e5e7eb; text-align:center;">
-                        <div style="font-size:0.65em; color:#9ca3af;">Exit</div>
-                        <div style="font-weight:700; font-size:0.9em;">$${trade.exitPrice.toFixed(2)}</div>
-                        <div style="font-size:0.65em; color:#9ca3af;">${trade.exitDate || '—'}</div>
-                    </div>
-                    <div style="padding:6px; background:white; border-radius:5px; border:1px solid #e5e7eb; text-align:center;">
-                        <div style="font-size:0.65em; color:#9ca3af;">Stop</div>
-                        <div style="font-weight:700; font-size:0.9em;">$${(trade.initialStop||0).toFixed(2)}</div>
-                    </div>
-                    <div style="padding:6px; background:white; border-radius:5px; border:1px solid #e5e7eb; text-align:center;">
-                        <div style="font-size:0.65em; color:#9ca3af;">Hold</div>
-                        <div style="font-weight:700; font-size:0.9em;">${holdDays !== null ? holdDays + 'd' : '—'}</div>
-                    </div>
-                </div>
-                <div style="padding:10px; background:${trade.rMultiple >= 0 ? '#dcfce7' : '#fee2e2'}; border-radius:6px; text-align:center; margin-bottom:8px;">
-                    <div style="font-size:0.72em; color:#6b7280;">Result</div>
-                    <div style="font-size:1.5em; font-weight:800; color:${pnlColor};">${pnlSign}${trade.rMultiple.toFixed(2)}R</div>
-                    <div style="font-size:0.78em; color:${pnlColor}; font-weight:600;">${pnlSign}${trade.portfolioPnlPercent.toFixed(2)}% portfolio</div>
-                </div>
-                <div style="padding:8px; background:#f0f9ff; border-radius:5px; border:1px solid #bfdbfe; font-size:0.72em; color:#1e40af; line-height:1.8;">
-                    <strong>Legend</strong><br>
-                    🟡 21 EMA &nbsp; 🟣 50 SMA<br>
-                    ▲ Entry (green)<br>
-                    ▼ Exit (red)<br>
-                    ▼ Partial (orange)
-                </div>
-                ${trade.notes ? `<div style="margin-top:8px; padding:8px; background:#fefce8; border-radius:5px; border:1px solid #fde68a; font-size:0.78em; color:#78350f; line-height:1.4;"><strong>Notes:</strong> ${trade.notes}</div>` : ''}
-                ${partialsHTML}`;
         }
 
         function updateAllDisplays() {
