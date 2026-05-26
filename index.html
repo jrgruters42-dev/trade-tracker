@@ -2492,6 +2492,7 @@
                     ncfd: parseFloat(document.getElementById('ncfdInput')?.value) || null
                 },
                 taxPayments: taxPayments,
+                rewardMilestoneClaimed: rewardMilestoneClaimed,
                 lastModified: new Date().toISOString()
             };
 
@@ -2963,6 +2964,8 @@
                         qqq: document.getElementById('chkQQQ')?.checked || false,
                         ncfd: parseFloat(document.getElementById('ncfdInput')?.value) || null
                     },
+                    taxPayments: taxPayments,
+                    rewardMilestoneClaimed: rewardMilestoneClaimed,
                     lastModified: new Date().toISOString()
                 };
 
