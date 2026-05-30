@@ -4367,24 +4367,30 @@
         function editJournalEntry(date) {
             const entry = dailyEquityEntries.find(e => e.date === date);
             if (!entry) return;
-            
-            const newAccountValue = prompt('Account Value for ' + date + ':', entry.accountValue);
-            if (newAccountValue === null) return; // User canceled
-            
-            const newFomo = prompt('FOMO for ' + date + ':', entry.fomo);
+
+            const newDate = prompt('Date (YYYY-MM-DD):', entry.date);
+            if (newDate === null) return;
+            if (newDate !== date && dailyEquityEntries.find(e => e.date === newDate)) {
+                alert('An entry already exists for ' + newDate + '. Please choose a different date.');
+                return;
+            }
+
+            const newAccountValue = prompt('Account Value for ' + newDate + ':', entry.accountValue);
+            if (newAccountValue === null) return;
+
+            const newFomo = prompt('FOMO for ' + newDate + ':', entry.fomo);
             if (newFomo === null) return;
-            
-            const newNotes = prompt('Notes for ' + date + ':', entry.notes);
+
+            const newNotes = prompt('Notes for ' + newDate + ':', entry.notes);
             if (newNotes === null) return;
-            
+
             // Update the entry
+            entry.date         = newDate;
             entry.accountValue = parseFloat(newAccountValue);
-            entry.fomo = newFomo;
-            entry.notes = newNotes;
-            
-            // Recalculate daily % change for this entry and subsequent entries
+            entry.fomo         = newFomo;
+            entry.notes        = newNotes;
+
             recalculateDailyChanges();
-            
             saveToFirebase();
             updateDailyEquityTable();
         }
