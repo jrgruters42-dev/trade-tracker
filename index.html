@@ -1796,10 +1796,10 @@
                             <tr>
                                 <th>Date</th>
                                 <th>Account Equity</th>
+                                <th title="10-Day Moving Average of account equity. Highlights amber when account is BELOW the average — warning signal.">10-Day Avg</th>
                                 <th>Daily % Change</th>
                                 <th title="DD from Peak: how far your account has dropped from its highest point up to that date">DD from Peak</th>
                                 <th title="Closed DD: drawdown in cumulative closed trade P&L only (not affected by open positions)">Closed DD</th>
-                                <th title="10-Day Moving Average of account equity. Highlights amber when account is BELOW the average — warning signal.">10-Day Avg</th>
                                 <th>Exposure %</th>
                                 <th title="Total Risk: sum of Port Risk% across all open positions at time of snapshot. Green <2%, amber 2-3%, red 3%+">Total Risk %</th>
                                 <th>FOMO</th>
@@ -4370,10 +4370,10 @@
                     <tr style="${rowBg}">
                         <td>${entry.date}</td>
                         <td>$${entry.accountValue.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+                        <td style="${belowAvgStyle}">${tenDayAvg > 0 ? '$' + tenDayAvg.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}) : '—'}</td>
                         <td class="${entry.dailyChange >= 0 ? 'profit' : 'loss'}">${entry.dailyChange.toFixed(2)}%</td>
                         <td style="color:${ddColor}; font-weight:${ddFromPeak >= 5 ? '700' : '400'};">${ddFromPeak > 0 ? '-' : ''}${ddFromPeak.toFixed(2)}%</td>
                         <td style="color:${closedDDColor}; font-weight:${(closedDD||0) >= 2 ? '700' : '400'};">${closedDD !== null ? (closedDD > 0 ? '-' : '') + closedDD.toFixed(2) + '%' : '—'}</td>
-                        <td style="${belowAvgStyle}">${tenDayAvg > 0 ? '$' + tenDayAvg.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}) : '—'}</td>
                         <td>${entry.exposure.toFixed(2)}%</td>
                         <td style="color:${(entry.totalRisk||0) >= 3 ? '#dc2626' : (entry.totalRisk||0) >= 2 ? '#d97706' : '#15803d'}; font-weight:600;">${entry.totalRisk ? entry.totalRisk.toFixed(2) + '%' : '—'}</td>
                         <td><input type="text" value="${entry.fomo}" onchange="updateDailyEquityEntry('${entry.date}', 'fomo', this.value)" style="width: 80px; padding: 4px;"></td>
