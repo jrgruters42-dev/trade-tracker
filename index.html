@@ -1798,8 +1798,9 @@
                                 <th>Account Equity</th>
                                 <th title="10-Day Moving Average of account equity. Highlights amber when account is BELOW the average — warning signal.">10-Day Avg</th>
                                 <th>Daily % Change</th>
+                                <th title="YTD P&L%: account growth from starting value adjusted for cash flows">YTD P&L%</th>
                                 <th title="DD from Peak: how far your account has dropped from its highest point up to that date">DD from Peak</th>
-                                <th title="Closed DD: drawdown in cumulative closed trade P&L only (not affected by open positions)">Closed DD</th>
+                                <th title="Closed DD from Peak: drawdown in cumulative closed trade P&L only (not affected by open positions)">Closed DD from Peak</th>
                                 <th>Exposure %</th>
                                 <th title="Total Risk: sum of Port Risk% across all open positions at time of snapshot. Green <2%, amber 2-3%, red 3%+">Total Risk %</th>
                                 <th>FOMO</th>
@@ -4372,6 +4373,7 @@
                         <td>$${entry.accountValue.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
                         <td style="${belowAvgStyle}">${tenDayAvg > 0 ? '$' + tenDayAvg.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}) : '—'}</td>
                         <td class="${entry.dailyChange >= 0 ? 'profit' : 'loss'}">${entry.dailyChange.toFixed(2)}%</td>
+                        <td style="font-weight:600; color:${(() => { const startAcc = parseFloat(document.getElementById('startingAccount')?.value) || 250000; const ytd = ((entry.accountValue - startAcc - getNetCashFlows()) / startAcc) * 100; return ytd >= 0 ? '#15803d' : '#dc2626'; })()};">${(() => { const startAcc = parseFloat(document.getElementById('startingAccount')?.value) || 250000; const ytd = ((entry.accountValue - startAcc - getNetCashFlows()) / startAcc) * 100; return (ytd >= 0 ? '+' : '') + ytd.toFixed(2) + '%'; })()}</td>
                         <td style="color:${ddColor}; font-weight:${ddFromPeak >= 5 ? '700' : '400'};">${ddFromPeak > 0 ? '-' : ''}${ddFromPeak.toFixed(2)}%</td>
                         <td style="color:${closedDDColor}; font-weight:${(closedDD||0) >= 2 ? '700' : '400'};">${closedDD !== null ? (closedDD > 0 ? '-' : '') + closedDD.toFixed(2) + '%' : '—'}</td>
                         <td>${entry.exposure.toFixed(2)}%</td>
@@ -6902,11 +6904,12 @@
             }
 
             const accountSize = getAccountSize();
-            let totalExposure = 0, totalDrawdown = 0;
+            let totalExposure = 0, totalDrawdown = 0, totalPortfolioRisk = 0;
             openPositions.forEach(pos => {
                 const metrics = calculatePositionMetrics(pos);
-                totalExposure += metrics.accountWeight;
-                totalDrawdown += metrics.portfolioDrawdown;
+                totalExposure      += metrics.accountWeight;
+                totalDrawdown      += metrics.portfolioDrawdown;
+                totalPortfolioRisk += metrics.portfolioCapitalRisk || 0;
             });
 
             const newEntry = {
@@ -6914,6 +6917,7 @@
                 accountValue: accountSize,
                 drawdown: totalDrawdown,
                 exposure: totalExposure,
+                totalRisk: totalPortfolioRisk,
                 fomo: isNaN(ncfdVal) ? '' : ncfdVal,
                 notes: 'Daily snapshot',
                 dailyChange: 0
