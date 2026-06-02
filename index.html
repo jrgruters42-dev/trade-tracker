@@ -1797,10 +1797,11 @@
                                 <th>Date</th>
                                 <th>Account Equity</th>
                                 <th>Daily % Change</th>
-                                <th>10-Day Avg</th>
-                                <th>Drawdown %</th>
+                                <th title="DD from Peak: how far your account has dropped from its highest point up to that date">DD from Peak</th>
+                                <th title="Closed DD: drawdown in cumulative closed trade P&L only (not affected by open positions)">Closed DD</th>
+                                <th title="10-Day Moving Average of account equity. Highlights amber when account is BELOW the average — warning signal.">10-Day Avg</th>
                                 <th>Exposure %</th>
-                                <th title="Total Risk: sum of Port Risk% across all open positions at time of snapshot. Color: green <2%, yellow 2-3%, red 3%+">Total Risk %</th>
+                                <th title="Total Risk: sum of Port Risk% across all open positions at time of snapshot. Green <2%, amber 2-3%, red 3%+">Total Risk %</th>
                                 <th>FOMO</th>
                                 <th>Notes</th>
                                 <th>Actions</th>
@@ -3791,13 +3792,14 @@
                             <th>Symbol</th>
                             <th>Entry</th>
                             <th>Exit</th>
-                            <th title="Account Weight%: Size of this position as a % of total account at the time of the trade. Used to calculate portfolio-level P&L impact.">Acct Wt% ℹ</th>
-                            <th title="RISK LEVEL: % of portfolio risked on this trade at entry. Note: historical trades before mid-2025 show legacy position size % (e.g. 9% = 9% position), not % risk. Newer trades show actual % risk per trade (e.g. 0.5%).">Risk Level</th>
+                            <th title="Shares: Hover for partial sell history">Shares ℹ</th>
+                            <th title="Hold Days: Number of days position was open">Hold</th>
+                            <th title="RISK LEVEL: % of portfolio risked on this trade at entry.">Risk Level</th>
                             <th>P&L%</th>
-                            <th title="Portfolio P&L%: This trade's gain or loss as a % of your total account (not just the position). A 20% gain on a 10% position = 2% portfolio P&L. This is what actually matters for account growth.">Port P&L% ℹ</th>
-                            <th title="R-Multiple: How many times your initial risk you made or lost. 1R = broke even on risk. 2R = made 2x your risk. -1R = lost your full risk amount. Formula: Total P&L ÷ Initial Risk Dollars. This is the core metric — it normalizes all trades to be comparable regardless of position size.">R Multiple ℹ</th>
+                            <th title="Portfolio P&L%: This trade's gain or loss as a % of your total account.">Port P&L% ℹ</th>
+                            <th title="R-Multiple: How many times your initial risk you made or lost.">R ℹ</th>
                             <th>Date</th>
-                            <th title="Cumulative Portfolio P&L%: Running total of all closed trade gains and losses as a % of your account. Shows your equity curve in table form — each trade's contribution stacked on top of the previous.">Cum P/L% ℹ</th>
+                            <th title="Cumulative Portfolio P&L%: Running total of all closed trade gains and losses.">Cum P/L% ℹ</th>
                             <th>Notes</th>
                             <th>Actions</th>
                         </tr>
@@ -3823,10 +3825,28 @@
                 
                 html += `
                     <tr>
-                        <td><strong>${trade.symbol}</strong></td>
+                        <td><strong style="cursor:pointer; color:#1e40af; text-decoration:underline dotted;" onclick="openTradeChart(${trade.originalIndex})" title="Click to view chart">${trade.symbol}</strong></td>
                         <td>$${trade.entryPrice.toFixed(2)}</td>
                         <td>$${trade.exitPrice.toFixed(2)}</td>
-                        <td>${trade.accountWeight.toFixed(2)}%</td>
+                        <td>${(() => {
+                            const initSh = trade.initialShares || trade.accountWeight || '—';
+                            let tip = `Initial: ${initSh} shares`;
+                            if (trade.partialSells && trade.partialSells.length > 0) {
+                                tip += '&#10;&#10;Partial Sells:';
+                                trade.partialSells.forEach((ps, i) => {
+                                    const d = ps.date ? new Date(ps.date).toLocaleDateString() : '—';
+                                    tip += `&#10;- ${ps.shares} sh @ $${parseFloat(ps.price).toFixed(2)} on ${d}`;
+                                });
+                            }
+                            tip += `&#10;&#10;Final exit: ${trade.initialShares ? (trade.initialShares - (trade.partialSells||[]).reduce((s,p)=>s+p.shares,0)) : '—'} sh @ $${trade.exitPrice.toFixed(2)} on ${trade.exitDate}`;
+                            const display = trade.initialShares || '—';
+                            return `<span title="${tip}" style="cursor:help; border-bottom:1px dotted #9ca3af;">${display}</span>`;
+                        })()}</td>
+                        <td>${(() => {
+                            if (!trade.entryDate || !trade.exitDate) return '—';
+                            const days = Math.round((new Date(trade.exitDate) - new Date(trade.entryDate)) / (1000*60*60*24));
+                            return days + 'd';
+                        })()}</td>
                         <td>${riskPercent.toFixed(3)}%</td>
                         <td class="${pnlClass}">${trade.pnlPercent.toFixed(2)}%</td>
                         <td class="${pnlClass}">${trade.portfolioPnlPercent.toFixed(2)}%</td>
@@ -4019,52 +4039,69 @@
                 if (el2) el2.textContent = last30Pnl.toFixed(2) + '%';
                 if (el3) el3.textContent = last10Pnl.toFixed(2) + '%';
 
-                const dailyPnls = closedTrades.map(t => t.portfolioPnlPercent);
-                
-                const trace2 = {
-                    x: dailyPnls,
-                    type: 'histogram',
-                    marker: { color: '#667eea' },
-                    name: 'Daily P&L Distribution'
-                };
+                const rValues = closedTrades.map(t => parseFloat(t.rMultiple.toFixed(2)));
+                const wins    = rValues.filter(r => r > 0);
+                const losses  = rValues.filter(r => r <= 0);
 
+                const traceWins = {
+                    x: wins, type: 'histogram',
+                    marker: { color: 'rgba(16,185,129,0.7)', line: { color: '#059669', width: 1 } },
+                    name: 'Winners', xbins: { size: 0.5 }
+                };
+                const traceLosses = {
+                    x: losses, type: 'histogram',
+                    marker: { color: 'rgba(239,68,68,0.7)', line: { color: '#dc2626', width: 1 } },
+                    name: 'Losers', xbins: { size: 0.5 }
+                };
                 const layout2 = {
-                    xaxis: { title: 'Portfolio P&L %' },
-                    yaxis: { title: 'Frequency' },
-                    plot_bgcolor: '#f9f9f9',
-                    paper_bgcolor: 'white'
+                    title: 'R-Multiple Distribution',
+                    xaxis: { title: 'R-Multiple', zeroline: true, zerolinecolor: '#374151', zerolinewidth: 2 },
+                    yaxis: { title: 'Number of Trades' },
+                    barmode: 'overlay',
+                    plot_bgcolor: '#f9f9f9', paper_bgcolor: 'white'
                 };
-
-                Plotly.newPlot('dailyPnlChart', [trace2], layout2, {responsive: true});
+                Plotly.newPlot('dailyPnlChart', [traceWins, traceLosses], layout2, {responsive: true});
             }
 
-            if (dailyEquity.length === 0) {
-                document.getElementById('accountValueCurve').innerHTML = '<div class="empty-state">No daily snapshots yet. Click "Save Daily Snapshot" to start tracking your equity curve.</div>';
+            // Account Value Curve — use manually logged dailyEquityEntries (accurate)
+            const sortedEntries = [...dailyEquityEntries].sort((a,b) => a.date.localeCompare(b.date));
+            if (sortedEntries.length === 0) {
+                document.getElementById('accountValueCurve').innerHTML = '<div class="empty-state">No daily entries yet. Use ⚡ Log Today to start tracking your equity curve.</div>';
             } else {
-                const dates = dailyEquity.map(snap => snap.date);
-                const values = dailyEquity.map(snap => snap.accountValue);
-                
+                const dates  = sortedEntries.map(e => e.date);
+                const values = sortedEntries.map(e => e.accountValue);
+
+                // 10-day moving average line
+                const maValues = sortedEntries.map((e, i) => {
+                    if (i < 9) return null;
+                    const slice = sortedEntries.slice(i-9, i+1);
+                    return slice.reduce((s, x) => s + x.accountValue, 0) / 10;
+                });
+
                 const trace3 = {
-                    x: dates,
-                    y: values,
-                    type: 'scatter',
-                    mode: 'lines+markers',
+                    x: dates, y: values,
+                    type: 'scatter', mode: 'lines+markers',
                     name: 'Account Value',
                     line: { color: '#10b981', width: 3 },
-                    marker: { size: 6 },
-                    fill: 'tozeroy',
-                    fillcolor: 'rgba(16, 185, 129, 0.1)'
+                    marker: { size: 5 },
+                    fill: 'tozeroy', fillcolor: 'rgba(16,185,129,0.1)'
+                };
+                const traceMA = {
+                    x: dates, y: maValues,
+                    type: 'scatter', mode: 'lines',
+                    name: '10-Day Avg',
+                    line: { color: '#f59e0b', width: 2, dash: 'dot' },
+                    connectgaps: false
                 };
 
                 const layout3 = {
                     xaxis: { title: 'Date' },
-                    yaxis: { title: 'Account Value ($)' },
+                    yaxis: { title: 'Account Value ($)', tickformat: '$,.0f' },
                     hovermode: 'closest',
-                    plot_bgcolor: '#f9f9f9',
-                    paper_bgcolor: 'white'
+                    legend: { orientation: 'h', y: -0.2 },
+                    plot_bgcolor: '#f9f9f9', paper_bgcolor: 'white'
                 };
-
-                Plotly.newPlot('accountValueCurve', [trace3], layout3, {responsive: true});
+                Plotly.newPlot('accountValueCurve', [trace3, traceMA], layout3, {responsive: true});
             }
         }
 
@@ -4276,36 +4313,67 @@
                 return;
             }
             
+            // Pre-compute running peak for DD from Peak
+            const sortedAsc = [...dailyEquityEntries].sort((a,b) => a.date.localeCompare(b.date));
+            const peakByDate = {};
+            let runningPeak = 0;
+            sortedAsc.forEach(e => {
+                if (e.accountValue > runningPeak) runningPeak = e.accountValue;
+                peakByDate[e.date] = runningPeak;
+            });
+
+            // Pre-compute closed DD from Peak per date
+            // Build cumulative closed P&L curve sorted by exit date
+            const closedByDate = {};
+            let cumClosedPnl = 0;
+            let closedPeak = 0;
+            [...closedTrades].sort((a,b) => (a.exitDate||'').localeCompare(b.exitDate||'')).forEach(t => {
+                cumClosedPnl += t.portfolioPnlPercent || 0;
+                if (cumClosedPnl > closedPeak) closedPeak = cumClosedPnl;
+                closedByDate[t.exitDate] = { cum: cumClosedPnl, peak: closedPeak };
+            });
+            // For each daily entry, find the most recent closed DD at or before that date
+            function getClosedDDForDate(date) {
+                const entries = Object.entries(closedByDate).filter(([d]) => d <= date).sort(([a],[b]) => b.localeCompare(a));
+                if (!entries.length) return null;
+                const [, latest] = entries[0];
+                return latest.peak > 0 ? ((latest.peak - latest.cum) / latest.peak) * 100 : 0;
+            }
+
             let html = '';
             
             dailyEquityEntries.forEach((entry, index) => {
-                // Calculate 10-day moving average
+                const rowBg = index % 2 === 0 ? 'background: #f9fafb;' : 'background: white;';
+                const notesDisplay = entry.notes || '';
+                const notesPreview = notesDisplay.length > 30 ? notesDisplay.substring(0, 30) + '...' : notesDisplay;
+
+                // 10-day moving average (entries sorted newest-first, so look forward)
                 let tenDayAvg = 0;
                 let belowAvg = false;
-                
                 if (index <= dailyEquityEntries.length - 10) {
                     const last10 = dailyEquityEntries.slice(index, index + 10);
                     tenDayAvg = last10.reduce((sum, e) => sum + e.accountValue, 0) / 10;
-                    belowAvg = entry.accountValue < tenDayAvg;
+                    belowAvg = entry.accountValue < tenDayAvg; // highlight when account below avg
                 }
-                
-                // Alternating row colors
-                const rowBg = index % 2 === 0 ? 'background: #f9fafb;' : 'background: white;';
-                
-                // Highlight 10-day avg if below average
                 const belowAvgStyle = belowAvg ? 'background: #fef3c7; color: #92400e; font-weight: 700;' : '';
-                
-                // Escape HTML in notes for display
-                const notesDisplay = entry.notes || '';
-                const notesPreview = notesDisplay.length > 30 ? notesDisplay.substring(0, 30) + '...' : notesDisplay;
-                
+
+                // DD from Peak
+                const peak = peakByDate[entry.date] || entry.accountValue;
+                const ddFromPeak = peak > 0 ? ((peak - entry.accountValue) / peak) * 100 : 0;
+                const ddColor = ddFromPeak >= 10 ? '#dc2626' : ddFromPeak >= 5 ? '#d97706' : '#374151';
+
+                // Closed DD from Peak
+                const closedDD = getClosedDDForDate(entry.date);
+                const closedDDColor = closedDD === null ? '#9ca3af' : closedDD >= 5 ? '#dc2626' : closedDD >= 2 ? '#d97706' : '#374151';
+
                 html += `
                     <tr style="${rowBg}">
                         <td>${entry.date}</td>
                         <td>$${entry.accountValue.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
                         <td class="${entry.dailyChange >= 0 ? 'profit' : 'loss'}">${entry.dailyChange.toFixed(2)}%</td>
-                        <td style="${belowAvgStyle}">${tenDayAvg > 0 ? '$' + tenDayAvg.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}) : '-'}</td>
-                        <td>${entry.drawdown.toFixed(2)}%</td>
+                        <td style="color:${ddColor}; font-weight:${ddFromPeak >= 5 ? '700' : '400'};">${ddFromPeak > 0 ? '-' : ''}${ddFromPeak.toFixed(2)}%</td>
+                        <td style="color:${closedDDColor}; font-weight:${(closedDD||0) >= 2 ? '700' : '400'};">${closedDD !== null ? (closedDD > 0 ? '-' : '') + closedDD.toFixed(2) + '%' : '—'}</td>
+                        <td style="${belowAvgStyle}">${tenDayAvg > 0 ? '$' + tenDayAvg.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}) : '—'}</td>
                         <td>${entry.exposure.toFixed(2)}%</td>
                         <td style="color:${(entry.totalRisk||0) >= 3 ? '#dc2626' : (entry.totalRisk||0) >= 2 ? '#d97706' : '#15803d'}; font-weight:600;">${entry.totalRisk ? entry.totalRisk.toFixed(2) + '%' : '—'}</td>
                         <td><input type="text" value="${entry.fomo}" onchange="updateDailyEquityEntry('${entry.date}', 'fomo', this.value)" style="width: 80px; padding: 4px;"></td>
