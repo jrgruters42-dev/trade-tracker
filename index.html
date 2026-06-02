@@ -881,7 +881,6 @@
                 </div>
                 <div style="display:flex; align-items:center; gap:8px;">
                     <button onclick="event.stopPropagation(); acknowledgeRewardMilestone()" id="rewardAckBtn" style="display:none; padding:3px 10px; font-size:0.72em; background:#10b981; color:white; border:none; border-radius:6px; cursor:pointer; font-weight:700;">✓ Mark Claimed</button>
-                    <button onclick="event.stopPropagation(); forceClaimRewardMilestone()" id="rewardForceBtn" style="display:none; padding:3px 10px; font-size:0.72em; background:#6b7280; color:white; border:none; border-radius:6px; cursor:pointer; font-weight:600;">Override & Claim</button>
                     <span id="rewardReadinessToggle" style="font-size:0.75em; color:#9ca3af; font-weight:600;">▶ tap to expand</span>
                 </div>
             </div>
@@ -1799,8 +1798,9 @@
                                 <th>Account Equity</th>
                                 <th>Daily % Change</th>
                                 <th>10-Day Avg</th>
-                                <th>DD from Peak</th>
+                                <th>Drawdown %</th>
                                 <th>Exposure %</th>
+                                <th title="Total Risk: sum of Port Risk% across all open positions at time of snapshot. Color: green <2%, yellow 2-3%, red 3%+">Total Risk %</th>
                                 <th>FOMO</th>
                                 <th>Notes</th>
                                 <th>Actions</th>
@@ -2493,7 +2493,6 @@
                     ncfd: parseFloat(document.getElementById('ncfdInput')?.value) || null
                 },
                 taxPayments: taxPayments,
-                rewardMilestoneClaimed: rewardMilestoneClaimed,
                 lastModified: new Date().toISOString()
             };
 
@@ -2965,8 +2964,6 @@
                         qqq: document.getElementById('chkQQQ')?.checked || false,
                         ncfd: parseFloat(document.getElementById('ncfdInput')?.value) || null
                     },
-                    taxPayments: taxPayments,
-                    rewardMilestoneClaimed: rewardMilestoneClaimed,
                     lastModified: new Date().toISOString()
                 };
 
@@ -4121,6 +4118,7 @@
                 accountValue: accountSize,
                 drawdown: totalDrawdown,
                 exposure: totalExposure,
+                totalRisk: totalPortfolioRisk,
                 fomo: ncfdPrice,
                 notes: 'Quick Snapshot',
                 dailyChange: 0 // Will be calculated
@@ -4189,6 +4187,7 @@
                 dailyChange: dailyChange,
                 drawdown: totalDrawdown,
                 exposure: totalExposure,
+                totalRisk: totalExposure > 0 ? (() => { let tr = 0; openPositions.forEach(p => { tr += calculatePositionMetrics(p).portfolioCapitalRisk || 0; }); return tr; })() : 0,
                 fomo: '',
                 notes: ''
             };
@@ -4228,18 +4227,21 @@
             
             const accountValue = prompt(`Account Value for ${targetDate}:`, '');
             if (!accountValue) return;
-
+            
+            const drawdown = prompt(`Drawdown % for ${targetDate} (optional):`, '0');
             const exposure = prompt(`Exposure % for ${targetDate} (optional):`, '0');
+            const totalRiskVal = prompt(`Total Risk % for ${targetDate} (optional):`, '0');
             const fomo = prompt(`FOMO for ${targetDate} (optional):`, '');
             const notes = prompt(`Notes for ${targetDate} (optional):`, '');
-
+            
             // Create new entry
             const newEntry = {
                 date: targetDate,
                 accountValue: parseFloat(accountValue),
                 dailyChange: 0, // Will be calculated
-                drawdown: 0,    // Legacy field — DD from Peak is now auto-calculated on display
+                drawdown: parseFloat(drawdown) || 0,
                 exposure: parseFloat(exposure) || 0,
+                totalRisk: parseFloat(totalRiskVal) || 0,
                 fomo: fomo || '',
                 notes: notes || ''
             };
@@ -4273,34 +4275,19 @@
                 tbody.innerHTML = '<tr><td colspan="9" class="empty-state">No daily entries yet. Click "Add Today\'s Entry" to start tracking.</td></tr>';
                 return;
             }
-
-            // Pre-compute running peak for DD from peak calculation
-            // Entries are sorted newest-first for display, so we need oldest-first for peak calc
-            const sortedAsc = [...dailyEquityEntries].sort((a, b) => a.date.localeCompare(b.date));
-            const peakByDate = {};
-            let runningPeak = 0;
-            sortedAsc.forEach(e => {
-                if (e.accountValue > runningPeak) runningPeak = e.accountValue;
-                peakByDate[e.date] = runningPeak;
-            });
-
+            
             let html = '';
-
+            
             dailyEquityEntries.forEach((entry, index) => {
                 // Calculate 10-day moving average
                 let tenDayAvg = 0;
                 let belowAvg = false;
-
+                
                 if (index <= dailyEquityEntries.length - 10) {
                     const last10 = dailyEquityEntries.slice(index, index + 10);
                     tenDayAvg = last10.reduce((sum, e) => sum + e.accountValue, 0) / 10;
                     belowAvg = entry.accountValue < tenDayAvg;
                 }
-
-                // DD from Peak = (peak - current) / peak × 100
-                const peak = peakByDate[entry.date] || entry.accountValue;
-                const ddFromPeak = peak > 0 ? ((peak - entry.accountValue) / peak) * 100 : 0;
-                const ddColor = ddFromPeak >= 10 ? '#dc2626' : ddFromPeak >= 5 ? '#d97706' : '#374151';
                 
                 // Alternating row colors
                 const rowBg = index % 2 === 0 ? 'background: #f9fafb;' : 'background: white;';
@@ -4318,8 +4305,9 @@
                         <td>$${entry.accountValue.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
                         <td class="${entry.dailyChange >= 0 ? 'profit' : 'loss'}">${entry.dailyChange.toFixed(2)}%</td>
                         <td style="${belowAvgStyle}">${tenDayAvg > 0 ? '$' + tenDayAvg.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}) : '-'}</td>
-                        <td style="color:${ddColor}; font-weight:${ddFromPeak >= 5 ? '700' : '400'};">${ddFromPeak > 0 ? '-' : ''}${ddFromPeak.toFixed(2)}%</td>
+                        <td>${entry.drawdown.toFixed(2)}%</td>
                         <td>${entry.exposure.toFixed(2)}%</td>
+                        <td style="color:${(entry.totalRisk||0) >= 3 ? '#dc2626' : (entry.totalRisk||0) >= 2 ? '#d97706' : '#15803d'}; font-weight:600;">${entry.totalRisk ? entry.totalRisk.toFixed(2) + '%' : '—'}</td>
                         <td><input type="text" value="${entry.fomo}" onchange="updateDailyEquityEntry('${entry.date}', 'fomo', this.value)" style="width: 80px; padding: 4px;"></td>
                         <td class="notes-cell">
                             <div class="notes-preview" onclick="editDailyNote('${entry.date}', '${notesDisplay.replace(/'/g, "\\'")}')">
@@ -4371,12 +4359,14 @@
             const newDate = prompt('Date (YYYY-MM-DD):', entry.date);
             if (newDate === null) return;
             if (newDate !== date && dailyEquityEntries.find(e => e.date === newDate)) {
-                alert('An entry already exists for ' + newDate + '. Please choose a different date.');
-                return;
+                alert('An entry already exists for ' + newDate); return;
             }
 
             const newAccountValue = prompt('Account Value for ' + newDate + ':', entry.accountValue);
             if (newAccountValue === null) return;
+
+            const newTotalRisk = prompt('Total Risk % for ' + newDate + ':', entry.totalRisk ? entry.totalRisk.toFixed(2) : '0');
+            if (newTotalRisk === null) return;
 
             const newFomo = prompt('FOMO for ' + newDate + ':', entry.fomo);
             if (newFomo === null) return;
@@ -4384,9 +4374,9 @@
             const newNotes = prompt('Notes for ' + newDate + ':', entry.notes);
             if (newNotes === null) return;
 
-            // Update the entry
             entry.date         = newDate;
             entry.accountValue = parseFloat(newAccountValue);
+            entry.totalRisk    = parseFloat(newTotalRisk) || 0;
             entry.fomo         = newFomo;
             entry.notes        = newNotes;
 
@@ -7351,12 +7341,9 @@
                 ? `🔔 Milestone ${claimingMilestone} available — suggested reward: <strong>$${suggestedReward.toLocaleString(undefined,{maximumFractionDigits:0})}</strong>`
                 : `Working toward Milestone ${claimingMilestone} — $${progressDollars.toFixed(0)} / $${milestoneSize.toLocaleString()} (${progressPct.toFixed(0)}%) · Next reward when reached: $${suggestedReward.toLocaleString(undefined,{maximumFractionDigits:0})}`;
 
-            // Ack button — shows only when ALL criteria met
-            const ackBtn   = document.getElementById('rewardAckBtn');
-            const forceBtn = document.getElementById('rewardForceBtn');
-            ackBtn.style.display   = allMet ? 'inline-block' : 'none';
-            // Force button — shows when milestone earned but criteria blocking it
-            forceBtn.style.display = (!allMet && canClaim) ? 'inline-block' : 'none';
+            // Ack button
+            const ackBtn = document.getElementById('rewardAckBtn');
+            ackBtn.style.display = allMet ? 'inline-block' : 'none';
 
             // Criteria cells
             const critStyle = (met, label, value, detail) => {
@@ -7402,11 +7389,6 @@
                 const capped     = claimingMilestone > 4 ? ' (capped)' : '';
                 rewardAmtEl.textContent = `$${suggestedReward.toLocaleString(undefined,{maximumFractionDigits:0})} (${displayPct}%${capped} of $${milestoneSize.toLocaleString(undefined,{maximumFractionDigits:0})})`;
             }
-        }
-
-        function forceClaimRewardMilestone() {
-            if (!confirm(`Override criteria and mark Milestone ${rewardMilestoneClaimed + 1} as claimed? Use this only when the milestone was legitimately earned but criteria are temporarily blocking it.`)) return;
-            acknowledgeRewardMilestone();
         }
 
         function acknowledgeRewardMilestone() {
