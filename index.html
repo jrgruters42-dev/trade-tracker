@@ -4337,11 +4337,12 @@
                 closedByDate[t.exitDate] = { cum: cumClosedPnl, peak: closedPeak };
             });
             // For each daily entry, find the most recent closed DD at or before that date
+            // Uses same formula as main stats: cum - peak (raw percentage point drawdown)
             function getClosedDDForDate(date) {
                 const entries = Object.entries(closedByDate).filter(([d]) => d <= date).sort(([a],[b]) => b.localeCompare(a));
                 if (!entries.length) return null;
                 const [, latest] = entries[0];
-                return latest.peak > 0 ? ((latest.peak - latest.cum) / latest.peak) * 100 : 0;
+                return latest.cum - latest.peak; // negative = drawdown, 0 = at peak
             }
 
             let html = '';
@@ -4368,7 +4369,8 @@
 
                 // Closed DD from Peak
                 const closedDD = getClosedDDForDate(entry.date);
-                const closedDDColor = closedDD === null ? '#9ca3af' : closedDD >= 5 ? '#dc2626' : closedDD >= 2 ? '#d97706' : '#374151';
+                const closedDDColor = closedDD === null ? '#9ca3af' : closedDD < -5 ? '#dc2626' : closedDD < -2 ? '#d97706' : '#15803d';
+                const closedDDDisplay = closedDD === null ? '—' : closedDD === 0 ? '✓ Peak' : `${closedDD.toFixed(2)}%`;
 
                 html += `
                     <tr style="${rowBg}">
@@ -4378,7 +4380,7 @@
                         <td class="${entry.dailyChange >= 0 ? 'profit' : 'loss'}">${entry.dailyChange.toFixed(2)}%</td>
                         <td style="font-weight:600; color:${(() => { const startAcc = parseFloat(document.getElementById('startingAccount')?.value) || 250000; const ytd = ((entry.accountValue - startAcc - getNetCashFlows()) / startAcc) * 100; return ytd >= 0 ? '#15803d' : '#dc2626'; })()};">${(() => { const startAcc = parseFloat(document.getElementById('startingAccount')?.value) || 250000; const ytd = ((entry.accountValue - startAcc - getNetCashFlows()) / startAcc) * 100; return (ytd >= 0 ? '+' : '') + ytd.toFixed(2) + '%'; })()}</td>
                         <td style="color:${ddColor}; font-weight:${ddFromPeak >= 5 ? '700' : '400'};">${ddFromPeak > 0 ? '-' : ''}${ddFromPeak.toFixed(2)}%</td>
-                        <td style="color:${closedDDColor}; font-weight:${(closedDD||0) >= 2 ? '700' : '400'};">${closedDD !== null ? (closedDD > 0 ? '-' : '') + closedDD.toFixed(2) + '%' : '—'}</td>
+                        <td style="color:${closedDDColor}; font-weight:${(closedDD||0) < -2 ? '700' : '400'};">${closedDDDisplay}</td>
                         <td>${entry.exposure.toFixed(2)}%</td>
                         <td style="color:${(entry.totalRisk||0) >= 3 ? '#dc2626' : (entry.totalRisk||0) >= 2 ? '#d97706' : '#15803d'}; font-weight:600;">${entry.totalRisk ? entry.totalRisk.toFixed(2) + '%' : '—'}</td>
                         <td><input type="text" value="${entry.fomo}" onchange="updateDailyEquityEntry('${entry.date}', 'fomo', this.value)" style="width: 80px; padding: 4px;"></td>
