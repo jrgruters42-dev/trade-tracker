@@ -7464,8 +7464,8 @@
             const rewardAmtEl = document.getElementById('rewardSuggestedAmt');
             if (allGreenEl) allGreenEl.style.display = allMet ? 'block' : 'none';
             if (rewardAmtEl) {
-                const displayPct = Math.min(40, claimingMilestone * 10);
-                const capped     = claimingMilestone > 4 ? ' (capped)' : '';
+                const displayPct = Math.min(25, 10 + (claimingMilestone - 1) * 5);
+                const capped     = claimingMilestone > 4 ? ' (capped at 25%)' : '';
                 rewardAmtEl.textContent = `$${suggestedReward.toLocaleString(undefined,{maximumFractionDigits:0})} (${displayPct}%${capped} of $${milestoneSize.toLocaleString(undefined,{maximumFractionDigits:0})})`;
             }
         }
