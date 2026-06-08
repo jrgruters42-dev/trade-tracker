@@ -7408,8 +7408,8 @@
             // Progress bar
             document.getElementById('rewardProgressBar').style.width = `${progressPct.toFixed(1)}%`;
 
-            // Suggested reward = claimingMilestone × 10% of milestoneSize, capped at 40% (M4)
-            const rewardPct       = Math.min(40, claimingMilestone * 10) / 100;
+            // Reward % steps up 5% per milestone starting at 10%, capped at 25% from M4
+            const rewardPct       = Math.min(25, 10 + (claimingMilestone - 1) * 5) / 100;
             const suggestedReward = milestoneSize * rewardPct;
 
             // Milestone label (header)
