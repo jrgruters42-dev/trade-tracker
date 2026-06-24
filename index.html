@@ -2173,37 +2173,50 @@
 
             <!-- Custom Scenario Calculator -->
             <div style="margin-top:18px; padding:14px; background:#fafafa; border:2px solid #e5e7eb; border-radius:10px;">
-                <div style="font-size:0.8em; font-weight:700; color:#374151; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:12px;">🎯 Custom Break-Even Calculator</div>
-                <div style="font-size:0.8em; color:#6b7280; margin-bottom:12px;">Enter your actual or planned Sell 1 — see what Sell 2 needs to be to reach no-risk.</div>
-                <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px; margin-bottom:12px;">
+                <div style="font-size:0.8em; font-weight:700; color:#374151; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:8px;">🎯 Custom Sell Calculator</div>
+                <div style="font-size:0.8em; color:#6b7280; margin-bottom:12px;">Enter your actual Sell 1 price (e.g. from a gap-up) and see the adjusted Sell 2 targets.</div>
+
+                <!-- Plan selector -->
+                <div style="display:flex; gap:8px; margin-bottom:12px;">
+                    <button id="customPlanABtn" onclick="setCustomPlan('A')"
+                        style="flex:1; padding:7px; font-size:0.82em; font-weight:700; border:2px solid #3b82f6; border-radius:6px; background:#eff6ff; color:#1e40af; cursor:pointer;">
+                        Plan A
+                    </button>
+                    <button id="customPlanBBtn" onclick="setCustomPlan('B')"
+                        style="flex:1; padding:7px; font-size:0.82em; font-weight:700; border:2px solid #e5e7eb; border-radius:6px; background:white; color:#6b7280; cursor:pointer;">
+                        Plan B
+                    </button>
+                </div>
+
+                <input type="hidden" id="customActivePlan" value="A">
+
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:12px;">
                     <div>
                         <label style="font-size:0.75em; color:#6b7280; display:block; margin-bottom:3px;">Sell 1 — Shares</label>
-                        <input type="number" id="customSell1Shares" min="1" step="1" placeholder="e.g. 45"
+                        <input type="number" id="customSell1Shares" min="1" step="1"
                                oninput="calcCustomBreakEven()"
                                style="width:100%; padding:7px; border:2px solid #e5e7eb; border-radius:6px; font-size:0.9em;">
                     </div>
                     <div>
-                        <label style="font-size:0.75em; color:#6b7280; display:block; margin-bottom:3px;">Sell 1 — Price ($)</label>
-                        <input type="number" id="customSell1Price" step="0.01" placeholder="e.g. 185.50"
-                               oninput="calcCustomBreakEven()"
-                               style="width:100%; padding:7px; border:2px solid #e5e7eb; border-radius:6px; font-size:0.9em;">
-                    </div>
-                    <div>
-                        <label style="font-size:0.75em; color:#6b7280; display:block; margin-bottom:3px;">Sell 2 — Target Price ($) <span style="color:#9ca3af;">(optional)</span></label>
-                        <input type="number" id="customSell2TargetPrice" step="0.01" placeholder="original target"
+                        <label style="font-size:0.75em; color:#6b7280; display:block; margin-bottom:3px;">Sell 1 — Actual Price ($)</label>
+                        <input type="number" id="customSell1Price" step="0.01"
                                oninput="calcCustomBreakEven()"
                                style="width:100%; padding:7px; border:2px solid #e5e7eb; border-radius:6px; font-size:0.9em;">
                     </div>
                 </div>
-                <div id="customBreakEvenResult" style="display:none; border-radius:8px; overflow:hidden;">
+
+                <!-- Planned targets (read-only display) -->
+                <div id="customPlannedTargets" style="padding:8px 12px; background:#f3f4f6; border-radius:6px; font-size:0.8em; color:#6b7280; margin-bottom:12px;"></div>
+
+                <div id="customBreakEvenResult" style="display:none;">
                     <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
-                        <div id="customOptionA" style="padding:12px; background:#eff6ff; border:2px solid #3b82f6; border-radius:8px;">
-                            <div style="font-size:0.72em; font-weight:700; color:#1e40af; margin-bottom:6px; text-transform:uppercase;">Option A — Lower Price</div>
-                            <div id="customOptionAText" style="font-size:0.88em; color:#1e3a5f; line-height:1.5;"></div>
+                        <div style="padding:12px; background:#eff6ff; border:2px solid #3b82f6; border-radius:8px;">
+                            <div style="font-size:0.72em; font-weight:700; color:#1e40af; margin-bottom:6px; text-transform:uppercase;">Option A — Same Shares, Lower Price</div>
+                            <div id="customOptionAText" style="font-size:0.88em; color:#1e3a5f; line-height:1.6;"></div>
                         </div>
-                        <div id="customOptionB" style="padding:12px; background:#fdf4ff; border:2px solid #7c3aed; border-radius:8px;">
-                            <div style="font-size:0.72em; font-weight:700; color:#6d28d9; margin-bottom:6px; text-transform:uppercase;">Option B — Fewer Shares</div>
-                            <div id="customOptionBText" style="font-size:0.88em; color:#3b0764; line-height:1.5;"></div>
+                        <div style="padding:12px; background:#fdf4ff; border:2px solid #7c3aed; border-radius:8px;">
+                            <div style="font-size:0.72em; font-weight:700; color:#6d28d9; margin-bottom:6px; text-transform:uppercase;">Option B — Same Price, Fewer Shares</div>
+                            <div id="customOptionBText" style="font-size:0.88em; color:#3b0764; line-height:1.6;"></div>
                         </div>
                     </div>
                 </div>
@@ -5021,27 +5034,37 @@
                 renderHarvestPlans(pos, entry, stop, currentStop, riskPerShare, initialShares, remaining, initialRisk$, usePlanB);
             })();
 
-            // ── Pre-fill custom calculator from first partial sell if exists ──
-            const sell1Input  = document.getElementById('customSell1Shares');
-            const price1Input = document.getElementById('customSell1Price');
-            const result      = document.getElementById('customBreakEvenResult');
+            // ── Pre-fill custom calculator ─────────────────────────────────
+            document.getElementById('customSell1Shares').value = '';
+            document.getElementById('customSell1Price').value  = '';
+            document.getElementById('customBreakEvenResult').style.display = 'none';
+            // Default to Plan A
+            setCustomPlan('A');
+            // Pre-fill from first partial if exists
             if (pos.partialSells && pos.partialSells.length > 0) {
-                const firstSell = pos.partialSells[0];
-                sell1Input.value  = firstSell.shares;
-                price1Input.value = parseFloat(firstSell.price).toFixed(2);
-            } else {
-                sell1Input.value  = '';
-                price1Input.value = '';
+                const first = pos.partialSells[0];
+                document.getElementById('customSell1Shares').value = first.shares;
+                document.getElementById('customSell1Price').value  = parseFloat(first.price).toFixed(2);
+                calcCustomBreakEven();
             }
-            document.getElementById('customSell2TargetPrice').value = '';
-            result.style.display = 'none';
-            // Trigger calculation if pre-filled
-            if (sell1Input.value && price1Input.value) calcCustomBreakEven();
 
-            // ── Plan B ─────────────────────────────────────────────────────
             // ── Notes ──────────────────────────────────────────────────────
             document.getElementById('harvestNotes').value = pos.notes || '';
             document.getElementById('harvestCalcModal').style.display = 'block';
+        }
+
+        function setCustomPlan(plan) {
+            document.getElementById('customActivePlan').value = plan;
+            const btnA = document.getElementById('customPlanABtn');
+            const btnB = document.getElementById('customPlanBBtn');
+            if (plan === 'A') {
+                btnA.style.background = '#eff6ff'; btnA.style.borderColor = '#3b82f6'; btnA.style.color = '#1e40af';
+                btnB.style.background = 'white';   btnB.style.borderColor = '#e5e7eb'; btnB.style.color = '#6b7280';
+            } else {
+                btnB.style.background = '#fdf4ff'; btnB.style.borderColor = '#7c3aed'; btnB.style.color = '#6d28d9';
+                btnA.style.background = 'white';   btnA.style.borderColor = '#e5e7eb'; btnA.style.color = '#6b7280';
+            }
+            calcCustomBreakEven();
         }
 
         function calcCustomBreakEven() {
@@ -5051,77 +5074,127 @@
             const entry         = pos.entryPrice;
             const stop          = pos.initialStop;
             const initialShares = pos.initialShares || pos.shares;
-            const riskPerShare  = entry - stop;  // $ at risk per share if stopped out
+            const riskPerShare  = entry - stop;
+            const plan          = document.getElementById('customActivePlan').value;
+
+            // Planned sell quantities per plan
+            const planASell1Shares = Math.round(initialShares * 0.33);
+            const planASell1Price  = entry + 2 * riskPerShare;   // 2R
+
+            const planBSell1Shares = Math.round(initialShares * 0.15);
+            const planBSell1Price  = entry + 1 * riskPerShare;   // 1R
+            const planBSell2Shares = Math.round(initialShares * 0.18);
+            const planBSell2Price  = entry + 3 * riskPerShare;   // 3R
+
+            // Show planned targets
+            const targetsEl = document.getElementById('customPlannedTargets');
+            if (plan === 'A') {
+                targetsEl.innerHTML = `Plan A original: sell <strong>${planASell1Shares} shares @ $${planASell1Price.toFixed(2)}</strong> (2R) → enter your actual Sell 1 below`;
+            } else {
+                targetsEl.innerHTML = `Plan B original: Sell 1 = <strong>${planBSell1Shares} sh @ $${planBSell1Price.toFixed(2)}</strong> (1R) · Sell 2 = <strong>${planBSell2Shares} sh @ $${planBSell2Price.toFixed(2)}</strong> (3R)`;
+            }
 
             const sell1Shares = parseInt(document.getElementById('customSell1Shares').value) || 0;
             const sell1Price  = parseFloat(document.getElementById('customSell1Price').value) || 0;
-            const sell2Target = parseFloat(document.getElementById('customSell2TargetPrice').value) || 0;
             const resultEl    = document.getElementById('customBreakEvenResult');
 
             if (!sell1Shares || !sell1Price) { resultEl.style.display = 'none'; return; }
 
-            const remainingShares = initialShares - sell1Shares;
-
-            if (remainingShares <= 0) {
-                resultEl.style.display = 'block';
-                document.getElementById('customOptionAText').innerHTML = '✅ No shares remaining after Sell 1 — trade fully closed.';
-                document.getElementById('customOptionBText').innerHTML = '';
-                return;
-            }
-
-            // Sell 1 profit (above entry)
+            // Sell 1 profit above entry
             const sell1Profit = (sell1Price - entry) * sell1Shares;
 
-            // Risk remaining on leftover shares if they hit the stop
-            const stopoutLoss = riskPerShare * remainingShares;
+            if (plan === 'A') {
+                // Plan A: one sell makes position risk-free
+                // Planned: sell planASell1Shares @ planASell1Price
+                // Planned profit: (planASell1Price - entry) × planASell1Shares
+                const plannedProfit = (planASell1Price - entry) * planASell1Shares;
+                // Remaining risk to cover after actual sell 1
+                // Risk on unsold shares = riskPerShare × (initialShares - sell1Shares)
+                const unsoldShares   = initialShares - sell1Shares;
+                const stopRisk       = riskPerShare * unsoldShares;
+                const remainingRisk  = Math.max(0, stopRisk - sell1Profit);
 
-            // What Sell 2 still needs to cover so net on whole trade = 0
-            // Net = sell1Profit + sell2Profit - stopoutLoss = 0
-            // sell2Profit = stopoutLoss - sell1Profit
-            const sell2ProfitNeeded = stopoutLoss - sell1Profit;
+                resultEl.style.display = 'block';
 
-            resultEl.style.display = 'block';
+                if (remainingRisk <= 0) {
+                    document.getElementById('customOptionAText').innerHTML =
+                        `✅ Your Sell 1 already covers all stop-out risk on the remaining ${unsoldShares} shares. Position is risk-free!`;
+                    document.getElementById('customOptionBText').innerHTML =
+                        `✅ No further sell needed — stop can hit and you net zero or better.`;
+                    return;
+                }
 
-            if (sell2ProfitNeeded <= 0) {
-                // Sell 1 alone already covers all remaining stop-out risk
-                const surplus = Math.abs(sell2ProfitNeeded);
-                document.getElementById('customOptionAText').innerHTML =
-                    `✅ <strong>Sell 1 already covers all remaining risk!</strong><br>
-                    Even if remaining ${remainingShares} shares hit the stop you're up <strong>$${surplus.toFixed(0)}</strong> on the trade.`;
-                document.getElementById('customOptionBText').innerHTML =
-                    `✅ No Sell 2 needed — position is already risk-free.<br>
-                    <span style="font-size:0.8em; color:#6b7280;">Surplus cushion: $${surplus.toFixed(0)}</span>`;
-                return;
+                // Option A: same shares as planned (planASell1Shares), lower price
+                // But we already sold sell1Shares, so remaining sell is planASell1Shares - sell1Shares
+                const sell2SharesA = planASell1Shares - sell1Shares;
+                let optAText = '';
+                if (sell2SharesA <= 0) {
+                    // Already sold more than plan intended — figure out price for leftover
+                    const sell2Price = entry + (remainingRisk / unsoldShares);
+                    optAText = `You sold <strong>more shares</strong> than Plan A intended.<br>
+                        Sell remaining <strong>${unsoldShares} shares</strong> at:<br>
+                        <span style="font-size:1.3em; font-weight:800; color:#1e40af;">$${sell2Price.toFixed(2)}</span><br>
+                        <span style="font-size:0.8em; color:#6b7280;">vs original 2R target of $${planASell1Price.toFixed(2)}</span>`;
+                } else {
+                    const sell2Price = entry + (remainingRisk / sell2SharesA);
+                    optAText = `Sell remaining <strong>${sell2SharesA} shares</strong> at:<br>
+                        <span style="font-size:1.3em; font-weight:800; color:#1e40af;">$${sell2Price.toFixed(2)}</span><br>
+                        <span style="font-size:0.8em; color:#6b7280;">vs original target $${planASell1Price.toFixed(2)} — saves $${(planASell1Price - sell2Price).toFixed(2)}/share</span>`;
+                }
+
+                // Option B: same price as 2R, fewer shares
+                const sell2PriceB    = planASell1Price;
+                const profitPerShare = sell2PriceB - entry;
+                const sharesNeeded   = Math.ceil(remainingRisk / profitPerShare);
+                const sharesSafe     = Math.min(sharesNeeded, unsoldShares);
+                const freeRunners    = unsoldShares - sharesSafe;
+                const optBText = `At the original 2R price ($${planASell1Price.toFixed(2)}):<br>
+                    Sell only <strong>${sharesSafe} shares</strong><br>
+                    <span style="font-size:1.3em; font-weight:800; color:#6d28d9;">${freeRunners} free runners</span> remain<br>
+                    <span style="font-size:0.8em; color:#6b7280;">vs original plan of selling ${planASell1Shares} total</span>`;
+
+                document.getElementById('customOptionAText').innerHTML = optAText;
+                document.getElementById('customOptionBText').innerHTML = optBText;
+
+            } else {
+                // Plan B: two sells make position risk-free
+                // Actual sell 1 happened at sell1Price (vs planned planBSell1Price)
+                // Extra profit vs plan: (sell1Price - planBSell1Price) × sell1Shares
+                const extraProfit    = (sell1Price - planBSell1Price) * sell1Shares;
+                // Planned sell 2 profit: (planBSell2Price - entry) × planBSell2Shares
+                const plannedSell2Profit = (planBSell2Price - entry) * planBSell2Shares;
+                // Adjusted sell 2 profit needed: plannedSell2Profit - extraProfit
+                const sell2ProfitNeeded = Math.max(0, plannedSell2Profit - extraProfit);
+
+                resultEl.style.display = 'block';
+
+                if (sell2ProfitNeeded <= 0) {
+                    document.getElementById('customOptionAText').innerHTML =
+                        `✅ Your better Sell 1 price already covers what Sell 2 was meant to do. Position is risk-free!`;
+                    document.getElementById('customOptionBText').innerHTML =
+                        `✅ No Sell 2 needed — stop can hit and you net zero or better.`;
+                    return;
+                }
+
+                // Option A: same shares as planned (planBSell2Shares), lower price
+                const optAPricePerShare = entry + (sell2ProfitNeeded / planBSell2Shares);
+                const priceSaving       = planBSell2Price - optAPricePerShare;
+                const optAText = `Sell same <strong>${planBSell2Shares} shares</strong> at:<br>
+                    <span style="font-size:1.3em; font-weight:800; color:#1e40af;">$${optAPricePerShare.toFixed(2)}</span><br>
+                    <span style="font-size:0.8em; color:#6b7280;">$${priceSaving.toFixed(2)} lower than original 3R target ($${planBSell2Price.toFixed(2)})</span>`;
+
+                // Option B: same price as 3R, fewer shares
+                const profitPerShare = planBSell2Price - entry;
+                const sharesNeeded   = Math.ceil(sell2ProfitNeeded / profitPerShare);
+                const sharesSaved    = planBSell2Shares - sharesNeeded;
+                const optBText = `At the original 3R price ($${planBSell2Price.toFixed(2)}):<br>
+                    Sell only <strong>${sharesNeeded} shares</strong><br>
+                    <span style="font-size:1.3em; font-weight:800; color:#6d28d9;">${sharesSaved} fewer shares</span> to sell<br>
+                    <span style="font-size:0.8em; color:#6b7280;">vs original plan of ${planBSell2Shares} shares</span>`;
+
+                document.getElementById('customOptionAText').innerHTML = optAText;
+                document.getElementById('customOptionBText').innerHTML = optBText;
             }
-
-            // Option A: sell ALL remaining shares — what price covers the remaining risk?
-            // (sell2Price - entry) × remainingShares = sell2ProfitNeeded
-            const optAPrice = entry + (sell2ProfitNeeded / remainingShares);
-
-            // Option B: at a target price, how many shares needed?
-            const targetPrice   = sell2Target > entry ? sell2Target : entry + 2 * riskPerShare;
-            const profitPerSh   = targetPrice - entry;
-            const optBShares    = Math.ceil(sell2ProfitNeeded / profitPerSh);
-            const optBSharesSafe = Math.min(optBShares, remainingShares);
-            const leftover      = remainingShares - optBSharesSafe;
-
-            const targetLabel = sell2Target > entry ? `$${targetPrice.toFixed(2)}` : `$${targetPrice.toFixed(2)} (2R default)`;
-
-            document.getElementById('customOptionAText').innerHTML =
-                `Sell all <strong>${remainingShares} remaining shares</strong> at or above:<br>
-                <span style="font-size:1.4em; font-weight:800; color:#1e40af;">$${optAPrice.toFixed(2)}</span><br>
-                <span style="font-size:0.8em; color:#6b7280;">
-                    Stop can hit — whole trade nets zero or better.<br>
-                    That's ${optAPrice < entry + 2*riskPerShare ? `$${(entry + 2*riskPerShare - optAPrice).toFixed(2)} below` : `$${(optAPrice - entry - 2*riskPerShare).toFixed(2)} above`} the 2R level ($${(entry + 2*riskPerShare).toFixed(2)}).
-                </span>`;
-
-            document.getElementById('customOptionBText').innerHTML =
-                `At ${targetLabel}:<br>
-                Sell only <strong>${optBSharesSafe} of ${remainingShares} shares</strong><br>
-                <span style="font-size:1.4em; font-weight:800; color:#6d28d9;">${leftover} shares</span> left as free runners<br>
-                <span style="font-size:0.8em; color:#6b7280;">
-                    Stop on runners costs $${(riskPerShare * leftover).toFixed(0)} — covered by the two sells combined.
-                </span>`;
         }
 
         function renderHarvestPlans(pos, entry, stop, currentStop, riskPerShare, initialShares, remaining, initialRisk$, usePlanB) {
