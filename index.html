@@ -5051,8 +5051,7 @@
             const entry         = pos.entryPrice;
             const stop          = pos.initialStop;
             const initialShares = pos.initialShares || pos.shares;
-            const riskPerShare  = entry - stop;
-            const initialRisk$  = riskPerShare * initialShares;
+            const riskPerShare  = entry - stop;  // $ at risk per share if stopped out
 
             const sell1Shares = parseInt(document.getElementById('customSell1Shares').value) || 0;
             const sell1Price  = parseFloat(document.getElementById('customSell1Price').value) || 0;
@@ -5061,51 +5060,67 @@
 
             if (!sell1Shares || !sell1Price) { resultEl.style.display = 'none'; return; }
 
-            // Risk covered by sell 1 (only profit above entry counts toward covering risk)
-            const sell1Profit    = (sell1Price - entry) * sell1Shares;
-            const remainingRisk  = Math.max(0, initialRisk$ - sell1Profit);
             const remainingShares = initialShares - sell1Shares;
 
             if (remainingShares <= 0) {
                 resultEl.style.display = 'block';
-                document.getElementById('customOptionAText').innerHTML = '✅ Sell 1 already covers all risk — position is fully risk-free!';
-                document.getElementById('customOptionBText').innerHTML = '✅ No Sell 2 needed.';
+                document.getElementById('customOptionAText').innerHTML = '✅ No shares remaining after Sell 1 — trade fully closed.';
+                document.getElementById('customOptionBText').innerHTML = '';
                 return;
             }
 
-            // Option A: sell ALL remaining shares — what price needed?
-            const optAPrice = remainingRisk > 0
-                ? entry + (remainingRisk / remainingShares)
-                : entry; // already covered
+            // Sell 1 profit (above entry)
+            const sell1Profit = (sell1Price - entry) * sell1Shares;
 
-            // Option B: at a given target price, how many shares needed?
-            const targetPrice   = sell2Target || (entry + 2 * riskPerShare); // default 2R
-            const priceGainPer  = targetPrice - entry;
-            const optBShares    = priceGainPer > 0
-                ? Math.ceil(remainingRisk / priceGainPer)
-                : remainingShares;
-            const optBShares$   = Math.min(optBShares, remainingShares);
+            // Risk remaining on leftover shares if they hit the stop
+            const stopoutLoss = riskPerShare * remainingShares;
+
+            // What Sell 2 still needs to cover so net on whole trade = 0
+            // Net = sell1Profit + sell2Profit - stopoutLoss = 0
+            // sell2Profit = stopoutLoss - sell1Profit
+            const sell2ProfitNeeded = stopoutLoss - sell1Profit;
 
             resultEl.style.display = 'block';
 
-            const originalPlanBPrice = entry + 3 * riskPerShare;
-            const priceSaving = originalPlanBPrice - optAPrice;
+            if (sell2ProfitNeeded <= 0) {
+                // Sell 1 alone already covers all remaining stop-out risk
+                const surplus = Math.abs(sell2ProfitNeeded);
+                document.getElementById('customOptionAText').innerHTML =
+                    `✅ <strong>Sell 1 already covers all remaining risk!</strong><br>
+                    Even if remaining ${remainingShares} shares hit the stop you're up <strong>$${surplus.toFixed(0)}</strong> on the trade.`;
+                document.getElementById('customOptionBText').innerHTML =
+                    `✅ No Sell 2 needed — position is already risk-free.<br>
+                    <span style="font-size:0.8em; color:#6b7280;">Surplus cushion: $${surplus.toFixed(0)}</span>`;
+                return;
+            }
+
+            // Option A: sell ALL remaining shares — what price covers the remaining risk?
+            // (sell2Price - entry) × remainingShares = sell2ProfitNeeded
+            const optAPrice = entry + (sell2ProfitNeeded / remainingShares);
+
+            // Option B: at a target price, how many shares needed?
+            const targetPrice   = sell2Target > entry ? sell2Target : entry + 2 * riskPerShare;
+            const profitPerSh   = targetPrice - entry;
+            const optBShares    = Math.ceil(sell2ProfitNeeded / profitPerSh);
+            const optBSharesSafe = Math.min(optBShares, remainingShares);
+            const leftover      = remainingShares - optBSharesSafe;
+
+            const targetLabel = sell2Target > entry ? `$${targetPrice.toFixed(2)}` : `$${targetPrice.toFixed(2)} (2R default)`;
 
             document.getElementById('customOptionAText').innerHTML =
-                `Sell all <strong>${remainingShares} remaining shares</strong> at:<br>
-                <span style="font-size:1.3em; font-weight:800; color:#1e40af;">$${optAPrice.toFixed(2)}</span><br>
+                `Sell all <strong>${remainingShares} remaining shares</strong> at or above:<br>
+                <span style="font-size:1.4em; font-weight:800; color:#1e40af;">$${optAPrice.toFixed(2)}</span><br>
                 <span style="font-size:0.8em; color:#6b7280;">
-                    ${remainingRisk <= 0 ? '✅ Already covered by Sell 1' :
-                      priceSaving > 0 ? `$${priceSaving.toFixed(2)} lower than original 3R target ($${originalPlanBPrice.toFixed(2)})` :
-                      `$${Math.abs(priceSaving).toFixed(2)} higher than original 3R target`}
+                    Stop can hit — whole trade nets zero or better.<br>
+                    That's ${optAPrice < entry + 2*riskPerShare ? `$${(entry + 2*riskPerShare - optAPrice).toFixed(2)} below` : `$${(optAPrice - entry - 2*riskPerShare).toFixed(2)} above`} the 2R level ($${(entry + 2*riskPerShare).toFixed(2)}).
                 </span>`;
 
             document.getElementById('customOptionBText').innerHTML =
-                `At <strong>$${targetPrice.toFixed(2)}</strong>${sell2Target ? '' : ' (2R default)'}:<br>
-                Sell only <strong>${optBShares$} of ${remainingShares} shares</strong><br>
+                `At ${targetLabel}:<br>
+                Sell only <strong>${optBSharesSafe} of ${remainingShares} shares</strong><br>
+                <span style="font-size:1.4em; font-weight:800; color:#6d28d9;">${leftover} shares</span> left as free runners<br>
                 <span style="font-size:0.8em; color:#6b7280;">
-                    ${remainingRisk <= 0 ? '✅ Already covered — 0 shares needed' :
-                      `Leaves <strong>${remainingShares - optBShares$}</strong> shares as pure profit runners`}
+                    Stop on runners costs $${(riskPerShare * leftover).toFixed(0)} — covered by the two sells combined.
                 </span>`;
         }
 
