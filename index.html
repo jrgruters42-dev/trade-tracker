@@ -2151,10 +2151,6 @@
             <!-- 4-cell summary row -->
             <div id="harvestSummaryRow" style="display:grid; grid-template-columns:repeat(4,1fr); gap:10px; margin-bottom:16px;"></div>
 
-            <!-- R price ladder -->
-            <div style="font-size:0.75em; font-weight:700; color:#9ca3af; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:8px;">Price Ladder</div>
-            <div id="harvestLadder" style="display:grid; grid-template-columns:repeat(4,1fr); gap:8px; margin-bottom:16px;"></div>
-
             <!-- Plan recommendation banner -->
             <div id="harvestPlanBanner" style="margin-bottom:14px; padding:10px 14px; border-radius:8px; font-size:0.85em; font-weight:600;"></div>
 
@@ -2164,33 +2160,22 @@
                 <div id="harvestPlanB" style="padding:14px; border-radius:8px; border:2px solid #7c3aed; background:#fdf4ff;"></div>
             </div>
 
-            <!-- Notes -->
-            <div style="margin-bottom:12px;">
-                <label style="font-size:0.8em; font-weight:700; color:#374151; display:block; margin-bottom:5px;">📝 Trade Notes</label>
-                <textarea id="harvestNotes" rows="3" placeholder="Strategy notes, why you entered, what to watch for..." style="width:100%; padding:8px; border:2px solid #e5e7eb; border-radius:6px; font-size:0.88em; resize:vertical;"></textarea>
-            </div>
-            <button onclick="saveHarvestNotes()" class="btn-success" style="width:100%; padding:10px; font-size:0.95em; font-weight:700;">💾 Save Notes</button>
-
             <!-- Custom Scenario Calculator -->
-            <div style="margin-top:18px; padding:14px; background:#fafafa; border:2px solid #e5e7eb; border-radius:10px;">
+            <div style="padding:14px; background:#fafafa; border:2px solid #e5e7eb; border-radius:10px;">
                 <div style="font-size:0.8em; font-weight:700; color:#374151; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:8px;">🎯 Custom Sell Calculator</div>
-                <div style="font-size:0.8em; color:#6b7280; margin-bottom:12px;">Enter your actual Sell 1 price (e.g. from a gap-up) and see the adjusted Sell 2 targets.</div>
+                <div style="font-size:0.8em; color:#6b7280; margin-bottom:12px;">Enter your actual Sell 1 (e.g. from a gap-up) to see adjusted Sell 2 targets, or build a fully custom scenario.</div>
 
                 <!-- Plan selector -->
                 <div style="display:flex; gap:8px; margin-bottom:12px;">
                     <button id="customPlanABtn" onclick="setCustomPlan('A')"
-                        style="flex:1; padding:7px; font-size:0.82em; font-weight:700; border:2px solid #3b82f6; border-radius:6px; background:#eff6ff; color:#1e40af; cursor:pointer;">
-                        Plan A
-                    </button>
+                        style="flex:1; padding:7px; font-size:0.82em; font-weight:700; border:2px solid #3b82f6; border-radius:6px; background:#eff6ff; color:#1e40af; cursor:pointer;">Plan A</button>
                     <button id="customPlanBBtn" onclick="setCustomPlan('B')"
-                        style="flex:1; padding:7px; font-size:0.82em; font-weight:700; border:2px solid #e5e7eb; border-radius:6px; background:white; color:#6b7280; cursor:pointer;">
-                        Plan B
-                    </button>
+                        style="flex:1; padding:7px; font-size:0.82em; font-weight:700; border:2px solid #e5e7eb; border-radius:6px; background:white; color:#6b7280; cursor:pointer;">Plan B</button>
                 </div>
-
                 <input type="hidden" id="customActivePlan" value="A">
 
-                <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:12px;">
+                <!-- Sell 1 inputs -->
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:10px;">
                     <div>
                         <label style="font-size:0.75em; color:#6b7280; display:block; margin-bottom:3px;">Sell 1 — Shares</label>
                         <input type="number" id="customSell1Shares" min="1" step="1"
@@ -2205,10 +2190,11 @@
                     </div>
                 </div>
 
-                <!-- Planned targets (read-only display) -->
-                <div id="customPlannedTargets" style="padding:8px 12px; background:#f3f4f6; border-radius:6px; font-size:0.8em; color:#6b7280; margin-bottom:12px;"></div>
+                <!-- Planned targets display -->
+                <div id="customPlannedTargets" style="padding:8px 12px; background:#f3f4f6; border-radius:6px; font-size:0.8em; color:#6b7280; margin-bottom:10px;"></div>
 
-                <div id="customBreakEvenResult" style="display:none;">
+                <!-- Options A & B -->
+                <div id="customBreakEvenResult" style="display:none; margin-bottom:12px;">
                     <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
                         <div style="padding:12px; background:#eff6ff; border:2px solid #3b82f6; border-radius:8px;">
                             <div style="font-size:0.72em; font-weight:700; color:#1e40af; margin-bottom:6px; text-transform:uppercase;">Option A — Same Shares, Lower Price</div>
@@ -2218,6 +2204,29 @@
                             <div style="font-size:0.72em; font-weight:700; color:#6d28d9; margin-bottom:6px; text-transform:uppercase;">Option B — Same Price, Fewer Shares</div>
                             <div id="customOptionBText" style="font-size:0.88em; color:#3b0764; line-height:1.6;"></div>
                         </div>
+                    </div>
+                </div>
+
+                <!-- Option C: fully custom sell 2 -->
+                <div style="border-top:1px solid #e5e7eb; padding-top:10px;">
+                    <div style="font-size:0.75em; font-weight:700; color:#374151; margin-bottom:8px;">Option C — Custom Sell 2 <span style="color:#9ca3af; font-weight:400;">(enter your own shares & price)</span></div>
+                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:8px;">
+                        <div>
+                            <label style="font-size:0.75em; color:#6b7280; display:block; margin-bottom:3px;">Sell 2 — Shares</label>
+                            <input type="number" id="customSell2Shares" min="1" step="1"
+                                   oninput="calcOptionC()"
+                                   style="width:100%; padding:7px; border:2px solid #e5e7eb; border-radius:6px; font-size:0.9em;">
+                        </div>
+                        <div>
+                            <label style="font-size:0.75em; color:#6b7280; display:block; margin-bottom:3px;">Sell 2 — Price ($)</label>
+                            <input type="number" id="customSell2Price" step="0.01"
+                                   oninput="calcOptionC()"
+                                   style="width:100%; padding:7px; border:2px solid #e5e7eb; border-radius:6px; font-size:0.9em;">
+                        </div>
+                    </div>
+                    <div id="customOptionCResult" style="display:none; padding:12px; background:#fefce8; border:2px solid #f59e0b; border-radius:8px;">
+                        <div style="font-size:0.72em; font-weight:700; color:#92400e; margin-bottom:6px; text-transform:uppercase;">Option C — Custom Result</div>
+                        <div id="customOptionCText" style="font-size:0.88em; color:#78350f; line-height:1.6;"></div>
                     </div>
                 </div>
             </div>
@@ -3315,13 +3324,33 @@
                     qtyTooltip += `\nRemaining: ${pos.shares} shares`;
                 }
                 
+                // QTY cell color indicator:
+                // - Dark green bg: stop at/above entry (breakeven or better) — protected
+                // - Light green bg: partial taken but stop still below entry
+                // - Light blue bg: no partial, stop moved up but not to entry yet
+                // - Normal: no partial, stop below entry
+                const hasPartial     = pos.partialSells && pos.partialSells.length > 0;
+                const stopAtBreakeven = pos.currentStop >= pos.entryPrice;
+                let qtyCellStyle = 'cursor:help; ';
+                let qtyBadge = '';
+                if (stopAtBreakeven && hasPartial) {
+                    qtyCellStyle += 'background:#15803d; color:white; font-weight:700; border-radius:4px;';
+                    qtyBadge = ' ✓';
+                } else if (stopAtBreakeven) {
+                    qtyCellStyle += 'background:#dcfce7; color:#15803d; font-weight:700; border-radius:4px;';
+                    qtyBadge = ' ✓';
+                } else if (hasPartial) {
+                    qtyCellStyle += 'background:#bbf7d0; color:#166534; font-weight:600; border-radius:4px;';
+                    qtyBadge = ' ½';
+                }
+
                 html += `
                     <tr style="${rowBg}">
                         <td style="${symbolStyle}"><strong><span onclick="openHarvestModal(${pos.id})" style="cursor:pointer; border-bottom:2px dotted currentColor; padding-bottom:1px;" title="Click to open Harvest Calculator">${pos.symbol}</span></strong></td>
                         <td>$${pos.currentPrice.toFixed(2)}</td>
                         <td>$${pos.entryPrice.toFixed(2)}</td>
                         <td title="${adjTooltip}" style="cursor:help; border-bottom:1px dotted #9ca3af;">$${metrics.adjustedPrice.toFixed(2)}</td>
-                        <td title="${qtyTooltip}" style="cursor: help;">${pos.shares}</td>
+                        <td title="${qtyTooltip}" style="${qtyCellStyle}">${pos.shares}${qtyBadge}</td>
                         <td>$${pos.initialStop.toFixed(2)}</td>
                         <td style="background: #dbeafe;">$${pos.currentStop.toFixed(2)}</td>
                         <td>${pos.initialWeight.toFixed(3)}%</td>
@@ -5051,6 +5080,43 @@
             // ── Notes ──────────────────────────────────────────────────────
             document.getElementById('harvestNotes').value = pos.notes || '';
             document.getElementById('harvestCalcModal').style.display = 'block';
+        }
+
+        function calcOptionC() {
+            const pos = openPositions.find(p => p.id === harvestModalPosId);
+            if (!pos) return;
+            const entry         = pos.entryPrice;
+            const stop          = pos.initialStop;
+            const initialShares = pos.initialShares || pos.shares;
+            const riskPerShare  = entry - stop;
+
+            const sell1Shares = parseInt(document.getElementById('customSell1Shares').value) || 0;
+            const sell1Price  = parseFloat(document.getElementById('customSell1Price').value) || 0;
+            const sell2Shares = parseInt(document.getElementById('customSell2Shares').value) || 0;
+            const sell2Price  = parseFloat(document.getElementById('customSell2Price').value) || 0;
+            const resultEl    = document.getElementById('customOptionCResult');
+
+            if (!sell2Shares || !sell2Price) { resultEl.style.display = 'none'; return; }
+
+            const sell1Profit    = sell1Shares && sell1Price ? (sell1Price - entry) * sell1Shares : 0;
+            const sell2Profit    = (sell2Price - entry) * sell2Shares;
+            const remainingShares = initialShares - sell1Shares - sell2Shares;
+            const stopRisk       = remainingRisk  = riskPerShare * Math.max(0, remainingShares);
+            const totalBanked    = sell1Profit + sell2Profit;
+            const netAtStop      = totalBanked - stopRisk;
+            const isRiskFree     = netAtStop >= 0;
+
+            resultEl.style.display = 'block';
+            const netColor = isRiskFree ? '#15803d' : '#dc2626';
+            document.getElementById('customOptionCText').innerHTML =
+                `Sell 1: ${sell1Shares ? sell1Shares + ' sh @ $' + sell1Price.toFixed(2) + ' = +$' + sell1Profit.toFixed(0) : 'not entered'}<br>
+                Sell 2: <strong>${sell2Shares} sh @ $${sell2Price.toFixed(2)} = +$${sell2Profit.toFixed(0)}</strong><br>
+                Remaining: ${remainingShares} sh · Stop risk: $${stopRisk.toFixed(0)}<br>
+                <strong style="color:${netColor}; font-size:1.1em;">
+                    ${isRiskFree
+                        ? `✅ Risk-free — net +$${netAtStop.toFixed(0)} even if stop hits`
+                        : `⚠ Still $${Math.abs(netAtStop).toFixed(0)} at risk if stop hits`}
+                </strong>`;
         }
 
         function setCustomPlan(plan) {
