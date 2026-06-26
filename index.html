@@ -2207,26 +2207,22 @@
                     </div>
                 </div>
 
-                <!-- Option C: fully custom sell 2 -->
+                <!-- Option C: custom sell 2 price -->
                 <div style="border-top:1px solid #e5e7eb; padding-top:10px;">
-                    <div style="font-size:0.75em; font-weight:700; color:#374151; margin-bottom:8px;">Option C — Custom Sell 2 <span style="color:#9ca3af; font-weight:400;">(enter your own shares & price)</span></div>
+                    <div style="font-size:0.75em; font-weight:700; color:#374151; margin-bottom:6px;">Option C — Custom Sell 2 Price</div>
+                    <div style="font-size:0.75em; color:#6b7280; margin-bottom:8px;">Enter any price — see how many shares you need to sell to match the original plan's risk outcome.</div>
                     <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:8px;">
-                        <div>
-                            <label style="font-size:0.75em; color:#6b7280; display:block; margin-bottom:3px;">Sell 2 — Shares</label>
-                            <input type="number" id="customSell2Shares" min="1" step="1"
-                                   oninput="calcOptionC()"
-                                   style="width:100%; padding:7px; border:2px solid #e5e7eb; border-radius:6px; font-size:0.9em;">
-                        </div>
                         <div>
                             <label style="font-size:0.75em; color:#6b7280; display:block; margin-bottom:3px;">Sell 2 — Price ($)</label>
                             <input type="number" id="customSell2Price" step="0.01"
                                    oninput="calcOptionC()"
                                    style="width:100%; padding:7px; border:2px solid #e5e7eb; border-radius:6px; font-size:0.9em;">
                         </div>
-                    </div>
-                    <div id="customOptionCResult" style="display:none; padding:12px; background:#fefce8; border:2px solid #f59e0b; border-radius:8px;">
-                        <div style="font-size:0.72em; font-weight:700; color:#92400e; margin-bottom:6px; text-transform:uppercase;">Option C — Custom Result</div>
-                        <div id="customOptionCText" style="font-size:0.88em; color:#78350f; line-height:1.6;"></div>
+                        <div style="display:flex; align-items:flex-end;">
+                            <div id="customOptionCResult" style="width:100%; padding:10px; background:#fefce8; border:2px solid #f59e0b; border-radius:8px; display:none;">
+                                <div id="customOptionCText" style="font-size:0.88em; color:#78350f; line-height:1.6;"></div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -5060,7 +5056,9 @@
             // ── Pre-fill custom calculator ─────────────────────────────────
             document.getElementById('customSell1Shares').value = '';
             document.getElementById('customSell1Price').value  = '';
+            document.getElementById('customSell2Price').value  = '';
             document.getElementById('customBreakEvenResult').style.display = 'none';
+            document.getElementById('customOptionCResult').style.display   = 'none';
             // Default to Plan A
             setCustomPlan('A');
             // Pre-fill from first partial if exists
@@ -5080,38 +5078,70 @@
         function calcOptionC() {
             const pos = openPositions.find(p => p.id === harvestModalPosId);
             if (!pos) return;
+
             const entry         = pos.entryPrice;
             const stop          = pos.initialStop;
             const initialShares = pos.initialShares || pos.shares;
             const riskPerShare  = entry - stop;
+            const plan          = document.getElementById('customActivePlan').value;
 
             const sell1Shares = parseInt(document.getElementById('customSell1Shares').value) || 0;
             const sell1Price  = parseFloat(document.getElementById('customSell1Price').value) || 0;
-            const sell2Shares = parseInt(document.getElementById('customSell2Shares').value) || 0;
             const sell2Price  = parseFloat(document.getElementById('customSell2Price').value) || 0;
             const resultEl    = document.getElementById('customOptionCResult');
 
-            if (!sell2Shares || !sell2Price) { resultEl.style.display = 'none'; return; }
+            if (!sell2Price || !sell1Shares || !sell1Price) { resultEl.style.display = 'none'; return; }
+            if (sell2Price <= entry) {
+                resultEl.style.display = 'block';
+                document.getElementById('customOptionCText').innerHTML = '⚠ Sell 2 price must be above entry ($' + entry.toFixed(2) + ')';
+                return;
+            }
 
-            const sell1Profit    = sell1Shares && sell1Price ? (sell1Price - entry) * sell1Shares : 0;
-            const sell2Profit    = (sell2Price - entry) * sell2Shares;
-            const remainingShares = initialShares - sell1Shares - sell2Shares;
-            const stopRisk       = remainingRisk  = riskPerShare * Math.max(0, remainingShares);
-            const totalBanked    = sell1Profit + sell2Profit;
-            const netAtStop      = totalBanked - stopRisk;
-            const isRiskFree     = netAtStop >= 0;
+            // Original planned sell profits (what Plan A or B was designed to generate)
+            let plannedSell1Profit, plannedSell2Profit;
+            if (plan === 'A') {
+                const planASell1Shares = Math.round(initialShares * 0.33);
+                plannedSell1Profit = (entry + 2 * riskPerShare - entry) * planASell1Shares;
+                plannedSell2Profit = 0; // Plan A is one sell
+            } else {
+                const planBSell1Shares = Math.round(initialShares * 0.15);
+                const planBSell2Shares = Math.round(initialShares * 0.18);
+                plannedSell1Profit = riskPerShare * planBSell1Shares;           // 1R price
+                plannedSell2Profit = (3 * riskPerShare) * planBSell2Shares;    // 3R price
+            }
+
+            // Actual sell 1 profit
+            const actualSell1Profit = (sell1Price - entry) * sell1Shares;
+
+            // Extra profit from better sell 1 vs planned
+            const extraProfit = actualSell1Profit - plannedSell1Profit;
+
+            // Sell 2 profit needed = original planned sell 2 profit minus the extra we already banked
+            const sell2ProfitNeeded = Math.max(0, plannedSell2Profit - extraProfit);
+
+            // Shares needed at the custom price
+            const profitPerShare = sell2Price - entry;
+            const sharesNeeded   = Math.ceil(sell2ProfitNeeded / profitPerShare);
+            const remainingShares = initialShares - sell1Shares;
+            const sharesSafe     = Math.min(sharesNeeded, remainingShares);
+            const freeRunners    = remainingShares - sharesSafe;
 
             resultEl.style.display = 'block';
-            const netColor = isRiskFree ? '#15803d' : '#dc2626';
+
+            if (sell2ProfitNeeded <= 0) {
+                document.getElementById('customOptionCText').innerHTML =
+                    `✅ Sell 1 already covered the plan — <strong>0 shares</strong> needed at Sell 2.<br>
+                    All ${remainingShares} remaining shares are free runners.`;
+                return;
+            }
+
             document.getElementById('customOptionCText').innerHTML =
-                `Sell 1: ${sell1Shares ? sell1Shares + ' sh @ $' + sell1Price.toFixed(2) + ' = +$' + sell1Profit.toFixed(0) : 'not entered'}<br>
-                Sell 2: <strong>${sell2Shares} sh @ $${sell2Price.toFixed(2)} = +$${sell2Profit.toFixed(0)}</strong><br>
-                Remaining: ${remainingShares} sh · Stop risk: $${stopRisk.toFixed(0)}<br>
-                <strong style="color:${netColor}; font-size:1.1em;">
-                    ${isRiskFree
-                        ? `✅ Risk-free — net +$${netAtStop.toFixed(0)} even if stop hits`
-                        : `⚠ Still $${Math.abs(netAtStop).toFixed(0)} at risk if stop hits`}
-                </strong>`;
+                `At <strong>$${sell2Price.toFixed(2)}</strong>, sell:<br>
+                <span style="font-size:1.3em; font-weight:800; color:#92400e;">${sharesSafe} shares</span><br>
+                <span style="font-size:0.82em; color:#6b7280;">
+                    ${freeRunners > 0 ? `Leaves <strong>${freeRunners} free runners</strong>` : 'Sells all remaining shares'}<br>
+                    vs original plan of ${plan === 'A' ? Math.round(initialShares*0.33) : Math.round(initialShares*0.18)} shares
+                </span>`;
         }
 
         function setCustomPlan(plan) {
@@ -5125,7 +5155,20 @@
                 btnB.style.background = '#fdf4ff'; btnB.style.borderColor = '#7c3aed'; btnB.style.color = '#6d28d9';
                 btnA.style.background = 'white';   btnA.style.borderColor = '#e5e7eb'; btnA.style.color = '#6b7280';
             }
+            // Pre-fill Option C with the plan's Sell 2 target price
+            const pos = openPositions.find(p => p.id === harvestModalPosId);
+            if (pos) {
+                const entry        = pos.entryPrice;
+                const riskPerShare = entry - pos.initialStop;
+                const sell2El      = document.getElementById('customSell2Price');
+                if (sell2El && !sell2El.value) {
+                    sell2El.value = plan === 'A'
+                        ? (entry + 2 * riskPerShare).toFixed(2)   // Plan A: 2R
+                        : (entry + 3 * riskPerShare).toFixed(2);  // Plan B: 3R
+                }
+            }
             calcCustomBreakEven();
+            calcOptionC();
         }
 
         function calcCustomBreakEven() {
