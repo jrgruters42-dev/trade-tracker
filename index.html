@@ -3327,7 +3327,7 @@
                 // Position status badge next to symbol
                 // Logic: check currentStop vs entryPrice for breakeven, partials for harvest
                 const hasPartial      = pos.partialSells && pos.partialSells.length > 0;
-                const stopAtBreakeven = pos.currentStop >= pos.entryPrice;
+                const stopAtBreakeven = pos.currentStop >= metrics.adjustedPrice;
                 let statusBadge = '';
                 if (stopAtBreakeven && hasPartial) {
                     statusBadge = ' <span style="font-size:0.7em; padding:1px 5px; background:#15803d; color:white; border-radius:10px; font-weight:700; vertical-align:middle;" title="Partial taken + stop at breakeven or better">✓ BE</span>';
