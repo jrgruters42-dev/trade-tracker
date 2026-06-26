@@ -5090,47 +5090,49 @@
             const sell2Price  = parseFloat(document.getElementById('customSell2Price').value) || 0;
             const resultEl    = document.getElementById('customOptionCResult');
 
-            if (!sell2Price || !sell1Shares || !sell1Price) { resultEl.style.display = 'none'; return; }
+            if (!sell2Price) { resultEl.style.display = 'none'; return; }
             if (sell2Price <= entry) {
                 resultEl.style.display = 'block';
-                document.getElementById('customOptionCText').innerHTML = '⚠ Sell 2 price must be above entry ($' + entry.toFixed(2) + ')';
+                document.getElementById('customOptionCText').innerHTML = `⚠ Price must be above entry ($${entry.toFixed(2)})`;
                 return;
             }
 
-            // Original planned sell profits (what Plan A or B was designed to generate)
-            let plannedSell1Profit, plannedSell2Profit;
+            // What the original plan was designed to generate from its sell(s)
+            let totalPlannedProfit;
             if (plan === 'A') {
                 const planASell1Shares = Math.round(initialShares * 0.33);
-                plannedSell1Profit = (entry + 2 * riskPerShare - entry) * planASell1Shares;
-                plannedSell2Profit = 0; // Plan A is one sell
+                totalPlannedProfit = (2 * riskPerShare) * planASell1Shares;
             } else {
                 const planBSell1Shares = Math.round(initialShares * 0.15);
                 const planBSell2Shares = Math.round(initialShares * 0.18);
-                plannedSell1Profit = riskPerShare * planBSell1Shares;           // 1R price
-                plannedSell2Profit = (3 * riskPerShare) * planBSell2Shares;    // 3R price
+                totalPlannedProfit = (riskPerShare * planBSell1Shares) + (3 * riskPerShare * planBSell2Shares);
             }
 
-            // Actual sell 1 profit
-            const actualSell1Profit = (sell1Price - entry) * sell1Shares;
+            // Profit already banked from actual Sell 1 (0 if no sell yet)
+            const actualSell1Profit = (sell1Shares && sell1Price) ? (sell1Price - entry) * sell1Shares : 0;
+            const hasSell1 = sell1Shares > 0 && sell1Price > 0;
 
-            // Extra profit from better sell 1 vs planned
-            const extraProfit = actualSell1Profit - plannedSell1Profit;
-
-            // Sell 2 profit needed = original planned sell 2 profit minus the extra we already banked
-            const sell2ProfitNeeded = Math.max(0, plannedSell2Profit - extraProfit);
-
-            // Shares needed at the custom price
+            // Remaining profit needed from this sell
+            const profitNeeded   = Math.max(0, totalPlannedProfit - actualSell1Profit);
             const profitPerShare = sell2Price - entry;
-            const sharesNeeded   = Math.ceil(sell2ProfitNeeded / profitPerShare);
+            const sharesNeeded   = Math.ceil(profitNeeded / profitPerShare);
             const remainingShares = initialShares - sell1Shares;
             const sharesSafe     = Math.min(sharesNeeded, remainingShares);
             const freeRunners    = remainingShares - sharesSafe;
 
+            // Original plan comparison
+            const origShares = plan === 'A'
+                ? Math.round(initialShares * 0.33)
+                : Math.round(initialShares * 0.18);
+            const origPrice  = plan === 'A'
+                ? entry + 2 * riskPerShare
+                : entry + 3 * riskPerShare;
+
             resultEl.style.display = 'block';
 
-            if (sell2ProfitNeeded <= 0) {
+            if (profitNeeded <= 0) {
                 document.getElementById('customOptionCText').innerHTML =
-                    `✅ Sell 1 already covered the plan — <strong>0 shares</strong> needed at Sell 2.<br>
+                    `✅ ${hasSell1 ? 'Sell 1 already covered the plan' : 'Plan already covered'} — <strong>0 shares</strong> needed.<br>
                     All ${remainingShares} remaining shares are free runners.`;
                 return;
             }
@@ -5140,7 +5142,8 @@
                 <span style="font-size:1.3em; font-weight:800; color:#92400e;">${sharesSafe} shares</span><br>
                 <span style="font-size:0.82em; color:#6b7280;">
                     ${freeRunners > 0 ? `Leaves <strong>${freeRunners} free runners</strong>` : 'Sells all remaining shares'}<br>
-                    vs original plan of ${plan === 'A' ? Math.round(initialShares*0.33) : Math.round(initialShares*0.18)} shares
+                    vs original plan: ${origShares} sh @ $${origPrice.toFixed(2)}
+                    ${hasSell1 ? '' : ' <em>(no prior sell entered)</em>'}
                 </span>`;
         }
 
