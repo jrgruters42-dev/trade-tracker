@@ -3324,33 +3324,26 @@
                     qtyTooltip += `\nRemaining: ${pos.shares} shares`;
                 }
                 
-                // QTY cell color indicator:
-                // - Dark green bg: stop at/above entry (breakeven or better) — protected
-                // - Light green bg: partial taken but stop still below entry
-                // - Light blue bg: no partial, stop moved up but not to entry yet
-                // - Normal: no partial, stop below entry
-                const hasPartial     = pos.partialSells && pos.partialSells.length > 0;
+                // Position status badge next to symbol
+                // Logic: check currentStop vs entryPrice for breakeven, partials for harvest
+                const hasPartial      = pos.partialSells && pos.partialSells.length > 0;
                 const stopAtBreakeven = pos.currentStop >= pos.entryPrice;
-                let qtyCellStyle = 'cursor:help; ';
-                let qtyBadge = '';
+                let statusBadge = '';
                 if (stopAtBreakeven && hasPartial) {
-                    qtyCellStyle += 'background:#15803d; color:white; font-weight:700; border-radius:4px;';
-                    qtyBadge = ' ✓';
+                    statusBadge = ' <span style="font-size:0.7em; padding:1px 5px; background:#15803d; color:white; border-radius:10px; font-weight:700; vertical-align:middle;" title="Partial taken + stop at breakeven or better">✓ BE</span>';
                 } else if (stopAtBreakeven) {
-                    qtyCellStyle += 'background:#dcfce7; color:#15803d; font-weight:700; border-radius:4px;';
-                    qtyBadge = ' ✓';
+                    statusBadge = ' <span style="font-size:0.7em; padding:1px 5px; background:#dcfce7; color:#15803d; border-radius:10px; font-weight:700; border:1px solid #86efac; vertical-align:middle;" title="Stop at breakeven or better">✓ BE</span>';
                 } else if (hasPartial) {
-                    qtyCellStyle += 'background:#bbf7d0; color:#166534; font-weight:600; border-radius:4px;';
-                    qtyBadge = ' ½';
+                    statusBadge = ' <span style="font-size:0.7em; padding:1px 5px; background:#bbf7d0; color:#166534; border-radius:10px; font-weight:700; border:1px solid #6ee7b7; vertical-align:middle;" title="Partial sell taken">½</span>';
                 }
 
                 html += `
                     <tr style="${rowBg}">
-                        <td style="${symbolStyle}"><strong><span onclick="openHarvestModal(${pos.id})" style="cursor:pointer; border-bottom:2px dotted currentColor; padding-bottom:1px;" title="Click to open Harvest Calculator">${pos.symbol}</span></strong></td>
+                        <td style="${symbolStyle}"><strong><span onclick="openHarvestModal(${pos.id})" style="cursor:pointer; border-bottom:2px dotted currentColor; padding-bottom:1px;" title="Click to open Harvest Calculator">${pos.symbol}</span>${statusBadge}</strong></td>
                         <td>$${pos.currentPrice.toFixed(2)}</td>
                         <td>$${pos.entryPrice.toFixed(2)}</td>
                         <td title="${adjTooltip}" style="cursor:help; border-bottom:1px dotted #9ca3af;">$${metrics.adjustedPrice.toFixed(2)}</td>
-                        <td title="${qtyTooltip}" style="${qtyCellStyle}">${pos.shares}${qtyBadge}</td>
+                        <td title="${qtyTooltip}" style="cursor:help;">${pos.shares}</td>
                         <td>$${pos.initialStop.toFixed(2)}</td>
                         <td style="background: #dbeafe;">$${pos.currentStop.toFixed(2)}</td>
                         <td>${pos.initialWeight.toFixed(3)}%</td>
@@ -5002,7 +4995,8 @@
                         ${reached ? '<div style="font-size:0.7em; color:#15803d; margin-top:3px;">✓ REACHED</div>' : ''}
                     </div>`;
             }).join('');
-            document.getElementById('harvestLadder').innerHTML = ladder;
+            const ladderEl = document.getElementById('harvestLadder');
+            if (ladderEl) ladderEl.innerHTML = ladder;
 
             // ── Plan selection logic (async — fetch ADR from Firebase cache) ──
             const bannerEl2 = document.getElementById('harvestPlanBanner');
