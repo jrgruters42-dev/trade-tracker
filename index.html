@@ -5072,7 +5072,8 @@
             }
 
             // ── Notes ──────────────────────────────────────────────────────
-            document.getElementById('harvestNotes').value = pos.notes || '';
+            const harvestNotesEl = document.getElementById('harvestNotes');
+            if (harvestNotesEl) harvestNotesEl.value = pos.notes || '';
             document.getElementById('harvestCalcModal').style.display = 'block';
         }
 
