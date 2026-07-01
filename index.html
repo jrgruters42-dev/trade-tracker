@@ -2398,26 +2398,47 @@
                 
                 db = firebase.database();
                 dbRef = db.ref('tradeData');
-                
-                console.log('Setting up Firebase listener...');
-                
-                // Load data ONCE on page load (not continuously)
-                // This prevents save/load loops that cause data loss
-                dbRef.once('value', (snapshot) => {
-                    console.log('Firebase data received (one-time load)');
+
+                console.log('Setting up Firebase real-time listener...');
+
+                // Track our own last save time to avoid reloading our own changes
+                let ourLastSaveTime = null;
+
+                // Use .on() for real-time sync across devices
+                // Only reloads when lastModified is newer than what we last saved
+                dbRef.on('value', (snapshot) => {
                     const data = snapshot.val();
-                    if (data) {
-                        console.log('Loading data from Firebase');
-                        loadDataFromFirebase(data);
-                    } else {
-                        console.log('No data in Firebase yet - this is normal for first time');
+                    if (!data) {
+                        console.log('No data in Firebase yet');
+                        updateSyncStatus('Connected ✓', true);
+                        return;
                     }
-                    updateSyncStatus('Connected - Auto-syncing ✓', true);
+
+                    const incomingTime = data.lastModified || '';
+
+                    // Skip if this is our own save (timestamps match)
+                    if (ourLastSaveTime && incomingTime === ourLastSaveTime) {
+                        console.log('📤 Skipping reload — this is our own save');
+                        return;
+                    }
+
+                    // If we haven't loaded yet OR another device saved more recently — load it
+                    console.log('📥 Loading data from Firebase (real-time update)');
+                    loadDataFromFirebase(data);
+                    ourLastSaveTime = incomingTime;
+
+                    const now = new Date();
+                    const timeStr = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+                    document.getElementById('lastSavedTime').textContent = `Synced: ${timeStr}`;
+                    updateSyncStatus('Synced ✓', true);
                 }, (error) => {
                     console.error('Firebase read error:', error);
                     updateSyncStatus('Read error: ' + error.code, false);
                     alert('Firebase Error: ' + error.message + '\n\nCommon fixes:\n1. Check your Database URL is correct\n2. Make sure your database is in "test mode"\n3. Try re-creating your Firebase config');
                 });
+
+                // Expose ourLastSaveTime setter so saveToFirebase can update it
+                window._setOurLastSaveTime = (t) => { ourLastSaveTime = t; };
 
                 isFirebaseInitialized = true;
                 closeModal('firebaseSetupModal');
@@ -2561,6 +2582,9 @@
                 rewardMilestoneClaimed: rewardMilestoneClaimed,
                 lastModified: new Date().toISOString()
             };
+
+            // Tell the listener this is our own save so it won't reload
+            if (window._setOurLastSaveTime) window._setOurLastSaveTime(data.lastModified);
 
             return dbRef.set(data).then(() => {
                 const now = new Date();
