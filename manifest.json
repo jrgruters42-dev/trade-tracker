@@ -1,26 +1,22 @@
 {
-  "name": "Trade Tracker",
-  "short_name": "Tracker",
-  "description": "Personal trade tracking and portfolio management app",
-  "id": "/trade-tracker/",
-  "start_url": "https://jrgruters42-dev.github.io/trade-tracker/",
-  "scope": "https://jrgruters42-dev.github.io/trade-tracker/index.html",
+  "name": "Trading Journal",
+  "short_name": "TradingJournal",
+  "description": "Personal trading journal — Caruso/Minervini hybrid system",
+  "start_url": "/",
   "display": "standalone",
   "background_color": "#ffffff",
-  "theme_color": "#667eea",
-  "orientation": "portrait-primary",
+  "theme_color": "#1e40af",
+  "orientation": "any",
   "icons": [
     {
-      "src": "/trade-tracker/icon-192.png",
+      "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'><rect width='192' height='192' rx='24' fill='%231e40af'/><text y='130' x='96' text-anchor='middle' font-size='110' font-family='Arial'>📈</text></svg>",
       "sizes": "192x192",
-      "type": "image/png",
-      "purpose": "any maskable"
+      "type": "image/svg+xml"
     },
     {
-      "src": "/trade-tracker/icon-512.png",
+      "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'><rect width='512' height='512' rx='64' fill='%231e40af'/><text y='360' x='256' text-anchor='middle' font-size='300' font-family='Arial'>📈</text></svg>",
       "sizes": "512x512",
-      "type": "image/png",
-      "purpose": "any maskable"
+      "type": "image/svg+xml"
     }
   ]
 }
