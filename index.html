@@ -29,6 +29,7 @@
     <!-- Firebase SDK -->
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
     
     <style>
         * {
@@ -538,46 +539,7 @@
     </style>
 </head>
 <body>
-    <!-- Password Protection -->
-    <div id="passwordScreen" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); display: flex; align-items: center; justify-content: center; z-index: 99999;">
-        <div style="background: white; padding: 40px; border-radius: 12px; box-shadow: 0 8px 32px rgba(0,0,0,0.3); max-width: 400px; width: 90%;">
-            <h2 style="text-align: center; color: #667eea; margin-bottom: 20px;">🔒 Trade Tracker</h2>
-            <p style="text-align: center; color: #666; margin-bottom: 25px;">Enter your password to access the tracker</p>
-            <input type="password" id="passwordInput" placeholder="Enter password" style="width: 100%; padding: 12px; border: 2px solid #e0e0e0; border-radius: 8px; font-size: 16px; margin-bottom: 15px; box-sizing: border-box;" onkeypress="if(event.key === 'Enter') checkPassword()">
-            <button onclick="checkPassword()" style="width: 100%; padding: 12px; background: #667eea; color: white; border: none; border-radius: 8px; font-size: 16px; font-weight: 600; cursor: pointer;">Unlock</button>
-            <p id="passwordError" style="color: #ef4444; text-align: center; margin-top: 15px; display: none;">❌ Incorrect password</p>
-        </div>
-    </div>
-
-    <script>
-        // Password Protection
-        const TRACKER_PASSWORD = 'trading2026'; // Change this to your preferred password
-        
-        function checkPassword() {
-            const input = document.getElementById('passwordInput').value;
-            if (input === TRACKER_PASSWORD) {
-                document.getElementById('passwordScreen').style.display = 'none';
-                // Store authentication in session (clears when browser closes)
-                sessionStorage.setItem('trackerAuth', 'true');
-            } else {
-                document.getElementById('passwordError').style.display = 'block';
-                document.getElementById('passwordInput').value = '';
-                document.getElementById('passwordInput').focus();
-            }
-        }
-        
-        // Check if already authenticated in this session
-        window.addEventListener('load', function() {
-            if (sessionStorage.getItem('trackerAuth') === 'true') {
-                document.getElementById('passwordScreen').style.display = 'none';
-            }
-        });
-        
-        // Focus password input on load
-        document.getElementById('passwordInput')?.focus();
-    </script>
-
-    <div class="container">
+    <div class="container" id="mainApp" style="display:none;">
         <h1 style="margin-bottom: 10px; font-size: 1.8em;">📊 Trade Tracker</h1>
 
         <!-- Sync Status -->
@@ -593,7 +555,7 @@
                 <button onclick="quickSnapshotFromMain()" class="btn-success" style="padding:5px 10px; font-size:11px; font-weight:700;" title="Log today's snapshot without popup">⚡ Log Today</button>
                 <button onclick="forceSaveToFirebase()" class="btn-secondary btn-small" title="Force save all data to Firebase">💾 Save</button>
                 <button onclick="forceLoadFromFirebase()" class="btn-secondary btn-small" title="Force reload all data from Firebase">🔄 Reload</button>
-                <button onclick="openFirebaseSetup()" class="btn-secondary btn-small">⚙️</button>
+                <button onclick="signOut()" class="btn-secondary btn-small" title="Sign out" style="color:#dc2626;">Sign Out</button>
             </div>
         </div>
 
@@ -1905,74 +1867,23 @@
     <!-- Tax Tracker Tab -->
 
     <!-- Firebase Setup Modal -->
-    <div id="firebaseSetupModal" class="modal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h2>🔥 Firebase Cloud Sync Setup</h2>
-                <span class="close" onclick="closeModal('firebaseSetupModal')">&times;</span>
-            </div>
-            
-            <div class="firebase-setup">
-                <h3>One-Time Setup (5 minutes)</h3>
-                <p style="margin-bottom: 15px;">Follow these steps to enable automatic cloud sync:</p>
-                
-                <ol style="line-height: 1.8;">
-                    <li>Go to <a href="https://firebase.google.com" target="_blank" style="color: #667eea; font-weight: bold;">firebase.google.com</a></li>
-                    <li>Click "Get Started" → "Add Project"</li>
-                    <li>Name it "Trade Tracker" → Continue</li>
-                    <li>Disable Google Analytics → Create Project</li>
-                    <li>Click "Realtime Database" → Create Database → Start in <strong>test mode</strong></li>
-                    <li>Click ⚙️ Settings → Project Settings</li>
-                    <li>Scroll down → Click `</>` (web icon)</li>
-                    <li>Register app: "Trade Tracker"</li>
-                    <li>Copy the config values and paste below:</li>
-                </ol>
-            </div>
-
-            <form id="firebaseConfigForm">
-                <div class="form-group">
-                    <label>API Key</label>
-                    <input type="text" id="configApiKey" placeholder="AIza..." required>
-                </div>
-                <div class="form-group">
-                    <label>Auth Domain</label>
-                    <input type="text" id="configAuthDomain" placeholder="your-project.firebaseapp.com" required>
-                </div>
-                <div class="form-group">
-                    <label>Database URL</label>
-                    <input type="text" id="configDatabaseURL" placeholder="https://your-project.firebaseio.com" required>
-                </div>
-                <div class="form-group">
-                    <label>Project ID</label>
-                    <input type="text" id="configProjectId" placeholder="your-project-id" required>
-                </div>
-                
-                <p style="margin: 15px 0; font-size: 13px; color: #666;">
-                    ℹ️ This config is saved in your browser. You only need to do this once per computer.
-                </p>
-                
-                <div style="display: flex; gap: 10px;">
-                    <button type="submit" style="flex: 1;">Connect to Firebase</button>
-                    <button type="button" onclick="clearFirebaseConfig()" class="btn-danger" style="flex: 0;">Clear Config & Start Over</button>
-                </div>
-            </form>
-            
-            <div style="margin-top: 20px; padding: 15px; background: #fee; border-radius: 8px; border: 1px solid #fcc;">
-                <h4 style="color: #c00; margin-bottom: 10px;">Troubleshooting "Connecting to cloud..."</h4>
-                <ol style="font-size: 12px; line-height: 1.6; margin-left: 20px;">
-                    <li>Make sure Database URL starts with <code>https://</code> and ends with <code>.firebaseio.com</code></li>
-                    <li>In Firebase Console, go to <strong>Realtime Database</strong> → Click <strong>Rules</strong> tab</li>
-                    <li>Make sure rules are set to test mode:
-                        <pre style="background: #f5f5f5; padding: 8px; margin: 8px 0; font-size: 11px;">{
-  "rules": {
-    ".read": true,
-    ".write": true
-  }
-}</pre>
-                    </li>
-                    <li>Click <strong>Publish</strong> in Firebase Console after changing rules</li>
-                </ol>
-            </div>
+    <!-- Google Sign-In Screen (shown before auth) -->
+    <div id="authScreen" style="display:none; position:fixed; inset:0; background:linear-gradient(135deg, #1e40af 0%, #7c3aed 100%); z-index:9999; display:flex; align-items:center; justify-content:center;">
+        <div style="background:white; border-radius:16px; padding:48px 40px; max-width:400px; width:90%; text-align:center; box-shadow:0 25px 50px rgba(0,0,0,0.3);">
+            <div style="font-size:3em; margin-bottom:12px;">📈</div>
+            <h1 style="font-size:1.4em; font-weight:800; color:#1e40af; margin-bottom:6px;">Trading Journal</h1>
+            <p style="color:#6b7280; font-size:0.9em; margin-bottom:32px;">Sign in to access your journal across all devices</p>
+            <button onclick="signInWithGoogle()" style="display:flex; align-items:center; justify-content:center; gap:12px; width:100%; padding:14px 20px; background:white; border:2px solid #e5e7eb; border-radius:10px; font-size:1em; font-weight:600; color:#374151; cursor:pointer; transition:all 0.2s;" onmouseover="this.style.background='#f9fafb'" onmouseout="this.style.background='white'">
+                <svg width="20" height="20" viewBox="0 0 24 24">
+                    <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+                    <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+                    <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
+                    <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+                </svg>
+                Sign in with Google
+            </button>
+            <div id="authError" style="margin-top:16px; color:#dc2626; font-size:0.85em; display:none;"></div>
+            <p style="margin-top:24px; font-size:0.75em; color:#9ca3af;">Your data is private and only accessible with your Google account</p>
         </div>
     </div>
 
@@ -2386,107 +2297,106 @@
         let positionIdCounter = 1;
 
         // Initialize Firebase
-        function initializeFirebase(config) {
+        // ── Firebase Config (hardcoded) + Google Auth ─────────────────────
+        const FIREBASE_CONFIG = {
+            apiKey: "AIzaSyDtlAlmRmdU4KJWMKssiz6Wl5pI5kM6pKw",
+            authDomain: "trade-tracker-36e7a.firebaseapp.com",
+            databaseURL: "https://trade-tracker-36e7a-default-rtdb.firebaseio.com",
+            projectId: "trade-tracker-36e7a",
+            storageBucket: "trade-tracker-36e7a.appspot.com",
+            messagingSenderId: "9816278303",
+            appId: "1:9816278303:web:5b364b982b76239a349c2a"
+        };
+
+        function signInWithGoogle() {
+            const provider = new firebase.auth.GoogleAuthProvider();
+            firebase.auth().signInWithPopup(provider).catch((error) => {
+                console.error('Sign-in error:', error);
+                const errEl = document.getElementById('authError');
+                if (errEl) { errEl.textContent = 'Sign-in failed: ' + error.message; errEl.style.display = 'block'; }
+            });
+        }
+
+        function signOut() {
+            firebase.auth().signOut().then(() => {
+                document.getElementById('authScreen').style.display = 'flex';
+                document.getElementById('mainApp').style.display = 'none';
+            });
+        }
+
+        function initializeFirebase() {
             try {
-                console.log('Attempting to initialize Firebase...');
-                console.log('Config:', { ...config, apiKey: config.apiKey ? 'PRESENT' : 'MISSING' });
-                
                 if (!firebase.apps.length) {
-                    firebase.initializeApp(config);
-                    console.log('Firebase app initialized');
+                    firebase.initializeApp(FIREBASE_CONFIG);
                 }
-                
-                db = firebase.database();
-                dbRef = db.ref('tradeData');
 
-                console.log('Setting up Firebase connection...');
-
-                let lastLoadedTimestamp = null;
-                let isSaving = false;
-
-                // Initial load
-                dbRef.once('value', (snapshot) => {
-                    const data = snapshot.val();
-                    if (data) {
-                        loadDataFromFirebase(data);
-                        lastLoadedTimestamp = data.lastModified || null;
+                // Listen for auth state changes
+                firebase.auth().onAuthStateChanged((user) => {
+                    if (user) {
+                        console.log('✅ Signed in as:', user.email);
+                        document.getElementById('authScreen').style.display = 'none';
+                        document.getElementById('mainApp').style.display = 'block';
+                        connectToDatabase(user);
+                    } else {
+                        console.log('Not signed in — showing auth screen');
+                        document.getElementById('authScreen').style.display = 'flex';
+                        document.getElementById('mainApp').style.display = 'none';
                     }
-                    updateSyncStatus('Synced ✓', true);
-                    const now = new Date();
-                    document.getElementById('lastSavedTime').textContent = `Loaded: ${now.toLocaleTimeString('en-US', {hour:'2-digit',minute:'2-digit',second:'2-digit'})}`;
-                }, (error) => {
-                    console.error('Firebase read error:', error);
-                    updateSyncStatus('Read error: ' + error.code, false);
-                    alert('Firebase Error: ' + error.message);
                 });
 
-                // Poll every 15 seconds for changes from other devices
-                setInterval(() => {
-                    if (isSaving) return;
-                    dbRef.once('value').then((snapshot) => {
-                        const data = snapshot.val();
-                        if (!data) return;
-                        const incomingTimestamp = data.lastModified || null;
-                        if (incomingTimestamp && incomingTimestamp !== lastLoadedTimestamp) {
-                            console.log('📥 Newer data detected — reloading from Firebase');
-                            loadDataFromFirebase(data);
-                            lastLoadedTimestamp = incomingTimestamp;
-                            updateAllDisplays();
-                            updateSyncStatus('Synced ✓', true);
-                            const now = new Date();
-                            document.getElementById('lastSavedTime').textContent = `Updated: ${now.toLocaleTimeString('en-US', {hour:'2-digit',minute:'2-digit',second:'2-digit'})}`;
-                        }
-                    }).catch(err => console.error('Poll error:', err));
-                }, 15000);
-
-                window._setSavingFlag      = (val) => { isSaving = val; };
-                window._setLastLoadedTimestamp = (t) => { lastLoadedTimestamp = t; };
-
                 isFirebaseInitialized = true;
-                closeModal('firebaseSetupModal');
                 return true;
             } catch (error) {
-                console.error('Firebase initialization error:', error);
-                updateSyncStatus('Init failed: ' + error.message, false);
-                alert('Failed to connect to Firebase:\n\n' + error.message + '\n\nPlease check your configuration and try again.');
+                console.error('Firebase init error:', error);
                 return false;
             }
         }
 
-        // Firebase config form
-        document.getElementById('firebaseConfigForm').addEventListener('submit', function(e) {
-            e.preventDefault();
-            
-            const config = {
-                apiKey: document.getElementById('configApiKey').value.trim(),
-                authDomain: document.getElementById('configAuthDomain').value.trim(),
-                databaseURL: document.getElementById('configDatabaseURL').value.trim(),
-                projectId: document.getElementById('configProjectId').value.trim(),
-            };
+        function connectToDatabase(user) {
+            db    = firebase.database();
+            dbRef = db.ref('tradeData');
 
-            // Save config to localStorage
-            localStorage.setItem('firebaseConfig', JSON.stringify(config));
-            firebaseConfig = config;
+            let lastLoadedTimestamp = null;
+            let isSaving = false;
 
-            if (initializeFirebase(config)) {
-                alert('✅ Connected to Firebase! Your data will now sync automatically across all computers.');
-            }
-        });
-
-        // Load Firebase config from localStorage
-        function loadFirebaseConfig() {
-            const saved = localStorage.getItem('firebaseConfig');
-            if (saved) {
-                try {
-                    firebaseConfig = JSON.parse(saved);
-                    if (initializeFirebase(firebaseConfig)) {
-                        return true;
-                    }
-                } catch (error) {
-                    console.error('Error loading saved config:', error);
+            // Real-time listener — fires whenever data changes in Firebase
+            dbRef.on('value', (snapshot) => {
+                const data = snapshot.val();
+                if (!data) {
+                    updateSyncStatus('Connected ✓', true);
+                    return;
                 }
-            }
-            return false;
+                const incomingTimestamp = data.lastModified || '';
+                // Skip if this is our own save
+                if (isSaving && incomingTimestamp === lastLoadedTimestamp) {
+                    console.log('📤 Skipping — our own save');
+                    return;
+                }
+                if (incomingTimestamp === lastLoadedTimestamp) return;
+                console.log('📥 Loading data from Firebase');
+                loadDataFromFirebase(data);
+                lastLoadedTimestamp = incomingTimestamp;
+                updateAllDisplays();
+                updateSyncStatus('Synced ✓', true);
+                const now = new Date();
+                document.getElementById('lastSavedTime').textContent =
+                    `Synced: ${now.toLocaleTimeString('en-US', {hour:'2-digit',minute:'2-digit',second:'2-digit'})}`;
+            }, (error) => {
+                console.error('Firebase read error:', error);
+                updateSyncStatus('Read error', false);
+            });
+
+            window._setSavingFlag         = (val) => { isSaving = val; };
+            window._setLastLoadedTimestamp = (t)   => { lastLoadedTimestamp = t; };
+        }
+
+        function loadFirebaseConfig() {
+            // Config is now hardcoded — just initialize
+            return initializeFirebase();
+        }
+
+        function clearFirebaseConfig() {
+            firebase.auth().signOut();
         }
 
         // Test Firebase connection
@@ -9119,35 +9029,23 @@
 
         // Initialize
         window.onload = function() {
-            const hasConfig = loadFirebaseConfig();
-            if (!hasConfig) {
-                updateSyncStatus('Not configured - Click ⚙️ Firebase Config', false);
-                // Show modal after a short delay so page loads first
-                setTimeout(() => {
-                    document.getElementById('firebaseSetupModal').style.display = 'block';
-                }, 500);
-            } else {
-                updateSyncStatus('Connected to Firebase ✓', true);
-                
-                // Auto-save disabled - data saves when you make changes
-                // This prevents save/load loops that cause data loss
-                
-                // Update SPY YTD on page load (with delay to ensure Firebase data is loaded)
-                setTimeout(() => {
-                    if (document.getElementById('apiKey').value) {
-                        updateSPYPrice();
-                    }
-                }, 2000);
-                
-                // Initialize What If Calculator with default values
-                setTimeout(() => {
-                    calculateWhatIf();
-                    updateWinDistributionBars();
-                    updateLossDistributionBars();
-                    calcTargetExpectancy();
-                    calcCompoundInterest();
-                }, 500);
-            }
+            initializeFirebase();
+
+            // Update SPY YTD on page load
+            setTimeout(() => {
+                if (document.getElementById('apiKey').value) {
+                    updateSPYPrice();
+                }
+            }, 2000);
+
+            // Initialize What If Calculator with default values
+            setTimeout(() => {
+                calculateWhatIf();
+                updateWinDistributionBars();
+                updateLossDistributionBars();
+                calcTargetExpectancy();
+                calcCompoundInterest();
+            }, 500);
         };
     </script>
     
