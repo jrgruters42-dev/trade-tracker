@@ -2399,46 +2399,48 @@
                 db = firebase.database();
                 dbRef = db.ref('tradeData');
 
-                console.log('Setting up Firebase real-time listener...');
+                console.log('Setting up Firebase connection...');
 
-                // Track our own last save time to avoid reloading our own changes
-                let ourLastSaveTime = null;
+                let lastLoadedTimestamp = null;
+                let isSaving = false;
 
-                // Use .on() for real-time sync across devices
-                // Only reloads when lastModified is newer than what we last saved
-                dbRef.on('value', (snapshot) => {
+                // Initial load
+                dbRef.once('value', (snapshot) => {
                     const data = snapshot.val();
-                    if (!data) {
-                        console.log('No data in Firebase yet');
-                        updateSyncStatus('Connected ✓', true);
-                        return;
+                    if (data) {
+                        loadDataFromFirebase(data);
+                        lastLoadedTimestamp = data.lastModified || null;
                     }
-
-                    const incomingTime = data.lastModified || '';
-
-                    // Skip if this is our own save (timestamps match)
-                    if (ourLastSaveTime && incomingTime === ourLastSaveTime) {
-                        console.log('📤 Skipping reload — this is our own save');
-                        return;
-                    }
-
-                    // If we haven't loaded yet OR another device saved more recently — load it
-                    console.log('📥 Loading data from Firebase (real-time update)');
-                    loadDataFromFirebase(data);
-                    ourLastSaveTime = incomingTime;
-
-                    const now = new Date();
-                    const timeStr = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-                    document.getElementById('lastSavedTime').textContent = `Synced: ${timeStr}`;
                     updateSyncStatus('Synced ✓', true);
+                    const now = new Date();
+                    document.getElementById('lastSavedTime').textContent = `Loaded: ${now.toLocaleTimeString('en-US', {hour:'2-digit',minute:'2-digit',second:'2-digit'})}`;
                 }, (error) => {
                     console.error('Firebase read error:', error);
                     updateSyncStatus('Read error: ' + error.code, false);
-                    alert('Firebase Error: ' + error.message + '\n\nCommon fixes:\n1. Check your Database URL is correct\n2. Make sure your database is in "test mode"\n3. Try re-creating your Firebase config');
+                    alert('Firebase Error: ' + error.message);
                 });
 
-                // Expose ourLastSaveTime setter so saveToFirebase can update it
-                window._setOurLastSaveTime = (t) => { ourLastSaveTime = t; };
+                // Poll every 15 seconds for changes from other devices
+                setInterval(() => {
+                    if (isSaving) return;
+                    dbRef.once('value').then((snapshot) => {
+                        const data = snapshot.val();
+                        if (!data) return;
+                        const incomingTimestamp = data.lastModified || null;
+                        if (incomingTimestamp && incomingTimestamp !== lastLoadedTimestamp) {
+                            console.log('📥 Newer data detected — reloading from Firebase');
+                            loadDataFromFirebase(data);
+                            lastLoadedTimestamp = incomingTimestamp;
+                            updateAllDisplays();
+                            updateSyncStatus('Synced ✓', true);
+                            const now = new Date();
+                            document.getElementById('lastSavedTime').textContent = `Updated: ${now.toLocaleTimeString('en-US', {hour:'2-digit',minute:'2-digit',second:'2-digit'})}`;
+                        }
+                    }).catch(err => console.error('Poll error:', err));
+                }, 15000);
+
+                window._setSavingFlag      = (val) => { isSaving = val; };
+                window._setLastLoadedTimestamp = (t) => { lastLoadedTimestamp = t; };
 
                 isFirebaseInitialized = true;
                 closeModal('firebaseSetupModal');
@@ -2583,10 +2585,12 @@
                 lastModified: new Date().toISOString()
             };
 
-            // Tell the listener this is our own save so it won't reload
-            if (window._setOurLastSaveTime) window._setOurLastSaveTime(data.lastModified);
+            // Tell the poll we're saving so it doesn't reload mid-save
+            if (window._setSavingFlag) window._setSavingFlag(true);
+            if (window._setLastLoadedTimestamp) window._setLastLoadedTimestamp(data.lastModified);
 
             return dbRef.set(data).then(() => {
+                if (window._setSavingFlag) window._setSavingFlag(false);
                 const now = new Date();
                 const timeStr = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
                 updateSyncStatus('Synced ✓', true);
