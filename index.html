@@ -1,12 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <link rel="manifest" href="/manifest.json">
-    <meta name="theme-color" content="#1e40af">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="default">
-    <meta name="apple-mobile-web-app-title" content="Trading Journal">
-    <meta name="mobile-web-app-capable" content="yes">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Trade Tracker - Cloud Sync</title>
@@ -539,7 +533,8 @@
     </style>
 </head>
 <body>
-    <div class="container" id="mainApp" style="display:none;">
+    <div id="mainApp" style="display:none;">
+    <div class="container">
         <h1 style="margin-bottom: 10px; font-size: 1.8em;">📊 Trade Tracker</h1>
 
         <!-- Sync Status -->
@@ -555,7 +550,7 @@
                 <button onclick="quickSnapshotFromMain()" class="btn-success" style="padding:5px 10px; font-size:11px; font-weight:700;" title="Log today's snapshot without popup">⚡ Log Today</button>
                 <button onclick="forceSaveToFirebase()" class="btn-secondary btn-small" title="Force save all data to Firebase">💾 Save</button>
                 <button onclick="forceLoadFromFirebase()" class="btn-secondary btn-small" title="Force reload all data from Firebase">🔄 Reload</button>
-                <button onclick="signOut()" class="btn-secondary btn-small" title="Sign out" style="color:#dc2626;">Sign Out</button>
+                <button onclick="signOut()" class="btn-secondary btn-small" style="color:#dc2626;" title="Sign out">Sign Out</button>
             </div>
         </div>
 
@@ -849,7 +844,6 @@
                 </div>
                 <div style="display:flex; align-items:center; gap:8px;">
                     <button onclick="event.stopPropagation(); acknowledgeRewardMilestone()" id="rewardAckBtn" style="display:none; padding:3px 10px; font-size:0.72em; background:#10b981; color:white; border:none; border-radius:6px; cursor:pointer; font-weight:700;">✓ Mark Claimed</button>
-                    <button onclick="event.stopPropagation(); forceClaimRewardMilestone()" id="rewardForceBtn" style="display:none; padding:3px 10px; font-size:0.72em; background:#6b7280; color:white; border:none; border-radius:6px; cursor:pointer; font-weight:600;">Override &amp; Claim</button>
                     <span id="rewardReadinessToggle" style="font-size:0.75em; color:#9ca3af; font-weight:600;">▶ tap to expand</span>
                 </div>
             </div>
@@ -1765,13 +1759,10 @@
                             <tr>
                                 <th>Date</th>
                                 <th>Account Equity</th>
-                                <th title="10-Day Moving Average of account equity. Highlights amber when account is BELOW the average — warning signal.">10-Day Avg</th>
                                 <th>Daily % Change</th>
-                                <th title="YTD P&L%: account growth from starting value adjusted for cash flows">YTD P&L%</th>
-                                <th title="DD from Peak: how far your account has dropped from its highest point up to that date">DD from Peak</th>
-                                <th title="Closed DD from Peak: drawdown in cumulative closed trade P&L only (not affected by open positions)">Closed DD from Peak</th>
+                                <th>10-Day Avg</th>
+                                <th>Drawdown %</th>
                                 <th>Exposure %</th>
-                                <th title="Total Risk: sum of Port Risk% across all open positions at time of snapshot. Green <2%, amber 2-3%, red 3%+">Total Risk %</th>
                                 <th>FOMO</th>
                                 <th>Notes</th>
                                 <th>Actions</th>
@@ -1867,26 +1858,20 @@
     <!-- Tax Tracker Tab -->
 
     <!-- Firebase Setup Modal -->
-    <!-- Google Sign-In Screen (shown before auth) -->
-    <div id="authScreen" style="display:none; position:fixed; inset:0; background:linear-gradient(135deg, #1e40af 0%, #7c3aed 100%); z-index:9999; display:flex; align-items:center; justify-content:center;">
+    <!-- Google Sign-In Screen -->
+    <div id="authScreen" style="display:none; position:fixed; inset:0; background:linear-gradient(135deg,#1e40af 0%,#7c3aed 100%); z-index:9999; align-items:center; justify-content:center;">
         <div style="background:white; border-radius:16px; padding:48px 40px; max-width:400px; width:90%; text-align:center; box-shadow:0 25px 50px rgba(0,0,0,0.3);">
             <div style="font-size:3em; margin-bottom:12px;">📈</div>
             <h1 style="font-size:1.4em; font-weight:800; color:#1e40af; margin-bottom:6px;">Trading Journal</h1>
             <p style="color:#6b7280; font-size:0.9em; margin-bottom:32px;">Sign in to access your journal across all devices</p>
-            <button onclick="signInWithGoogle()" style="display:flex; align-items:center; justify-content:center; gap:12px; width:100%; padding:14px 20px; background:white; border:2px solid #e5e7eb; border-radius:10px; font-size:1em; font-weight:600; color:#374151; cursor:pointer; transition:all 0.2s;" onmouseover="this.style.background='#f9fafb'" onmouseout="this.style.background='white'">
-                <svg width="20" height="20" viewBox="0 0 24 24">
-                    <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
-                    <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
-                    <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
-                    <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
-                </svg>
+            <button onclick="signInWithGoogle()" style="display:flex; align-items:center; justify-content:center; gap:12px; width:100%; padding:14px 20px; background:white; border:2px solid #e5e7eb; border-radius:10px; font-size:1em; font-weight:600; color:#374151; cursor:pointer;" onmouseover="this.style.background='#f9fafb'" onmouseout="this.style.background='white'">
+                <svg width="20" height="20" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
                 Sign in with Google
             </button>
             <div id="authError" style="margin-top:16px; color:#dc2626; font-size:0.85em; display:none;"></div>
             <p style="margin-top:24px; font-size:0.75em; color:#9ca3af;">Your data is private and only accessible with your Google account</p>
         </div>
     </div>
-
     <!-- Other Modals (partial sell, update stop, close position, edit) -->
     <div id="partialSellModal" class="modal">
         <div class="modal-content">
@@ -2068,6 +2053,10 @@
             <!-- 4-cell summary row -->
             <div id="harvestSummaryRow" style="display:grid; grid-template-columns:repeat(4,1fr); gap:10px; margin-bottom:16px;"></div>
 
+            <!-- R price ladder -->
+            <div style="font-size:0.75em; font-weight:700; color:#9ca3af; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:8px;">Price Ladder</div>
+            <div id="harvestLadder" style="display:grid; grid-template-columns:repeat(4,1fr); gap:8px; margin-bottom:16px;"></div>
+
             <!-- Plan recommendation banner -->
             <div id="harvestPlanBanner" style="margin-bottom:14px; padding:10px 14px; border-radius:8px; font-size:0.85em; font-weight:600;"></div>
 
@@ -2077,72 +2066,12 @@
                 <div id="harvestPlanB" style="padding:14px; border-radius:8px; border:2px solid #7c3aed; background:#fdf4ff;"></div>
             </div>
 
-            <!-- Custom Scenario Calculator -->
-            <div style="padding:14px; background:#fafafa; border:2px solid #e5e7eb; border-radius:10px;">
-                <div style="font-size:0.8em; font-weight:700; color:#374151; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:8px;">🎯 Custom Sell Calculator</div>
-                <div style="font-size:0.8em; color:#6b7280; margin-bottom:12px;">Enter your actual Sell 1 (e.g. from a gap-up) to see adjusted Sell 2 targets, or build a fully custom scenario.</div>
-
-                <!-- Plan selector -->
-                <div style="display:flex; gap:8px; margin-bottom:12px;">
-                    <button id="customPlanABtn" onclick="setCustomPlan('A')"
-                        style="flex:1; padding:7px; font-size:0.82em; font-weight:700; border:2px solid #3b82f6; border-radius:6px; background:#eff6ff; color:#1e40af; cursor:pointer;">Plan A</button>
-                    <button id="customPlanBBtn" onclick="setCustomPlan('B')"
-                        style="flex:1; padding:7px; font-size:0.82em; font-weight:700; border:2px solid #e5e7eb; border-radius:6px; background:white; color:#6b7280; cursor:pointer;">Plan B</button>
-                </div>
-                <input type="hidden" id="customActivePlan" value="A">
-
-                <!-- Sell 1 inputs -->
-                <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:10px;">
-                    <div>
-                        <label style="font-size:0.75em; color:#6b7280; display:block; margin-bottom:3px;">Sell 1 — Shares</label>
-                        <input type="number" id="customSell1Shares" min="1" step="1"
-                               oninput="calcCustomBreakEven()"
-                               style="width:100%; padding:7px; border:2px solid #e5e7eb; border-radius:6px; font-size:0.9em;">
-                    </div>
-                    <div>
-                        <label style="font-size:0.75em; color:#6b7280; display:block; margin-bottom:3px;">Sell 1 — Actual Price ($)</label>
-                        <input type="number" id="customSell1Price" step="0.01"
-                               oninput="calcCustomBreakEven()"
-                               style="width:100%; padding:7px; border:2px solid #e5e7eb; border-radius:6px; font-size:0.9em;">
-                    </div>
-                </div>
-
-                <!-- Planned targets display -->
-                <div id="customPlannedTargets" style="padding:8px 12px; background:#f3f4f6; border-radius:6px; font-size:0.8em; color:#6b7280; margin-bottom:10px;"></div>
-
-                <!-- Options A & B -->
-                <div id="customBreakEvenResult" style="display:none; margin-bottom:12px;">
-                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
-                        <div style="padding:12px; background:#eff6ff; border:2px solid #3b82f6; border-radius:8px;">
-                            <div style="font-size:0.72em; font-weight:700; color:#1e40af; margin-bottom:6px; text-transform:uppercase;">Option A — Same Shares, Lower Price</div>
-                            <div id="customOptionAText" style="font-size:0.88em; color:#1e3a5f; line-height:1.6;"></div>
-                        </div>
-                        <div style="padding:12px; background:#fdf4ff; border:2px solid #7c3aed; border-radius:8px;">
-                            <div style="font-size:0.72em; font-weight:700; color:#6d28d9; margin-bottom:6px; text-transform:uppercase;">Option B — Same Price, Fewer Shares</div>
-                            <div id="customOptionBText" style="font-size:0.88em; color:#3b0764; line-height:1.6;"></div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Option C: custom sell 2 price -->
-                <div style="border-top:1px solid #e5e7eb; padding-top:10px;">
-                    <div style="font-size:0.75em; font-weight:700; color:#374151; margin-bottom:6px;">Option C — Custom Sell 2 Price</div>
-                    <div style="font-size:0.75em; color:#6b7280; margin-bottom:8px;">Enter any price — see how many shares you need to sell to match the original plan's risk outcome.</div>
-                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:8px;">
-                        <div>
-                            <label style="font-size:0.75em; color:#6b7280; display:block; margin-bottom:3px;">Sell 2 — Price ($)</label>
-                            <input type="number" id="customSell2Price" step="0.01"
-                                   oninput="calcOptionC()"
-                                   style="width:100%; padding:7px; border:2px solid #e5e7eb; border-radius:6px; font-size:0.9em;">
-                        </div>
-                        <div style="display:flex; align-items:flex-end;">
-                            <div id="customOptionCResult" style="width:100%; padding:10px; background:#fefce8; border:2px solid #f59e0b; border-radius:8px; display:none;">
-                                <div id="customOptionCText" style="font-size:0.88em; color:#78350f; line-height:1.6;"></div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
+            <!-- Notes -->
+            <div style="margin-bottom:12px;">
+                <label style="font-size:0.8em; font-weight:700; color:#374151; display:block; margin-bottom:5px;">📝 Trade Notes</label>
+                <textarea id="harvestNotes" rows="3" placeholder="Strategy notes, why you entered, what to watch for..." style="width:100%; padding:8px; border:2px solid #e5e7eb; border-radius:6px; font-size:0.88em; resize:vertical;"></textarea>
             </div>
+            <button onclick="saveHarvestNotes()" class="btn-success" style="width:100%; padding:10px; font-size:0.95em; font-weight:700;">💾 Save Notes</button>
         </div>
     </div>
 
@@ -2297,7 +2226,7 @@
         let positionIdCounter = 1;
 
         // Initialize Firebase
-        // ── Firebase Config (hardcoded) + Google Auth ─────────────────────
+        // ── Hardcoded Firebase config + Google Auth ───────────────────────────
         const FIREBASE_CONFIG = {
             apiKey: "AIzaSyDtlAlmRmdU4KJWMKssiz6Wl5pI5kM6pKw",
             authDomain: "trade-tracker-36e7a.firebaseapp.com",
@@ -2318,27 +2247,25 @@
         }
 
         function signOut() {
-            firebase.auth().signOut().then(() => {
-                document.getElementById('authScreen').style.display = 'flex';
-                document.getElementById('mainApp').style.display = 'none';
-            });
+            if (confirm('Sign out of Trading Journal?')) {
+                firebase.auth().signOut();
+            }
         }
 
-        function initializeFirebase() {
+        function initializeFirebase(config) {
             try {
                 if (!firebase.apps.length) {
                     firebase.initializeApp(FIREBASE_CONFIG);
                 }
 
-                // Listen for auth state changes
                 firebase.auth().onAuthStateChanged((user) => {
                     if (user) {
                         console.log('✅ Signed in as:', user.email);
                         document.getElementById('authScreen').style.display = 'none';
                         document.getElementById('mainApp').style.display = 'block';
-                        connectToDatabase(user);
+                        connectToDatabase();
                     } else {
-                        console.log('Not signed in — showing auth screen');
+                        console.log('Not signed in');
                         document.getElementById('authScreen').style.display = 'flex';
                         document.getElementById('mainApp').style.display = 'none';
                     }
@@ -2352,52 +2279,74 @@
             }
         }
 
-        function connectToDatabase(user) {
+        function connectToDatabase() {
             db    = firebase.database();
             dbRef = db.ref('tradeData');
 
             let lastLoadedTimestamp = null;
-            let isSaving = false;
+            let dataLoaded = false;
 
-            // Real-time listener — fires whenever data changes in Firebase
-            dbRef.on('value', (snapshot) => {
+            // STEP 1: Load data once first
+            dbRef.once('value').then((snapshot) => {
                 const data = snapshot.val();
-                if (!data) {
-                    updateSyncStatus('Connected ✓', true);
-                    return;
+                if (data) {
+                    console.log('📥 Initial data load from Firebase');
+                    loadDataFromFirebase(data);
+                    lastLoadedTimestamp = data.lastModified || null;
+                    dataLoaded = true;
+                    updateAllDisplays();
+                } else {
+                    console.log('No data in Firebase yet');
+                    dataLoaded = true;
                 }
-                const incomingTimestamp = data.lastModified || '';
-                // Skip if this is our own save
-                if (isSaving && incomingTimestamp === lastLoadedTimestamp) {
-                    console.log('📤 Skipping — our own save');
-                    return;
-                }
-                if (incomingTimestamp === lastLoadedTimestamp) return;
-                console.log('📥 Loading data from Firebase');
-                loadDataFromFirebase(data);
-                lastLoadedTimestamp = incomingTimestamp;
-                updateAllDisplays();
                 updateSyncStatus('Synced ✓', true);
                 const now = new Date();
                 document.getElementById('lastSavedTime').textContent =
-                    `Synced: ${now.toLocaleTimeString('en-US', {hour:'2-digit',minute:'2-digit',second:'2-digit'})}`;
-            }, (error) => {
-                console.error('Firebase read error:', error);
-                updateSyncStatus('Read error', false);
-            });
+                    `Loaded: ${now.toLocaleTimeString('en-US', {hour:'2-digit',minute:'2-digit',second:'2-digit'})}`;
 
-            window._setSavingFlag         = (val) => { isSaving = val; };
-            window._setLastLoadedTimestamp = (t)   => { lastLoadedTimestamp = t; };
+                // STEP 2: Only AFTER data is loaded, set up real-time listener for OTHER devices
+                dbRef.on('value', (snapshot) => {
+                    if (!dataLoaded) return; // safety guard
+                    const data = snapshot.val();
+                    if (!data) return;
+                    const incomingTimestamp = data.lastModified || '';
+                    // Skip if this matches what we last loaded (our own save or initial load)
+                    if (incomingTimestamp === lastLoadedTimestamp) return;
+                    console.log('📥 Remote change detected — reloading');
+                    loadDataFromFirebase(data);
+                    lastLoadedTimestamp = incomingTimestamp;
+                    updateAllDisplays();
+                    updateSyncStatus('Synced ✓', true);
+                    const now = new Date();
+                    document.getElementById('lastSavedTime').textContent =
+                        `Updated: ${now.toLocaleTimeString('en-US', {hour:'2-digit',minute:'2-digit',second:'2-digit'})}`;
+                }, (error) => {
+                    console.error('Firebase listener error:', error);
+                    updateSyncStatus('Sync error', false);
+                });
+
+                // Expose timestamp setter for saveToFirebase
+                window._setLastLoadedTimestamp = (t) => { lastLoadedTimestamp = t; };
+
+            }).catch((error) => {
+                console.error('Initial load error:', error);
+                updateSyncStatus('Load error: ' + error.message, false);
+            });
         }
 
+        // Load Firebase config (now hardcoded, just initialize)
         function loadFirebaseConfig() {
-            // Config is now hardcoded — just initialize
-            return initializeFirebase();
+            return initializeFirebase(FIREBASE_CONFIG);
         }
 
         function clearFirebaseConfig() {
             firebase.auth().signOut();
         }
+
+        function openFirebaseSetup() {
+            // No-op — config is hardcoded now
+        }
+
 
         // Test Firebase connection
         function testFirebaseConnection() {
@@ -2457,8 +2406,15 @@
                 console.error('❌ Cannot save: Firebase not initialized');
                 return Promise.reject('Firebase not initialized');
             }
-            
-            window.pendingSave = true; // Track that save is in progress
+
+            // CRITICAL: Never save if data looks empty — this prevents wiping Firebase
+            // if the page hasn't finished loading yet
+            if (openPositions.length === 0 && closedTrades.length === 0 && dailyEquityEntries.length === 0) {
+                console.warn('⚠️ Save blocked — all arrays empty, likely not loaded yet');
+                return Promise.resolve();
+            }
+
+            window.pendingSave = true;
             console.log('💾 Starting save to Firebase...', {
                 openPositions: openPositions.length,
                 closedTrades: closedTrades.length,
@@ -2491,16 +2447,13 @@
                     ncfd: parseFloat(document.getElementById('ncfdInput')?.value) || null
                 },
                 taxPayments: taxPayments,
-                rewardMilestoneClaimed: rewardMilestoneClaimed,
                 lastModified: new Date().toISOString()
             };
 
-            // Tell the poll we're saving so it doesn't reload mid-save
-            if (window._setSavingFlag) window._setSavingFlag(true);
+            // Tell listener this timestamp is ours so it won't reload
             if (window._setLastLoadedTimestamp) window._setLastLoadedTimestamp(data.lastModified);
 
             return dbRef.set(data).then(() => {
-                if (window._setSavingFlag) window._setSavingFlag(false);
                 const now = new Date();
                 const timeStr = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
                 updateSyncStatus('Synced ✓', true);
@@ -2958,7 +2911,6 @@
                     myRothJan1: parseFloat(document.getElementById('myRothJan1').value),
                     wifeRoth: parseFloat(document.getElementById('wifeRoth').value),
                     wifeRothJan1: parseFloat(document.getElementById('wifeRothJan1').value),
-                    spyJan1: parseFloat(document.getElementById('spyJan1').value),
                     apiKey: document.getElementById('apiKey').value,
                 alphaVantageKey: document.getElementById('alphaVantageKey')?.value || '',
                     stockProfiles: stockProfiles,
@@ -2969,7 +2921,6 @@
                         qqq: document.getElementById('chkQQQ')?.checked || false,
                         ncfd: parseFloat(document.getElementById('ncfdInput')?.value) || null
                     },
-                    rewardMilestoneClaimed: rewardMilestoneClaimed,
                     lastModified: new Date().toISOString()
                 };
 
@@ -3265,26 +3216,13 @@
                     qtyTooltip += `\nRemaining: ${pos.shares} shares`;
                 }
                 
-                // Position status badge next to symbol
-                // Logic: check currentStop vs entryPrice for breakeven, partials for harvest
-                const hasPartial      = pos.partialSells && pos.partialSells.length > 0;
-                const stopAtBreakeven = pos.currentStop >= metrics.adjustedPrice;
-                let statusBadge = '';
-                if (stopAtBreakeven && hasPartial) {
-                    statusBadge = ' <span style="font-size:0.7em; padding:1px 5px; background:#15803d; color:white; border-radius:10px; font-weight:700; vertical-align:middle;" title="Partial taken + stop at breakeven or better">✓ BE</span>';
-                } else if (stopAtBreakeven) {
-                    statusBadge = ' <span style="font-size:0.7em; padding:1px 5px; background:#dcfce7; color:#15803d; border-radius:10px; font-weight:700; border:1px solid #86efac; vertical-align:middle;" title="Stop at breakeven or better">✓ BE</span>';
-                } else if (hasPartial) {
-                    statusBadge = ' <span style="font-size:0.7em; padding:1px 5px; background:#bbf7d0; color:#166534; border-radius:10px; font-weight:700; border:1px solid #6ee7b7; vertical-align:middle;" title="Partial sell taken">½</span>';
-                }
-
                 html += `
                     <tr style="${rowBg}">
-                        <td style="${symbolStyle}"><strong><span onclick="openHarvestModal(${pos.id})" style="cursor:pointer; border-bottom:2px dotted currentColor; padding-bottom:1px;" title="Click to open Harvest Calculator">${pos.symbol}</span>${statusBadge}</strong></td>
+                        <td style="${symbolStyle}"><strong><span onclick="openHarvestModal(${pos.id})" style="cursor:pointer; border-bottom:2px dotted currentColor; padding-bottom:1px;" title="Click to open Harvest Calculator">${pos.symbol}</span></strong></td>
                         <td>$${pos.currentPrice.toFixed(2)}</td>
                         <td>$${pos.entryPrice.toFixed(2)}</td>
                         <td title="${adjTooltip}" style="cursor:help; border-bottom:1px dotted #9ca3af;">$${metrics.adjustedPrice.toFixed(2)}</td>
-                        <td title="${qtyTooltip}" style="cursor:help;">${pos.shares}</td>
+                        <td title="${qtyTooltip}" style="cursor: help;">${pos.shares}</td>
                         <td>$${pos.initialStop.toFixed(2)}</td>
                         <td style="background: #dbeafe;">$${pos.currentStop.toFixed(2)}</td>
                         <td>${pos.initialWeight.toFixed(3)}%</td>
@@ -3810,14 +3748,13 @@
                             <th>Symbol</th>
                             <th>Entry</th>
                             <th>Exit</th>
-                            <th title="Shares: Hover for partial sell history">Shares ℹ</th>
-                            <th title="Hold Days: Number of days position was open">Hold</th>
-                            <th title="RISK LEVEL: % of portfolio risked on this trade at entry.">Risk Level</th>
+                            <th title="Account Weight%: Size of this position as a % of total account at the time of the trade. Used to calculate portfolio-level P&L impact.">Acct Wt% ℹ</th>
+                            <th title="RISK LEVEL: % of portfolio risked on this trade at entry. Note: historical trades before mid-2025 show legacy position size % (e.g. 9% = 9% position), not % risk. Newer trades show actual % risk per trade (e.g. 0.5%).">Risk Level</th>
                             <th>P&L%</th>
-                            <th title="Portfolio P&L%: This trade's gain or loss as a % of your total account.">Port P&L% ℹ</th>
-                            <th title="R-Multiple: How many times your initial risk you made or lost.">R ℹ</th>
+                            <th title="Portfolio P&L%: This trade's gain or loss as a % of your total account (not just the position). A 20% gain on a 10% position = 2% portfolio P&L. This is what actually matters for account growth.">Port P&L% ℹ</th>
+                            <th title="R-Multiple: How many times your initial risk you made or lost. 1R = broke even on risk. 2R = made 2x your risk. -1R = lost your full risk amount. Formula: Total P&L ÷ Initial Risk Dollars. This is the core metric — it normalizes all trades to be comparable regardless of position size.">R Multiple ℹ</th>
                             <th>Date</th>
-                            <th title="Cumulative Portfolio P&L%: Running total of all closed trade gains and losses.">Cum P/L% ℹ</th>
+                            <th title="Cumulative Portfolio P&L%: Running total of all closed trade gains and losses as a % of your account. Shows your equity curve in table form — each trade's contribution stacked on top of the previous.">Cum P/L% ℹ</th>
                             <th>Notes</th>
                             <th>Actions</th>
                         </tr>
@@ -3843,28 +3780,10 @@
                 
                 html += `
                     <tr>
-                        <td><strong style="cursor:pointer; color:#1e40af; text-decoration:underline dotted;" onclick="openTradeChart(${trade.originalIndex})" title="Click to view chart">${trade.symbol}</strong></td>
+                        <td><strong>${trade.symbol}</strong></td>
                         <td>$${trade.entryPrice.toFixed(2)}</td>
                         <td>$${trade.exitPrice.toFixed(2)}</td>
-                        <td>${(() => {
-                            const initSh = trade.initialShares || trade.accountWeight || '—';
-                            let tip = `Initial: ${initSh} shares`;
-                            if (trade.partialSells && trade.partialSells.length > 0) {
-                                tip += '&#10;&#10;Partial Sells:';
-                                trade.partialSells.forEach((ps, i) => {
-                                    const d = ps.date ? new Date(ps.date).toLocaleDateString() : '—';
-                                    tip += `&#10;- ${ps.shares} sh @ $${parseFloat(ps.price).toFixed(2)} on ${d}`;
-                                });
-                            }
-                            tip += `&#10;&#10;Final exit: ${trade.initialShares ? (trade.initialShares - (trade.partialSells||[]).reduce((s,p)=>s+p.shares,0)) : '—'} sh @ $${trade.exitPrice.toFixed(2)} on ${trade.exitDate}`;
-                            const display = trade.initialShares || '—';
-                            return `<span title="${tip}" style="cursor:help; border-bottom:1px dotted #9ca3af;">${display}</span>`;
-                        })()}</td>
-                        <td>${(() => {
-                            if (!trade.entryDate || !trade.exitDate) return '—';
-                            const days = Math.round((new Date(trade.exitDate) - new Date(trade.entryDate)) / (1000*60*60*24));
-                            return days + 'd';
-                        })()}</td>
+                        <td>${trade.accountWeight.toFixed(2)}%</td>
                         <td>${riskPercent.toFixed(3)}%</td>
                         <td class="${pnlClass}">${trade.pnlPercent.toFixed(2)}%</td>
                         <td class="${pnlClass}">${trade.portfolioPnlPercent.toFixed(2)}%</td>
@@ -4057,69 +3976,52 @@
                 if (el2) el2.textContent = last30Pnl.toFixed(2) + '%';
                 if (el3) el3.textContent = last10Pnl.toFixed(2) + '%';
 
-                const rValues = closedTrades.map(t => parseFloat(t.rMultiple.toFixed(2)));
-                const wins    = rValues.filter(r => r > 0);
-                const losses  = rValues.filter(r => r <= 0);
+                const dailyPnls = closedTrades.map(t => t.portfolioPnlPercent);
+                
+                const trace2 = {
+                    x: dailyPnls,
+                    type: 'histogram',
+                    marker: { color: '#667eea' },
+                    name: 'Daily P&L Distribution'
+                };
 
-                const traceWins = {
-                    x: wins, type: 'histogram',
-                    marker: { color: 'rgba(16,185,129,0.7)', line: { color: '#059669', width: 1 } },
-                    name: 'Winners', xbins: { size: 0.5 }
-                };
-                const traceLosses = {
-                    x: losses, type: 'histogram',
-                    marker: { color: 'rgba(239,68,68,0.7)', line: { color: '#dc2626', width: 1 } },
-                    name: 'Losers', xbins: { size: 0.5 }
-                };
                 const layout2 = {
-                    title: 'R-Multiple Distribution',
-                    xaxis: { title: 'R-Multiple', zeroline: true, zerolinecolor: '#374151', zerolinewidth: 2 },
-                    yaxis: { title: 'Number of Trades' },
-                    barmode: 'overlay',
-                    plot_bgcolor: '#f9f9f9', paper_bgcolor: 'white'
+                    xaxis: { title: 'Portfolio P&L %' },
+                    yaxis: { title: 'Frequency' },
+                    plot_bgcolor: '#f9f9f9',
+                    paper_bgcolor: 'white'
                 };
-                Plotly.newPlot('dailyPnlChart', [traceWins, traceLosses], layout2, {responsive: true});
+
+                Plotly.newPlot('dailyPnlChart', [trace2], layout2, {responsive: true});
             }
 
-            // Account Value Curve — use manually logged dailyEquityEntries (accurate)
-            const sortedEntries = [...dailyEquityEntries].sort((a,b) => a.date.localeCompare(b.date));
-            if (sortedEntries.length === 0) {
-                document.getElementById('accountValueCurve').innerHTML = '<div class="empty-state">No daily entries yet. Use ⚡ Log Today to start tracking your equity curve.</div>';
+            if (dailyEquity.length === 0) {
+                document.getElementById('accountValueCurve').innerHTML = '<div class="empty-state">No daily snapshots yet. Click "Save Daily Snapshot" to start tracking your equity curve.</div>';
             } else {
-                const dates  = sortedEntries.map(e => e.date);
-                const values = sortedEntries.map(e => e.accountValue);
-
-                // 10-day moving average line
-                const maValues = sortedEntries.map((e, i) => {
-                    if (i < 9) return null;
-                    const slice = sortedEntries.slice(i-9, i+1);
-                    return slice.reduce((s, x) => s + x.accountValue, 0) / 10;
-                });
-
+                const dates = dailyEquity.map(snap => snap.date);
+                const values = dailyEquity.map(snap => snap.accountValue);
+                
                 const trace3 = {
-                    x: dates, y: values,
-                    type: 'scatter', mode: 'lines+markers',
+                    x: dates,
+                    y: values,
+                    type: 'scatter',
+                    mode: 'lines+markers',
                     name: 'Account Value',
                     line: { color: '#10b981', width: 3 },
-                    marker: { size: 5 },
-                    fill: 'tozeroy', fillcolor: 'rgba(16,185,129,0.1)'
-                };
-                const traceMA = {
-                    x: dates, y: maValues,
-                    type: 'scatter', mode: 'lines',
-                    name: '10-Day Avg',
-                    line: { color: '#f59e0b', width: 2, dash: 'dot' },
-                    connectgaps: false
+                    marker: { size: 6 },
+                    fill: 'tozeroy',
+                    fillcolor: 'rgba(16, 185, 129, 0.1)'
                 };
 
                 const layout3 = {
                     xaxis: { title: 'Date' },
-                    yaxis: { title: 'Account Value ($)', tickformat: '$,.0f' },
+                    yaxis: { title: 'Account Value ($)' },
                     hovermode: 'closest',
-                    legend: { orientation: 'h', y: -0.2 },
-                    plot_bgcolor: '#f9f9f9', paper_bgcolor: 'white'
+                    plot_bgcolor: '#f9f9f9',
+                    paper_bgcolor: 'white'
                 };
-                Plotly.newPlot('accountValueCurve', [trace3, traceMA], layout3, {responsive: true});
+
+                Plotly.newPlot('accountValueCurve', [trace3], layout3, {responsive: true});
             }
         }
 
@@ -4173,7 +4075,6 @@
                 accountValue: accountSize,
                 drawdown: totalDrawdown,
                 exposure: totalExposure,
-                totalRisk: totalPortfolioRisk,
                 fomo: ncfdPrice,
                 notes: 'Quick Snapshot',
                 dailyChange: 0 // Will be calculated
@@ -4242,7 +4143,6 @@
                 dailyChange: dailyChange,
                 drawdown: totalDrawdown,
                 exposure: totalExposure,
-                totalRisk: totalExposure > 0 ? (() => { let tr = 0; openPositions.forEach(p => { tr += calculatePositionMetrics(p).portfolioCapitalRisk || 0; }); return tr; })() : 0,
                 fomo: '',
                 notes: ''
             };
@@ -4285,7 +4185,6 @@
             
             const drawdown = prompt(`Drawdown % for ${targetDate} (optional):`, '0');
             const exposure = prompt(`Exposure % for ${targetDate} (optional):`, '0');
-            const totalRiskVal = prompt(`Total Risk % for ${targetDate} (optional):`, '0');
             const fomo = prompt(`FOMO for ${targetDate} (optional):`, '');
             const notes = prompt(`Notes for ${targetDate} (optional):`, '');
             
@@ -4296,7 +4195,6 @@
                 dailyChange: 0, // Will be calculated
                 drawdown: parseFloat(drawdown) || 0,
                 exposure: parseFloat(exposure) || 0,
-                totalRisk: parseFloat(totalRiskVal) || 0,
                 fomo: fomo || '',
                 notes: notes || ''
             };
@@ -4331,72 +4229,37 @@
                 return;
             }
             
-            // Pre-compute running peak for DD from Peak
-            const sortedAsc = [...dailyEquityEntries].sort((a,b) => a.date.localeCompare(b.date));
-            const peakByDate = {};
-            let runningPeak = 0;
-            sortedAsc.forEach(e => {
-                if (e.accountValue > runningPeak) runningPeak = e.accountValue;
-                peakByDate[e.date] = runningPeak;
-            });
-
-            // Pre-compute closed DD from Peak per date
-            // Build cumulative closed P&L curve sorted by exit date
-            const closedByDate = {};
-            let cumClosedPnl = 0;
-            let closedPeak = 0;
-            [...closedTrades].sort((a,b) => (a.exitDate||'').localeCompare(b.exitDate||'')).forEach(t => {
-                cumClosedPnl += t.portfolioPnlPercent || 0;
-                if (cumClosedPnl > closedPeak) closedPeak = cumClosedPnl;
-                closedByDate[t.exitDate] = { cum: cumClosedPnl, peak: closedPeak };
-            });
-            // For each daily entry, find the most recent closed DD at or before that date
-            // Uses same formula as main stats: cum - peak (raw percentage point drawdown)
-            function getClosedDDForDate(date) {
-                const entries = Object.entries(closedByDate).filter(([d]) => d <= date).sort(([a],[b]) => b.localeCompare(a));
-                if (!entries.length) return null;
-                const [, latest] = entries[0];
-                return latest.cum - latest.peak; // negative = drawdown, 0 = at peak
-            }
-
             let html = '';
             
             dailyEquityEntries.forEach((entry, index) => {
-                const rowBg = index % 2 === 0 ? 'background: #f9fafb;' : 'background: white;';
-                const notesDisplay = entry.notes || '';
-                const notesPreview = notesDisplay.length > 30 ? notesDisplay.substring(0, 30) + '...' : notesDisplay;
-
-                // 10-day moving average (entries sorted newest-first, so look forward)
+                // Calculate 10-day moving average
                 let tenDayAvg = 0;
                 let belowAvg = false;
+                
                 if (index <= dailyEquityEntries.length - 10) {
                     const last10 = dailyEquityEntries.slice(index, index + 10);
                     tenDayAvg = last10.reduce((sum, e) => sum + e.accountValue, 0) / 10;
-                    belowAvg = entry.accountValue < tenDayAvg; // highlight when account below avg
+                    belowAvg = entry.accountValue < tenDayAvg;
                 }
+                
+                // Alternating row colors
+                const rowBg = index % 2 === 0 ? 'background: #f9fafb;' : 'background: white;';
+                
+                // Highlight 10-day avg if below average
                 const belowAvgStyle = belowAvg ? 'background: #fef3c7; color: #92400e; font-weight: 700;' : '';
-
-                // DD from Peak
-                const peak = peakByDate[entry.date] || entry.accountValue;
-                const ddFromPeak = peak > 0 ? ((peak - entry.accountValue) / peak) * 100 : 0;
-                const ddColor = ddFromPeak >= 10 ? '#dc2626' : ddFromPeak >= 5 ? '#d97706' : '#374151';
-
-                // Closed DD from Peak
-                const closedDD = getClosedDDForDate(entry.date);
-                const closedDDColor = closedDD === null ? '#9ca3af' : closedDD < -5 ? '#dc2626' : closedDD < -2 ? '#d97706' : '#15803d';
-                const closedDDDisplay = closedDD === null ? '—' : closedDD === 0 ? '✓ Peak' : `${closedDD.toFixed(2)}%`;
-
+                
+                // Escape HTML in notes for display
+                const notesDisplay = entry.notes || '';
+                const notesPreview = notesDisplay.length > 30 ? notesDisplay.substring(0, 30) + '...' : notesDisplay;
+                
                 html += `
                     <tr style="${rowBg}">
                         <td>${entry.date}</td>
                         <td>$${entry.accountValue.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
-                        <td style="${belowAvgStyle}">${tenDayAvg > 0 ? '$' + tenDayAvg.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}) : '—'}</td>
                         <td class="${entry.dailyChange >= 0 ? 'profit' : 'loss'}">${entry.dailyChange.toFixed(2)}%</td>
-                        <td style="font-weight:600; color:${(() => { const startAcc = parseFloat(document.getElementById('startingAccount')?.value) || 250000; const ytd = ((entry.accountValue - startAcc - getNetCashFlows()) / startAcc) * 100; return ytd >= 0 ? '#15803d' : '#dc2626'; })()};">${(() => { const startAcc = parseFloat(document.getElementById('startingAccount')?.value) || 250000; const ytd = ((entry.accountValue - startAcc - getNetCashFlows()) / startAcc) * 100; return (ytd >= 0 ? '+' : '') + ytd.toFixed(2) + '%'; })()}</td>
-                        <td style="color:${ddColor}; font-weight:${ddFromPeak >= 5 ? '700' : '400'};">${ddFromPeak > 0 ? '-' : ''}${ddFromPeak.toFixed(2)}%</td>
-                        <td style="color:${closedDDColor}; font-weight:${(closedDD||0) < -2 ? '700' : '400'};">${closedDDDisplay}</td>
+                        <td style="${belowAvgStyle}">${tenDayAvg > 0 ? '$' + tenDayAvg.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}) : '-'}</td>
+                        <td>${entry.drawdown.toFixed(2)}%</td>
                         <td>${entry.exposure.toFixed(2)}%</td>
-                        <td style="color:${(entry.totalRisk||0) >= 3 ? '#dc2626' : (entry.totalRisk||0) >= 2 ? '#d97706' : '#15803d'}; font-weight:600;">${entry.totalRisk ? entry.totalRisk.toFixed(2) + '%' : '—'}</td>
                         <td><input type="text" value="${entry.fomo}" onchange="updateDailyEquityEntry('${entry.date}', 'fomo', this.value)" style="width: 80px; padding: 4px;"></td>
                         <td class="notes-cell">
                             <div class="notes-preview" onclick="editDailyNote('${entry.date}', '${notesDisplay.replace(/'/g, "\\'")}')">
@@ -4444,32 +4307,24 @@
         function editJournalEntry(date) {
             const entry = dailyEquityEntries.find(e => e.date === date);
             if (!entry) return;
-
-            const newDate = prompt('Date (YYYY-MM-DD):', entry.date);
-            if (newDate === null) return;
-            if (newDate !== date && dailyEquityEntries.find(e => e.date === newDate)) {
-                alert('An entry already exists for ' + newDate); return;
-            }
-
-            const newAccountValue = prompt('Account Value for ' + newDate + ':', entry.accountValue);
-            if (newAccountValue === null) return;
-
-            const newTotalRisk = prompt('Total Risk % for ' + newDate + ':', entry.totalRisk ? entry.totalRisk.toFixed(2) : '0');
-            if (newTotalRisk === null) return;
-
-            const newFomo = prompt('FOMO for ' + newDate + ':', entry.fomo);
+            
+            const newAccountValue = prompt('Account Value for ' + date + ':', entry.accountValue);
+            if (newAccountValue === null) return; // User canceled
+            
+            const newFomo = prompt('FOMO for ' + date + ':', entry.fomo);
             if (newFomo === null) return;
-
-            const newNotes = prompt('Notes for ' + newDate + ':', entry.notes);
+            
+            const newNotes = prompt('Notes for ' + date + ':', entry.notes);
             if (newNotes === null) return;
-
-            entry.date         = newDate;
+            
+            // Update the entry
             entry.accountValue = parseFloat(newAccountValue);
-            entry.totalRisk    = parseFloat(newTotalRisk) || 0;
-            entry.fomo         = newFomo;
-            entry.notes        = newNotes;
-
+            entry.fomo = newFomo;
+            entry.notes = newNotes;
+            
+            // Recalculate daily % change for this entry and subsequent entries
             recalculateDailyChanges();
+            
             saveToFirebase();
             updateDailyEquityTable();
         }
@@ -4936,8 +4791,7 @@
                         ${reached ? '<div style="font-size:0.7em; color:#15803d; margin-top:3px;">✓ REACHED</div>' : ''}
                     </div>`;
             }).join('');
-            const ladderEl = document.getElementById('harvestLadder');
-            if (ladderEl) ladderEl.innerHTML = ladder;
+            document.getElementById('harvestLadder').innerHTML = ladder;
 
             // ── Plan selection logic (async — fetch ADR from Firebase cache) ──
             const bannerEl2 = document.getElementById('harvestPlanBanner');
@@ -4998,255 +4852,10 @@
                 renderHarvestPlans(pos, entry, stop, currentStop, riskPerShare, initialShares, remaining, initialRisk$, usePlanB);
             })();
 
-            // ── Pre-fill custom calculator ─────────────────────────────────
-            document.getElementById('customSell1Shares').value = '';
-            document.getElementById('customSell1Price').value  = '';
-            document.getElementById('customSell2Price').value  = '';
-            document.getElementById('customBreakEvenResult').style.display = 'none';
-            document.getElementById('customOptionCResult').style.display   = 'none';
-            // Default to Plan A
-            setCustomPlan('A');
-            // Pre-fill from first partial if exists
-            if (pos.partialSells && pos.partialSells.length > 0) {
-                const first = pos.partialSells[0];
-                document.getElementById('customSell1Shares').value = first.shares;
-                document.getElementById('customSell1Price').value  = parseFloat(first.price).toFixed(2);
-                calcCustomBreakEven();
-            }
-
+            // ── Plan B ─────────────────────────────────────────────────────
             // ── Notes ──────────────────────────────────────────────────────
-            const harvestNotesEl = document.getElementById('harvestNotes');
-            if (harvestNotesEl) harvestNotesEl.value = pos.notes || '';
+            document.getElementById('harvestNotes').value = pos.notes || '';
             document.getElementById('harvestCalcModal').style.display = 'block';
-        }
-
-        function calcOptionC() {
-            const pos = openPositions.find(p => p.id === harvestModalPosId);
-            if (!pos) return;
-
-            const entry         = pos.entryPrice;
-            const stop          = pos.initialStop;
-            const initialShares = pos.initialShares || pos.shares;
-            const riskPerShare  = entry - stop;
-            const plan          = document.getElementById('customActivePlan').value;
-
-            const sell1Shares = parseInt(document.getElementById('customSell1Shares').value) || 0;
-            const sell1Price  = parseFloat(document.getElementById('customSell1Price').value) || 0;
-            const sell2Price  = parseFloat(document.getElementById('customSell2Price').value) || 0;
-            const resultEl    = document.getElementById('customOptionCResult');
-
-            if (!sell2Price) { resultEl.style.display = 'none'; return; }
-            if (sell2Price <= entry) {
-                resultEl.style.display = 'block';
-                document.getElementById('customOptionCText').innerHTML = `⚠ Price must be above entry ($${entry.toFixed(2)})`;
-                return;
-            }
-
-            // What the original plan was designed to generate from its sell(s)
-            let totalPlannedProfit;
-            if (plan === 'A') {
-                const planASell1Shares = Math.round(initialShares * 0.33);
-                totalPlannedProfit = (2 * riskPerShare) * planASell1Shares;
-            } else {
-                const planBSell1Shares = Math.round(initialShares * 0.15);
-                const planBSell2Shares = Math.round(initialShares * 0.18);
-                totalPlannedProfit = (riskPerShare * planBSell1Shares) + (3 * riskPerShare * planBSell2Shares);
-            }
-
-            // Profit already banked from actual Sell 1 (0 if no sell yet)
-            const actualSell1Profit = (sell1Shares && sell1Price) ? (sell1Price - entry) * sell1Shares : 0;
-            const hasSell1 = sell1Shares > 0 && sell1Price > 0;
-
-            // Remaining profit needed from this sell
-            const profitNeeded   = Math.max(0, totalPlannedProfit - actualSell1Profit);
-            const profitPerShare = sell2Price - entry;
-            const sharesNeeded   = Math.ceil(profitNeeded / profitPerShare);
-            const remainingShares = initialShares - sell1Shares;
-            const sharesSafe     = Math.min(sharesNeeded, remainingShares);
-            const freeRunners    = remainingShares - sharesSafe;
-
-            // Original plan comparison
-            const origShares = plan === 'A'
-                ? Math.round(initialShares * 0.33)
-                : Math.round(initialShares * 0.18);
-            const origPrice  = plan === 'A'
-                ? entry + 2 * riskPerShare
-                : entry + 3 * riskPerShare;
-
-            resultEl.style.display = 'block';
-
-            if (profitNeeded <= 0) {
-                document.getElementById('customOptionCText').innerHTML =
-                    `✅ ${hasSell1 ? 'Sell 1 already covered the plan' : 'Plan already covered'} — <strong>0 shares</strong> needed.<br>
-                    All ${remainingShares} remaining shares are free runners.`;
-                return;
-            }
-
-            document.getElementById('customOptionCText').innerHTML =
-                `At <strong>$${sell2Price.toFixed(2)}</strong>, sell:<br>
-                <span style="font-size:1.3em; font-weight:800; color:#92400e;">${sharesSafe} shares</span><br>
-                <span style="font-size:0.82em; color:#6b7280;">
-                    ${freeRunners > 0 ? `Leaves <strong>${freeRunners} free runners</strong>` : 'Sells all remaining shares'}<br>
-                    vs original plan: ${origShares} sh @ $${origPrice.toFixed(2)}
-                    ${hasSell1 ? '' : ' <em>(no prior sell entered)</em>'}
-                </span>`;
-        }
-
-        function setCustomPlan(plan) {
-            document.getElementById('customActivePlan').value = plan;
-            const btnA = document.getElementById('customPlanABtn');
-            const btnB = document.getElementById('customPlanBBtn');
-            if (plan === 'A') {
-                btnA.style.background = '#eff6ff'; btnA.style.borderColor = '#3b82f6'; btnA.style.color = '#1e40af';
-                btnB.style.background = 'white';   btnB.style.borderColor = '#e5e7eb'; btnB.style.color = '#6b7280';
-            } else {
-                btnB.style.background = '#fdf4ff'; btnB.style.borderColor = '#7c3aed'; btnB.style.color = '#6d28d9';
-                btnA.style.background = 'white';   btnA.style.borderColor = '#e5e7eb'; btnA.style.color = '#6b7280';
-            }
-            // Pre-fill Option C with the plan's Sell 2 target price
-            const pos = openPositions.find(p => p.id === harvestModalPosId);
-            if (pos) {
-                const entry        = pos.entryPrice;
-                const riskPerShare = entry - pos.initialStop;
-                const sell2El      = document.getElementById('customSell2Price');
-                if (sell2El && !sell2El.value) {
-                    sell2El.value = plan === 'A'
-                        ? (entry + 2 * riskPerShare).toFixed(2)   // Plan A: 2R
-                        : (entry + 3 * riskPerShare).toFixed(2);  // Plan B: 3R
-                }
-            }
-            calcCustomBreakEven();
-            calcOptionC();
-        }
-
-        function calcCustomBreakEven() {
-            const pos = openPositions.find(p => p.id === harvestModalPosId);
-            if (!pos) return;
-
-            const entry         = pos.entryPrice;
-            const stop          = pos.initialStop;
-            const initialShares = pos.initialShares || pos.shares;
-            const riskPerShare  = entry - stop;
-            const plan          = document.getElementById('customActivePlan').value;
-
-            // Planned sell quantities per plan
-            const planASell1Shares = Math.round(initialShares * 0.33);
-            const planASell1Price  = entry + 2 * riskPerShare;   // 2R
-
-            const planBSell1Shares = Math.round(initialShares * 0.15);
-            const planBSell1Price  = entry + 1 * riskPerShare;   // 1R
-            const planBSell2Shares = Math.round(initialShares * 0.18);
-            const planBSell2Price  = entry + 3 * riskPerShare;   // 3R
-
-            // Show planned targets
-            const targetsEl = document.getElementById('customPlannedTargets');
-            if (plan === 'A') {
-                targetsEl.innerHTML = `Plan A original: sell <strong>${planASell1Shares} shares @ $${planASell1Price.toFixed(2)}</strong> (2R) → enter your actual Sell 1 below`;
-            } else {
-                targetsEl.innerHTML = `Plan B original: Sell 1 = <strong>${planBSell1Shares} sh @ $${planBSell1Price.toFixed(2)}</strong> (1R) · Sell 2 = <strong>${planBSell2Shares} sh @ $${planBSell2Price.toFixed(2)}</strong> (3R)`;
-            }
-
-            const sell1Shares = parseInt(document.getElementById('customSell1Shares').value) || 0;
-            const sell1Price  = parseFloat(document.getElementById('customSell1Price').value) || 0;
-            const resultEl    = document.getElementById('customBreakEvenResult');
-
-            if (!sell1Shares || !sell1Price) { resultEl.style.display = 'none'; return; }
-
-            // Sell 1 profit above entry
-            const sell1Profit = (sell1Price - entry) * sell1Shares;
-
-            if (plan === 'A') {
-                // Plan A: one sell makes position risk-free
-                // Planned: sell planASell1Shares @ planASell1Price
-                // Planned profit: (planASell1Price - entry) × planASell1Shares
-                const plannedProfit = (planASell1Price - entry) * planASell1Shares;
-                // Remaining risk to cover after actual sell 1
-                // Risk on unsold shares = riskPerShare × (initialShares - sell1Shares)
-                const unsoldShares   = initialShares - sell1Shares;
-                const stopRisk       = riskPerShare * unsoldShares;
-                const remainingRisk  = Math.max(0, stopRisk - sell1Profit);
-
-                resultEl.style.display = 'block';
-
-                if (remainingRisk <= 0) {
-                    document.getElementById('customOptionAText').innerHTML =
-                        `✅ Your Sell 1 already covers all stop-out risk on the remaining ${unsoldShares} shares. Position is risk-free!`;
-                    document.getElementById('customOptionBText').innerHTML =
-                        `✅ No further sell needed — stop can hit and you net zero or better.`;
-                    return;
-                }
-
-                // Option A: same shares as planned (planASell1Shares), lower price
-                // But we already sold sell1Shares, so remaining sell is planASell1Shares - sell1Shares
-                const sell2SharesA = planASell1Shares - sell1Shares;
-                let optAText = '';
-                if (sell2SharesA <= 0) {
-                    // Already sold more than plan intended — figure out price for leftover
-                    const sell2Price = entry + (remainingRisk / unsoldShares);
-                    optAText = `You sold <strong>more shares</strong> than Plan A intended.<br>
-                        Sell remaining <strong>${unsoldShares} shares</strong> at:<br>
-                        <span style="font-size:1.3em; font-weight:800; color:#1e40af;">$${sell2Price.toFixed(2)}</span><br>
-                        <span style="font-size:0.8em; color:#6b7280;">vs original 2R target of $${planASell1Price.toFixed(2)}</span>`;
-                } else {
-                    const sell2Price = entry + (remainingRisk / sell2SharesA);
-                    optAText = `Sell remaining <strong>${sell2SharesA} shares</strong> at:<br>
-                        <span style="font-size:1.3em; font-weight:800; color:#1e40af;">$${sell2Price.toFixed(2)}</span><br>
-                        <span style="font-size:0.8em; color:#6b7280;">vs original target $${planASell1Price.toFixed(2)} — saves $${(planASell1Price - sell2Price).toFixed(2)}/share</span>`;
-                }
-
-                // Option B: same price as 2R, fewer shares
-                const sell2PriceB    = planASell1Price;
-                const profitPerShare = sell2PriceB - entry;
-                const sharesNeeded   = Math.ceil(remainingRisk / profitPerShare);
-                const sharesSafe     = Math.min(sharesNeeded, unsoldShares);
-                const freeRunners    = unsoldShares - sharesSafe;
-                const optBText = `At the original 2R price ($${planASell1Price.toFixed(2)}):<br>
-                    Sell only <strong>${sharesSafe} shares</strong><br>
-                    <span style="font-size:1.3em; font-weight:800; color:#6d28d9;">${freeRunners} free runners</span> remain<br>
-                    <span style="font-size:0.8em; color:#6b7280;">vs original plan of selling ${planASell1Shares} total</span>`;
-
-                document.getElementById('customOptionAText').innerHTML = optAText;
-                document.getElementById('customOptionBText').innerHTML = optBText;
-
-            } else {
-                // Plan B: two sells make position risk-free
-                // Actual sell 1 happened at sell1Price (vs planned planBSell1Price)
-                // Extra profit vs plan: (sell1Price - planBSell1Price) × sell1Shares
-                const extraProfit    = (sell1Price - planBSell1Price) * sell1Shares;
-                // Planned sell 2 profit: (planBSell2Price - entry) × planBSell2Shares
-                const plannedSell2Profit = (planBSell2Price - entry) * planBSell2Shares;
-                // Adjusted sell 2 profit needed: plannedSell2Profit - extraProfit
-                const sell2ProfitNeeded = Math.max(0, plannedSell2Profit - extraProfit);
-
-                resultEl.style.display = 'block';
-
-                if (sell2ProfitNeeded <= 0) {
-                    document.getElementById('customOptionAText').innerHTML =
-                        `✅ Your better Sell 1 price already covers what Sell 2 was meant to do. Position is risk-free!`;
-                    document.getElementById('customOptionBText').innerHTML =
-                        `✅ No Sell 2 needed — stop can hit and you net zero or better.`;
-                    return;
-                }
-
-                // Option A: same shares as planned (planBSell2Shares), lower price
-                const optAPricePerShare = entry + (sell2ProfitNeeded / planBSell2Shares);
-                const priceSaving       = planBSell2Price - optAPricePerShare;
-                const optAText = `Sell same <strong>${planBSell2Shares} shares</strong> at:<br>
-                    <span style="font-size:1.3em; font-weight:800; color:#1e40af;">$${optAPricePerShare.toFixed(2)}</span><br>
-                    <span style="font-size:0.8em; color:#6b7280;">$${priceSaving.toFixed(2)} lower than original 3R target ($${planBSell2Price.toFixed(2)})</span>`;
-
-                // Option B: same price as 3R, fewer shares
-                const profitPerShare = planBSell2Price - entry;
-                const sharesNeeded   = Math.ceil(sell2ProfitNeeded / profitPerShare);
-                const sharesSaved    = planBSell2Shares - sharesNeeded;
-                const optBText = `At the original 3R price ($${planBSell2Price.toFixed(2)}):<br>
-                    Sell only <strong>${sharesNeeded} shares</strong><br>
-                    <span style="font-size:1.3em; font-weight:800; color:#6d28d9;">${sharesSaved} fewer shares</span> to sell<br>
-                    <span style="font-size:0.8em; color:#6b7280;">vs original plan of ${planBSell2Shares} shares</span>`;
-
-                document.getElementById('customOptionAText').innerHTML = optAText;
-                document.getElementById('customOptionBText').innerHTML = optBText;
-            }
         }
 
         function renderHarvestPlans(pos, entry, stop, currentStop, riskPerShare, initialShares, remaining, initialRisk$, usePlanB) {
@@ -7169,12 +6778,11 @@
             }
 
             const accountSize = getAccountSize();
-            let totalExposure = 0, totalDrawdown = 0, totalPortfolioRisk = 0;
+            let totalExposure = 0, totalDrawdown = 0;
             openPositions.forEach(pos => {
                 const metrics = calculatePositionMetrics(pos);
-                totalExposure      += metrics.accountWeight;
-                totalDrawdown      += metrics.portfolioDrawdown;
-                totalPortfolioRisk += metrics.portfolioCapitalRisk || 0;
+                totalExposure += metrics.accountWeight;
+                totalDrawdown += metrics.portfolioDrawdown;
             });
 
             const newEntry = {
@@ -7182,7 +6790,6 @@
                 accountValue: accountSize,
                 drawdown: totalDrawdown,
                 exposure: totalExposure,
-                totalRisk: totalPortfolioRisk,
                 fomo: isNaN(ncfdVal) ? '' : ncfdVal,
                 notes: 'Daily snapshot',
                 dailyChange: 0
@@ -7668,8 +7275,8 @@
             // Progress bar
             document.getElementById('rewardProgressBar').style.width = `${progressPct.toFixed(1)}%`;
 
-            // Reward % steps up 5% per milestone starting at 10%, capped at 25% from M4
-            const rewardPct       = Math.min(25, 10 + (claimingMilestone - 1) * 5) / 100;
+            // Suggested reward = claimingMilestone × 10% of milestoneSize, capped at 40% (M4)
+            const rewardPct       = Math.min(40, claimingMilestone * 10) / 100;
             const suggestedReward = milestoneSize * rewardPct;
 
             // Milestone label (header)
@@ -7679,10 +7286,8 @@
                 : `Working toward Milestone ${claimingMilestone} — $${progressDollars.toFixed(0)} / $${milestoneSize.toLocaleString()} (${progressPct.toFixed(0)}%) · Next reward when reached: $${suggestedReward.toLocaleString(undefined,{maximumFractionDigits:0})}`;
 
             // Ack button
-            const ackBtn   = document.getElementById('rewardAckBtn');
-            const forceBtn = document.getElementById('rewardForceBtn');
-            ackBtn.style.display   = allMet ? 'inline-block' : 'none';
-            forceBtn.style.display = (!allMet && canClaim) ? 'inline-block' : 'none';
+            const ackBtn = document.getElementById('rewardAckBtn');
+            ackBtn.style.display = allMet ? 'inline-block' : 'none';
 
             // Criteria cells
             const critStyle = (met, label, value, detail) => {
@@ -7724,15 +7329,10 @@
             const rewardAmtEl = document.getElementById('rewardSuggestedAmt');
             if (allGreenEl) allGreenEl.style.display = allMet ? 'block' : 'none';
             if (rewardAmtEl) {
-                const displayPct = Math.min(25, 10 + (claimingMilestone - 1) * 5);
-                const capped     = claimingMilestone > 4 ? ' (capped at 25%)' : '';
+                const displayPct = Math.min(40, claimingMilestone * 10);
+                const capped     = claimingMilestone > 4 ? ' (capped)' : '';
                 rewardAmtEl.textContent = `$${suggestedReward.toLocaleString(undefined,{maximumFractionDigits:0})} (${displayPct}%${capped} of $${milestoneSize.toLocaleString(undefined,{maximumFractionDigits:0})})`;
             }
-        }
-
-        function forceClaimRewardMilestone() {
-            if (!confirm(`Override criteria and mark Milestone ${rewardMilestoneClaimed + 1} as claimed? Use this only when the milestone was legitimately earned but criteria are temporarily blocking it.`)) return;
-            acknowledgeRewardMilestone();
         }
 
         function acknowledgeRewardMilestone() {
@@ -9029,23 +8629,35 @@
 
         // Initialize
         window.onload = function() {
-            initializeFirebase();
-
-            // Update SPY YTD on page load
-            setTimeout(() => {
-                if (document.getElementById('apiKey').value) {
-                    updateSPYPrice();
-                }
-            }, 2000);
-
-            // Initialize What If Calculator with default values
-            setTimeout(() => {
-                calculateWhatIf();
-                updateWinDistributionBars();
-                updateLossDistributionBars();
-                calcTargetExpectancy();
-                calcCompoundInterest();
-            }, 500);
+            const hasConfig = loadFirebaseConfig();
+            if (!hasConfig) {
+                updateSyncStatus('Not configured - Click ⚙️ Firebase Config', false);
+                // Show modal after a short delay so page loads first
+                setTimeout(() => {
+                    document.getElementById('firebaseSetupModal').style.display = 'block';
+                }, 500);
+            } else {
+                updateSyncStatus('Connected to Firebase ✓', true);
+                
+                // Auto-save disabled - data saves when you make changes
+                // This prevents save/load loops that cause data loss
+                
+                // Update SPY YTD on page load (with delay to ensure Firebase data is loaded)
+                setTimeout(() => {
+                    if (document.getElementById('apiKey').value) {
+                        updateSPYPrice();
+                    }
+                }, 2000);
+                
+                // Initialize What If Calculator with default values
+                setTimeout(() => {
+                    calculateWhatIf();
+                    updateWinDistributionBars();
+                    updateLossDistributionBars();
+                    calcTargetExpectancy();
+                    calcCompoundInterest();
+                }, 500);
+            }
         };
     </script>
     
@@ -9066,5 +8678,6 @@
             });
         }
     </script>
+    </div><!-- end mainApp -->
 </body>
 </html>
