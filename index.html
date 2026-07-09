@@ -530,6 +530,66 @@
             overflow-x: auto;
             font-size: 12px;
         }
+
+        /* ── Mobile Responsive (phone only, under 768px) ─────────────────── */
+        @media (max-width: 768px) {
+
+            /* Hide heavy sections on mobile */
+            .account-setup-section,
+            #rewardReadinessCard,
+            #tradeQualityCard,
+            .tab-nav,
+            #equity-curves,
+            #closed-trades,
+            #what-if,
+            #options-hedge,
+            #position-sizer {
+                display: none !important;
+            }
+
+            /* Compact the top stats */
+            .container { padding: 8px !important; }
+            h1 { font-size: 1.2em !important; margin-bottom: 6px !important; }
+
+            /* Sync bar compact */
+            .card { padding: 8px !important; margin-bottom: 6px !important; }
+
+            /* Safety dashboard — show as 2-col grid */
+            #safetyDashboard .safety-stats {
+                grid-template-columns: 1fr 1fr !important;
+                gap: 6px !important;
+            }
+            .safety-stat { padding: 6px 8px !important; }
+            .safety-stat .stat-value { font-size: 1em !important; }
+            .safety-stat .stat-label { font-size: 0.65em !important; }
+
+            /* Hide open positions TABLE, show mobile cards instead */
+            #openPositionsTable { display: none !important; }
+            #mobilePositionCards { display: block !important; }
+
+            /* Exposure scaling compact */
+            #exposureScalingCard { display: block !important; }
+        }
+
+        /* Mobile position cards — hidden on desktop */
+        #mobilePositionCards { display: none; }
+
+        .mobile-pos-card {
+            background: white;
+            border: 2px solid #e5e7eb;
+            border-radius: 10px;
+            padding: 12px;
+            margin-bottom: 10px;
+        }
+        .mobile-pos-card.profit-card { border-left: 4px solid #15803d; }
+        .mobile-pos-card.loss-card   { border-left: 4px solid #dc2626; }
+        .mobile-pos-card .pos-symbol { font-size: 1.2em; font-weight: 800; color: #1e40af; }
+        .mobile-pos-card .pos-grid   { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-top: 8px; }
+        .mobile-pos-card .pos-item   { font-size: 0.8em; }
+        .mobile-pos-card .pos-label  { color: #9ca3af; font-size: 0.7em; display: block; }
+        .mobile-pos-card .pos-value  { font-weight: 700; }
+        .mobile-pos-card .pos-pnl    { font-size: 1.1em; font-weight: 800; margin-top: 8px; padding: 6px; border-radius: 6px; text-align: center; }
+
     </style>
 </head>
 <body>
@@ -1043,6 +1103,8 @@
                 <div class="table-scroll" id="openPositionsTable">
                     <div class="empty-state">No open positions</div>
                 </div>
+                <!-- Mobile cards view (phones only) -->
+                <div id="mobilePositionCards"></div>
             </div>
             
             <!-- Harvest History -->
@@ -7618,6 +7680,43 @@
             </table>`;
         }
 
+        function updateMobilePositionCards() {
+            const el = document.getElementById('mobilePositionCards');
+            if (!el || window.innerWidth > 768) return;
+            if (openPositions.length === 0) {
+                el.innerHTML = '<div class="empty-state">No open positions</div>';
+                return;
+            }
+            el.innerHTML = openPositions.map(pos => {
+                const m = calculatePositionMetrics(pos);
+                const isProfit = m.unrealizedPnL >= 0;
+                const pnlColor = isProfit ? '#15803d' : '#dc2626';
+                const pnlBg   = isProfit ? '#dcfce7' : '#fee2e2';
+                const hasPartial = pos.partialSells && pos.partialSells.length > 0;
+                const atBE = pos.currentStop >= m.adjustedPrice;
+                const badge = (atBE && hasPartial) ? ' <span style="background:#15803d;color:white;border-radius:8px;padding:1px 5px;font-size:0.65em;">✓ BE</span>' :
+                              atBE ? ' <span style="background:#dcfce7;color:#15803d;border:1px solid #86efac;border-radius:8px;padding:1px 5px;font-size:0.65em;">✓ BE</span>' :
+                              hasPartial ? ' <span style="background:#bbf7d0;color:#166534;border-radius:8px;padding:1px 5px;font-size:0.65em;">½</span>' : '';
+                return `<div class="mobile-pos-card ${isProfit ? 'profit-card' : 'loss-card'}">
+                    <div style="display:flex; justify-content:space-between; align-items:center;">
+                        <span class="pos-symbol">${pos.symbol}${badge}</span>
+                        <span style="font-size:0.8em; color:#6b7280;">${pos.shares} sh</span>
+                    </div>
+                    <div class="pos-grid">
+                        <div class="pos-item"><span class="pos-label">Current</span><span class="pos-value">$${pos.currentPrice.toFixed(2)}</span></div>
+                        <div class="pos-item"><span class="pos-label">Entry</span><span class="pos-value">$${pos.entryPrice.toFixed(2)}</span></div>
+                        <div class="pos-item"><span class="pos-label">Stop</span><span class="pos-value">$${pos.currentStop.toFixed(2)}</span></div>
+                        <div class="pos-item"><span class="pos-label">Init R</span><span class="pos-value" style="color:${m.initialR >= 0 ? '#15803d' : '#dc2626'}">${m.initialR.toFixed(2)}R</span></div>
+                        <div class="pos-item"><span class="pos-label">Port P&L</span><span class="pos-value" style="color:${pnlColor}">${m.portfolioPnlPercent >= 0 ? '+' : ''}${m.portfolioPnlPercent.toFixed(2)}%</span></div>
+                        <div class="pos-item"><span class="pos-label">Exposure</span><span class="pos-value">${m.accountWeight.toFixed(1)}%</span></div>
+                    </div>
+                    <div class="pos-pnl" style="background:${pnlBg}; color:${pnlColor};">
+                        ${m.unrealizedPnL >= 0 ? '+' : ''}$${m.unrealizedPnL.toFixed(0)} unrealized
+                    </div>
+                </div>`;
+            }).join('');
+        }
+
         function updateAllDisplays() {
             updateSafetyDashboard();
             updateOpenPositionsTable();
@@ -7638,6 +7737,7 @@
             updateExposureScaling();
             populateHedgePositionDropdown();
             updateRewardReadiness();
+            updateMobilePositionCards();
             // Trade quality only updates when panel is open (performance)
             if (document.getElementById('tradeQualityContent')?.style.display !== 'none') {
                 updateTradeQuality();
