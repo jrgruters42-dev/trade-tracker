@@ -24,6 +24,7 @@
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+    <script src="https://unpkg.com/lightweight-charts@4.1.3/dist/lightweight-charts.standalone.production.js"></script>
     
     <style>
         * {
@@ -904,6 +905,7 @@
                 </div>
                 <div style="display:flex; align-items:center; gap:8px;">
                     <button onclick="event.stopPropagation(); acknowledgeRewardMilestone()" id="rewardAckBtn" style="display:none; padding:3px 10px; font-size:0.72em; background:#10b981; color:white; border:none; border-radius:6px; cursor:pointer; font-weight:700;">✓ Mark Claimed</button>
+                    <button onclick="event.stopPropagation(); forceClaimRewardMilestone()" id="rewardForceBtn" style="display:none; padding:3px 10px; font-size:0.72em; background:#6b7280; color:white; border:none; border-radius:6px; cursor:pointer; font-weight:600;">Override &amp; Claim</button>
                     <span id="rewardReadinessToggle" style="font-size:0.75em; color:#9ca3af; font-weight:600;">▶ tap to expand</span>
                 </div>
             </div>
@@ -2115,10 +2117,6 @@
             <!-- 4-cell summary row -->
             <div id="harvestSummaryRow" style="display:grid; grid-template-columns:repeat(4,1fr); gap:10px; margin-bottom:16px;"></div>
 
-            <!-- R price ladder -->
-            <div style="font-size:0.75em; font-weight:700; color:#9ca3af; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:8px;">Price Ladder</div>
-            <div id="harvestLadder" style="display:grid; grid-template-columns:repeat(4,1fr); gap:8px; margin-bottom:16px;"></div>
-
             <!-- Plan recommendation banner -->
             <div id="harvestPlanBanner" style="margin-bottom:14px; padding:10px 14px; border-radius:8px; font-size:0.85em; font-weight:600;"></div>
 
@@ -2128,12 +2126,91 @@
                 <div id="harvestPlanB" style="padding:14px; border-radius:8px; border:2px solid #7c3aed; background:#fdf4ff;"></div>
             </div>
 
-            <!-- Notes -->
-            <div style="margin-bottom:12px;">
-                <label style="font-size:0.8em; font-weight:700; color:#374151; display:block; margin-bottom:5px;">📝 Trade Notes</label>
-                <textarea id="harvestNotes" rows="3" placeholder="Strategy notes, why you entered, what to watch for..." style="width:100%; padding:8px; border:2px solid #e5e7eb; border-radius:6px; font-size:0.88em; resize:vertical;"></textarea>
+            <!-- Custom Sell Calculator -->
+            <div style="padding:14px; background:#fafafa; border:2px solid #e5e7eb; border-radius:10px;">
+                <div style="font-size:0.8em; font-weight:700; color:#374151; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:8px;">🎯 Custom Sell Calculator</div>
+                <div style="font-size:0.8em; color:#6b7280; margin-bottom:12px;">Enter your actual Sell 1 (e.g. from a gap-up) to see adjusted Sell 2 targets. Leave Sell 1 blank if you haven't sold yet.</div>
+
+                <!-- Plan selector -->
+                <div style="display:flex; gap:8px; margin-bottom:12px;">
+                    <button id="customPlanABtn" onclick="setCustomPlan('A')"
+                        style="flex:1; padding:7px; font-size:0.82em; font-weight:700; border:2px solid #3b82f6; border-radius:6px; background:#eff6ff; color:#1e40af; cursor:pointer;">Plan A</button>
+                    <button id="customPlanBBtn" onclick="setCustomPlan('B')"
+                        style="flex:1; padding:7px; font-size:0.82em; font-weight:700; border:2px solid #e5e7eb; border-radius:6px; background:white; color:#6b7280; cursor:pointer;">Plan B</button>
+                </div>
+                <input type="hidden" id="customActivePlan" value="A">
+
+                <!-- Planned targets display -->
+                <div id="customPlannedTargets" style="padding:8px 12px; background:#f3f4f6; border-radius:6px; font-size:0.8em; color:#6b7280; margin-bottom:10px;"></div>
+
+                <!-- Sell 1 inputs -->
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:10px;">
+                    <div>
+                        <label style="font-size:0.75em; color:#6b7280; display:block; margin-bottom:3px;">Sell 1 — Shares <span style="color:#9ca3af;">(optional)</span></label>
+                        <input type="number" id="customSell1Shares" min="1" step="1"
+                               oninput="calcCustomBreakEven()"
+                               style="width:100%; padding:7px; border:2px solid #e5e7eb; border-radius:6px; font-size:0.9em;">
+                    </div>
+                    <div>
+                        <label style="font-size:0.75em; color:#6b7280; display:block; margin-bottom:3px;">Sell 1 — Actual Price ($)</label>
+                        <input type="number" id="customSell1Price" step="0.01"
+                               oninput="calcCustomBreakEven()"
+                               style="width:100%; padding:7px; border:2px solid #e5e7eb; border-radius:6px; font-size:0.9em;">
+                    </div>
+                </div>
+
+                <!-- Options A & B -->
+                <div id="customBreakEvenResult" style="display:none; margin-bottom:12px;">
+                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+                        <div style="padding:12px; background:#eff6ff; border:2px solid #3b82f6; border-radius:8px;">
+                            <div style="font-size:0.72em; font-weight:700; color:#1e40af; margin-bottom:6px; text-transform:uppercase;">Option A — Same Shares, Lower Price</div>
+                            <div id="customOptionAText" style="font-size:0.88em; color:#1e3a5f; line-height:1.6;"></div>
+                        </div>
+                        <div style="padding:12px; background:#fdf4ff; border:2px solid #7c3aed; border-radius:8px;">
+                            <div style="font-size:0.72em; font-weight:700; color:#6d28d9; margin-bottom:6px; text-transform:uppercase;">Option B — Same Price, Fewer Shares</div>
+                            <div id="customOptionBText" style="font-size:0.88em; color:#3b0764; line-height:1.6;"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Option C: custom price -->
+                <div style="border-top:1px solid #e5e7eb; padding-top:10px;">
+                    <div style="font-size:0.75em; font-weight:700; color:#374151; margin-bottom:6px;">Option C — Enter Any Price, See Shares Needed</div>
+                    <div style="font-size:0.75em; color:#6b7280; margin-bottom:8px;">Type any price (e.g. from a gap-up) — see how many shares to sell to match the original plan's protection.</div>
+                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:8px;">
+                        <div>
+                            <label style="font-size:0.75em; color:#6b7280; display:block; margin-bottom:3px;">Sell 2 — Price ($)</label>
+                            <input type="number" id="customSell2Price" step="0.01"
+                                   oninput="calcOptionC()"
+                                   style="width:100%; padding:7px; border:2px solid #e5e7eb; border-radius:6px; font-size:0.9em;">
+                        </div>
+                        <div style="display:flex; align-items:flex-end;">
+                            <div id="customOptionCResult" style="width:100%; padding:10px; background:#fefce8; border:2px solid #f59e0b; border-radius:8px; display:none;">
+                                <div id="customOptionCText" style="font-size:0.88em; color:#78350f; line-height:1.6;"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
-            <button onclick="saveHarvestNotes()" class="btn-success" style="width:100%; padding:10px; font-size:0.95em; font-weight:700;">💾 Save Notes</button>
+        </div>
+    </div>
+
+    <!-- Trade Chart Modal -->
+    <div id="tradeChartModal" class="modal" style="display:none;">
+        <div class="modal-content" style="max-width:1150px; width:96vw; padding:0; overflow:hidden;">
+            <div style="display:flex; align-items:center; justify-content:space-between; padding:12px 16px; background:#1e40af; color:white;">
+                <div style="display:flex; align-items:center; gap:12px;">
+                    <span id="tradeChartTitle" style="font-size:1.1em; font-weight:800;"></span>
+                    <span id="tradeChartLoading" style="font-size:0.78em; opacity:0.8;"></span>
+                </div>
+                <span class="close" onclick="closeModal('tradeChartModal')" style="color:white; font-size:1.4em; cursor:pointer;">&times;</span>
+            </div>
+            <div style="display:flex; height:540px;">
+                <div style="flex:1; min-width:0; position:relative; background:#131722;">
+                    <div id="tradeChartContainer" style="width:100%; height:100%;"></div>
+                </div>
+                <div id="tradeChartDetails" style="width:230px; flex-shrink:0; overflow-y:auto; padding:14px; background:#f9fafb; border-left:1px solid #e5e7eb; font-size:0.82em;"></div>
+            </div>
         </div>
     </div>
 
@@ -3853,7 +3930,7 @@
                 
                 html += `
                     <tr>
-                        <td><strong>${trade.symbol}</strong></td>
+                        <td><strong style="cursor:pointer; color:#1e40af; text-decoration:underline dotted;" onclick="openTradeChart(${trade.originalIndex})" title="Click to view chart">${trade.symbol}</strong></td>
                         <td>$${trade.entryPrice.toFixed(2)}</td>
                         <td>$${trade.exitPrice.toFixed(2)}</td>
                         <td>${trade.accountWeight.toFixed(2)}%</td>
@@ -4049,23 +4126,19 @@
                 if (el2) el2.textContent = last30Pnl.toFixed(2) + '%';
                 if (el3) el3.textContent = last10Pnl.toFixed(2) + '%';
 
-                const dailyPnls = closedTrades.map(t => t.portfolioPnlPercent);
-                
-                const trace2 = {
-                    x: dailyPnls,
-                    type: 'histogram',
-                    marker: { color: '#667eea' },
-                    name: 'Daily P&L Distribution'
-                };
-
+                const rValues = closedTrades.map(t => parseFloat(t.rMultiple.toFixed(2)));
+                const wins    = rValues.filter(r => r > 0);
+                const losses  = rValues.filter(r => r <= 0);
+                const traceWins = { x:wins, type:'histogram', marker:{color:'rgba(16,185,129,0.7)',line:{color:'#059669',width:1}}, name:'Winners', xbins:{size:0.5} };
+                const traceLosses = { x:losses, type:'histogram', marker:{color:'rgba(239,68,68,0.7)',line:{color:'#dc2626',width:1}}, name:'Losers', xbins:{size:0.5} };
                 const layout2 = {
-                    xaxis: { title: 'Portfolio P&L %' },
-                    yaxis: { title: 'Frequency' },
-                    plot_bgcolor: '#f9f9f9',
-                    paper_bgcolor: 'white'
+                    title: 'R-Multiple Distribution',
+                    xaxis: { title:'R-Multiple', zeroline:true, zerolinecolor:'#374151', zerolinewidth:2 },
+                    yaxis: { title:'Number of Trades' },
+                    barmode: 'overlay',
+                    plot_bgcolor:'#f9f9f9', paper_bgcolor:'white'
                 };
-
-                Plotly.newPlot('dailyPnlChart', [trace2], layout2, {responsive: true});
+                Plotly.newPlot('dailyPnlChart', [traceWins, traceLosses], layout2, {responsive:true});
             }
 
             if (dailyEquity.length === 0) {
@@ -4925,9 +4998,22 @@
                 renderHarvestPlans(pos, entry, stop, currentStop, riskPerShare, initialShares, remaining, initialRisk$, usePlanB);
             })();
 
-            // ── Plan B ─────────────────────────────────────────────────────
-            // ── Notes ──────────────────────────────────────────────────────
-            document.getElementById('harvestNotes').value = pos.notes || '';
+            // ── Initialize custom calculator ───────────────────────────────
+            const notesEl = document.getElementById('harvestNotes');
+            if (notesEl) notesEl.value = pos.notes || '';
+            document.getElementById('customSell1Shares').value = '';
+            document.getElementById('customSell1Price').value  = '';
+            document.getElementById('customSell2Price').value  = '';
+            document.getElementById('customBreakEvenResult').style.display = 'none';
+            document.getElementById('customOptionCResult').style.display   = 'none';
+            // Pre-fill Sell 1 from first partial if exists
+            if (pos.partialSells && pos.partialSells.length > 0) {
+                const first = pos.partialSells[0];
+                document.getElementById('customSell1Shares').value = first.shares;
+                document.getElementById('customSell1Price').value  = parseFloat(first.price).toFixed(2);
+            }
+            setCustomPlan('A');
+
             document.getElementById('harvestCalcModal').style.display = 'block';
         }
 
@@ -4992,14 +5078,164 @@
             if (!harvestModalPosId) return;
             const pos = openPositions.find(p => p.id === harvestModalPosId);
             if (!pos) return;
-            pos.notes = document.getElementById('harvestNotes').value;
+            const notesEl = document.getElementById('harvestNotes');
+            if (notesEl) pos.notes = notesEl.value;
             saveToFirebase();
-            // Brief toast
-            const btn = document.querySelector('#harvestCalcModal .btn-success');
-            const orig = btn.textContent;
-            btn.textContent = '✅ Saved!';
-            btn.style.background = '#059669';
-            setTimeout(() => { btn.textContent = orig; btn.style.background = ''; }, 2000);
+        }
+
+        function setCustomPlan(plan) {
+            document.getElementById('customActivePlan').value = plan;
+            const btnA = document.getElementById('customPlanABtn');
+            const btnB = document.getElementById('customPlanBBtn');
+            if (plan === 'A') {
+                btnA.style.background = '#eff6ff'; btnA.style.borderColor = '#3b82f6'; btnA.style.color = '#1e40af';
+                btnB.style.background = 'white';   btnB.style.borderColor = '#e5e7eb'; btnB.style.color = '#6b7280';
+            } else {
+                btnB.style.background = '#fdf4ff'; btnB.style.borderColor = '#7c3aed'; btnB.style.color = '#6d28d9';
+                btnA.style.background = 'white';   btnA.style.borderColor = '#e5e7eb'; btnA.style.color = '#6b7280';
+            }
+            const pos = openPositions.find(p => p.id === harvestModalPosId);
+            if (pos) {
+                const rps = pos.entryPrice - pos.initialStop;
+                const sell2El = document.getElementById('customSell2Price');
+                if (sell2El && !sell2El.value) {
+                    sell2El.value = plan === 'A'
+                        ? (pos.entryPrice + 2 * rps).toFixed(2)
+                        : (pos.entryPrice + 3 * rps).toFixed(2);
+                }
+            }
+            calcCustomBreakEven();
+            calcOptionC();
+        }
+
+        function calcCustomBreakEven() {
+            const pos = openPositions.find(p => p.id === harvestModalPosId);
+            if (!pos) return;
+            const entry = pos.entryPrice, stop = pos.initialStop;
+            const initialShares = pos.initialShares || pos.shares;
+            const riskPerShare = entry - stop;
+            const plan = document.getElementById('customActivePlan').value;
+            const sell1Shares = parseInt(document.getElementById('customSell1Shares').value) || 0;
+            const sell1Price  = parseFloat(document.getElementById('customSell1Price').value) || 0;
+            const resultEl    = document.getElementById('customBreakEvenResult');
+            const targetsEl   = document.getElementById('customPlannedTargets');
+
+            if (plan === 'A') {
+                const s = Math.round(initialShares * 0.33);
+                const p = (entry + 2 * riskPerShare).toFixed(2);
+                if (targetsEl) targetsEl.innerHTML = `Plan A: sell <strong>${s} shares @ $${p}</strong> (2R)`;
+            } else {
+                const s1 = Math.round(initialShares * 0.15), p1 = (entry + riskPerShare).toFixed(2);
+                const s2 = Math.round(initialShares * 0.18), p2 = (entry + 3 * riskPerShare).toFixed(2);
+                if (targetsEl) targetsEl.innerHTML = `Plan B: Sell 1 = <strong>${s1} sh @ $${p1}</strong> · Sell 2 = <strong>${s2} sh @ $${p2}</strong>`;
+            }
+
+            if (!sell1Shares || !sell1Price) { if (resultEl) resultEl.style.display = 'none'; return; }
+
+            let plannedSell1Profit, plannedSell2Profit;
+            if (plan === 'A') {
+                plannedSell1Profit = (2 * riskPerShare) * Math.round(initialShares * 0.33);
+                plannedSell2Profit = 0;
+            } else {
+                plannedSell1Profit = riskPerShare * Math.round(initialShares * 0.15);
+                plannedSell2Profit = (3 * riskPerShare) * Math.round(initialShares * 0.18);
+            }
+
+            const actualSell1Profit = (sell1Price - entry) * sell1Shares;
+            const extraProfit = actualSell1Profit - plannedSell1Profit;
+
+            if (resultEl) resultEl.style.display = 'block';
+
+            if (plan === 'A') {
+                const unsoldShares  = initialShares - sell1Shares;
+                const stopRisk      = riskPerShare * unsoldShares;
+                const remainingRisk = Math.max(0, stopRisk - actualSell1Profit);
+                if (remainingRisk <= 0) {
+                    document.getElementById('customOptionAText').innerHTML = '✅ Sell 1 already covers all risk!';
+                    document.getElementById('customOptionBText').innerHTML = '✅ No further sell needed.';
+                    return;
+                }
+                const optAPrice  = entry + (remainingRisk / unsoldShares);
+                const optBShares = Math.min(Math.ceil(remainingRisk / (2*riskPerShare)), unsoldShares);
+                document.getElementById('customOptionAText').innerHTML =
+                    `Sell <strong>${unsoldShares} shares</strong> at:<br>
+                    <span style="font-size:1.3em;font-weight:800;color:#1e40af;">$${optAPrice.toFixed(2)}</span><br>
+                    <span style="font-size:0.8em;color:#6b7280;">$${(entry+2*riskPerShare-optAPrice).toFixed(2)} below 2R</span>`;
+                document.getElementById('customOptionBText').innerHTML =
+                    `At 2R ($${(entry+2*riskPerShare).toFixed(2)}):<br>
+                    Sell only <strong>${optBShares} shares</strong><br>
+                    <span style="font-size:0.8em;color:#6b7280;">vs original ${Math.round(initialShares*0.33)}</span>`;
+            } else {
+                const sell2ProfitNeeded = Math.max(0, plannedSell2Profit - extraProfit);
+                if (sell2ProfitNeeded <= 0) {
+                    document.getElementById('customOptionAText').innerHTML = '✅ Better Sell 1 covers Sell 2!';
+                    document.getElementById('customOptionBText').innerHTML = '✅ No Sell 2 needed.';
+                    return;
+                }
+                const planBSell2Shares = Math.round(initialShares * 0.18);
+                const optAPrice  = entry + (sell2ProfitNeeded / planBSell2Shares);
+                const optBShares = Math.min(Math.ceil(sell2ProfitNeeded / (3*riskPerShare)), planBSell2Shares);
+                document.getElementById('customOptionAText').innerHTML =
+                    `Sell <strong>${planBSell2Shares} shares</strong> at:<br>
+                    <span style="font-size:1.3em;font-weight:800;color:#1e40af;">$${optAPrice.toFixed(2)}</span><br>
+                    <span style="font-size:0.8em;color:#6b7280;">$${(entry+3*riskPerShare-optAPrice).toFixed(2)} below 3R</span>`;
+                document.getElementById('customOptionBText').innerHTML =
+                    `At 3R ($${(entry+3*riskPerShare).toFixed(2)}):<br>
+                    Sell only <strong>${optBShares} shares</strong><br>
+                    <span style="font-size:0.8em;color:#6b7280;">${planBSell2Shares-optBShares} fewer than planned</span>`;
+            }
+        }
+
+        function calcOptionC() {
+            const pos = openPositions.find(p => p.id === harvestModalPosId);
+            if (!pos) return;
+            const entry = pos.entryPrice, stop = pos.initialStop;
+            const initialShares = pos.initialShares || pos.shares;
+            const riskPerShare  = entry - stop;
+            const plan          = document.getElementById('customActivePlan').value;
+            const sell1Shares   = parseInt(document.getElementById('customSell1Shares').value) || 0;
+            const sell1Price    = parseFloat(document.getElementById('customSell1Price').value) || 0;
+            const sell2Price    = parseFloat(document.getElementById('customSell2Price').value) || 0;
+            const resultEl      = document.getElementById('customOptionCResult');
+
+            if (!sell2Price) { if (resultEl) resultEl.style.display = 'none'; return; }
+            if (sell2Price <= entry) {
+                if (resultEl) { resultEl.style.display = 'block'; document.getElementById('customOptionCText').innerHTML = `⚠ Price must be above entry ($${entry.toFixed(2)})`; }
+                return;
+            }
+
+            let totalPlannedProfit;
+            if (plan === 'A') {
+                totalPlannedProfit = (2 * riskPerShare) * Math.round(initialShares * 0.33);
+            } else {
+                totalPlannedProfit = (riskPerShare * Math.round(initialShares * 0.15)) +
+                                     (3 * riskPerShare * Math.round(initialShares * 0.18));
+            }
+
+            const actualSell1Profit = (sell1Shares && sell1Price) ? (sell1Price - entry) * sell1Shares : 0;
+            const profitNeeded   = Math.max(0, totalPlannedProfit - actualSell1Profit);
+            const profitPerShare = sell2Price - entry;
+            const sharesNeeded   = Math.ceil(profitNeeded / profitPerShare);
+            const remainingShares = initialShares - sell1Shares;
+            const sharesSafe     = Math.min(sharesNeeded, remainingShares);
+            const freeRunners    = remainingShares - sharesSafe;
+            const origShares     = plan === 'A' ? Math.round(initialShares*0.33) : Math.round(initialShares*0.18);
+
+            if (resultEl) resultEl.style.display = 'block';
+
+            if (profitNeeded <= 0) {
+                document.getElementById('customOptionCText').innerHTML =
+                    `✅ Already covered — 0 shares needed. All ${remainingShares} are free runners.`;
+                return;
+            }
+
+            document.getElementById('customOptionCText').innerHTML =
+                `At <strong>$${sell2Price.toFixed(2)}</strong>, sell:<br>
+                <span style="font-size:1.3em;font-weight:800;color:#92400e;">${sharesSafe} shares</span><br>
+                <span style="font-size:0.82em;color:#6b7280;">
+                    ${freeRunners > 0 ? `Leaves <strong>${freeRunners} free runners</strong>` : 'Sells all remaining'}<br>
+                    vs original: ${origShares} shares${!sell1Shares ? ' <em>(no prior sell)</em>' : ''}
+                </span>`;
         }
 
         function closeModal(modalId) {
@@ -5227,6 +5463,7 @@
                     initialRiskPercent: metrics.initialRiskPercent,
                     rMultiple: rMultiple,
                     exitDate: exitDate,
+                    entryDate: pos.entryDate || null,
                     notes: notes || '',
                     hadPartials: (pos.partialSells && pos.partialSells.length > 0) ? true : false,
                     partialSells: pos.partialSells || []
@@ -7358,9 +7595,11 @@
                 ? `🔔 Milestone ${claimingMilestone} available — suggested reward: <strong>$${suggestedReward.toLocaleString(undefined,{maximumFractionDigits:0})}</strong>`
                 : `Working toward Milestone ${claimingMilestone} — $${progressDollars.toFixed(0)} / $${milestoneSize.toLocaleString()} (${progressPct.toFixed(0)}%) · Next reward when reached: $${suggestedReward.toLocaleString(undefined,{maximumFractionDigits:0})}`;
 
-            // Ack button
-            const ackBtn = document.getElementById('rewardAckBtn');
-            ackBtn.style.display = allMet ? 'inline-block' : 'none';
+            // Ack button — shows when ALL criteria met
+            const ackBtn   = document.getElementById('rewardAckBtn');
+            const forceBtn = document.getElementById('rewardForceBtn');
+            ackBtn.style.display   = allMet ? 'inline-block' : 'none';
+            if (forceBtn) forceBtn.style.display = (!allMet && canClaim) ? 'inline-block' : 'none';
 
             // Criteria cells
             const critStyle = (met, label, value, detail) => {
@@ -7406,6 +7645,11 @@
                 const capped     = claimingMilestone > 4 ? ' (capped)' : '';
                 rewardAmtEl.textContent = `$${suggestedReward.toLocaleString(undefined,{maximumFractionDigits:0})} (${displayPct}%${capped} of $${milestoneSize.toLocaleString(undefined,{maximumFractionDigits:0})})`;
             }
+        }
+
+        function forceClaimRewardMilestone() {
+            if (!confirm(`Override criteria and mark Milestone ${rewardMilestoneClaimed + 1} as claimed? Use this only when the milestone was legitimately earned but criteria are temporarily blocking it.`)) return;
+            acknowledgeRewardMilestone();
         }
 
         function acknowledgeRewardMilestone() {
@@ -7726,6 +7970,116 @@
                     </div>
                 </div>`;
             }).join('');
+        }
+
+        // ── Trade Chart Modal ─────────────────────────────────────────────────
+        let lwChart = null;
+
+        async function openTradeChart(index) {
+            const trade = closedTrades[index];
+            if (!trade) return;
+            document.getElementById('tradeChartModal').style.display = 'flex';
+            document.getElementById('tradeChartTitle').textContent = `${trade.symbol} — Trade Review`;
+            document.getElementById('tradeChartLoading').textContent = 'Loading...';
+            document.getElementById('tradeChartContainer').innerHTML = '';
+            if (lwChart) { try { lwChart.remove(); } catch(e) {} lwChart = null; }
+            buildTradeChartDetails(trade);
+
+            const avKey = document.getElementById('alphaVantageKey')?.value?.trim();
+            if (!avKey) { document.getElementById('tradeChartLoading').textContent = '⚠ Add Alpha Vantage key in Account Setup'; return; }
+
+            const avUrl = `https://www.alphavantage.co/query?function=TIME_SERIES_DAILY&symbol=${trade.symbol}&outputsize=compact&apikey=${avKey}`;
+            let ohlcv = [];
+            try {
+                const resp = await fetch(avUrl);
+                const data = await resp.json();
+                if (data['Note']) throw new Error('API limit — try again in a minute');
+                if (data['Error Message']) throw new Error('Symbol not found');
+                const series = data['Time Series (Daily)'];
+                if (!series) throw new Error('No data');
+                ohlcv = Object.entries(series).map(([date, v]) => ({
+                    time: date, open: parseFloat(v['1. open']), high: parseFloat(v['2. high']),
+                    low: parseFloat(v['3. low']), close: parseFloat(v['4. close'])
+                })).sort((a,b) => a.time.localeCompare(b.time)).slice(-130);
+                if (!ohlcv.length) throw new Error('Empty data');
+            } catch(e) { document.getElementById('tradeChartLoading').textContent = `⚠ ${e.message}`; return; }
+            document.getElementById('tradeChartLoading').textContent = '';
+
+            const container = document.getElementById('tradeChartContainer');
+            lwChart = LightweightCharts.createChart(container, {
+                layout: { background: { color: '#131722' }, textColor: '#d1d4dc' },
+                grid:   { vertLines: { color: '#1e2130' }, horzLines: { color: '#1e2130' } },
+                crosshair: { mode: LightweightCharts.CrosshairMode.Normal },
+                rightPriceScale: { borderColor: '#2a2e3a', mode: 1 },
+                timeScale: { borderColor: '#2a2e3a' },
+                width: container.clientWidth, height: container.clientHeight,
+            });
+            const candleSeries = lwChart.addCandlestickSeries({ upColor:'#26a69a',downColor:'#ef5350',borderUpColor:'#26a69a',borderDownColor:'#ef5350',wickUpColor:'#26a69a',wickDownColor:'#ef5350' });
+            candleSeries.setData(ohlcv);
+            lwChart.addLineSeries({ color:'#f59e0b',lineWidth:1.5,priceLineVisible:false,lastValueVisible:false }).setData(calcEMA(ohlcv,21));
+            lwChart.addLineSeries({ color:'#6366f1',lineWidth:1.5,priceLineVisible:false,lastValueVisible:false }).setData(calcSMA(ohlcv,50));
+
+            const snapToData = (dateStr) => {
+                if (!dateStr) return null;
+                const t = dateStr.substring(0,10);
+                return ohlcv.find(d=>d.time===t) ? t :
+                    ohlcv.reduce((b,d)=>Math.abs(d.time.localeCompare(t))<Math.abs(b.time.localeCompare(t))?d:b, ohlcv[0])?.time;
+            };
+            const markers = [];
+            const entryTime = snapToData(trade.entryDate);
+            if (entryTime) markers.push({ time:entryTime, position:'belowBar', color:'#26a69a', shape:'arrowUp', text:`Entry $${trade.entryPrice.toFixed(2)}`, size:1.5 });
+            else candleSeries.createPriceLine({ price:trade.entryPrice, color:'#26a69a', lineWidth:1, lineStyle:2, axisLabelVisible:true, title:`Entry $${trade.entryPrice.toFixed(2)}` });
+            (trade.partialSells||[]).forEach((ps,i) => {
+                const t = snapToData(ps.date?.split('T')[0]);
+                if (t) markers.push({ time:t, position:'aboveBar', color:'#f59e0b', shape:'arrowDown', text:`Partial ${i+1} $${parseFloat(ps.price).toFixed(2)}`, size:1.2 });
+            });
+            const exitTime = snapToData(trade.exitDate);
+            if (exitTime) markers.push({ time:exitTime, position:'aboveBar', color:'#ef5350', shape:'arrowDown', text:`Exit $${trade.exitPrice.toFixed(2)}`, size:1.5 });
+            markers.sort((a,b)=>a.time.localeCompare(b.time));
+            candleSeries.setMarkers(markers);
+            const addDays=(d,n)=>{const x=new Date(d);x.setDate(x.getDate()+n);return x.toISOString().substring(0,10);};
+            lwChart.timeScale().setVisibleRange({ from:addDays(entryTime||ohlcv[0].time,-14), to:addDays(exitTime||ohlcv[ohlcv.length-1].time,14) });
+            new ResizeObserver(()=>{ if(lwChart) lwChart.applyOptions({width:container.clientWidth,height:container.clientHeight}); }).observe(container);
+        }
+
+        function calcEMA(ohlcv, period) {
+            const k = 2/(period+1); let ema = null;
+            return ohlcv.map(d=>{ ema = ema===null ? d.close : d.close*k+ema*(1-k); return {time:d.time,value:parseFloat(ema.toFixed(4))}; }).slice(period-1);
+        }
+        function calcSMA(ohlcv, period) {
+            const r=[];
+            for(let i=period-1;i<ohlcv.length;i++) r.push({time:ohlcv[i].time,value:parseFloat((ohlcv.slice(i-period+1,i+1).reduce((s,d)=>s+d.close,0)/period).toFixed(4))});
+            return r;
+        }
+
+        function buildTradeChartDetails(trade) {
+            const pnlColor = trade.rMultiple >= 0 ? '#15803d' : '#dc2626';
+            const pnlSign  = trade.rMultiple >= 0 ? '+' : '';
+            const holdDays = trade.exitDate && trade.entryDate ? Math.round((new Date(trade.exitDate)-new Date(trade.entryDate))/(1000*60*60*24)) : null;
+            let partialsHTML = '';
+            if (trade.partialSells?.length) {
+                partialsHTML = `<div style="margin-top:12px;padding-top:10px;border-top:1px solid #e5e7eb;"><div style="font-weight:700;margin-bottom:6px;">Partial Sells</div>${trade.partialSells.map((ps,i)=>{
+                    const d=ps.date?new Date(ps.date).toLocaleDateString():'—';
+                    const pct=((ps.price-trade.entryPrice)/trade.entryPrice*100).toFixed(1);
+                    return `<div style="padding:6px;background:white;border-radius:5px;border:1px solid #fde68a;margin-bottom:4px;"><div style="display:flex;justify-content:space-between;font-size:0.9em;"><span style="color:#6b7280;">${d}</span><span>${ps.shares} sh</span></div><div style="font-weight:700;color:${ps.price>=trade.entryPrice?'#15803d':'#dc2626'};">$${parseFloat(ps.price).toFixed(2)} (${pct>=0?'+':''}${pct}%)</div></div>`;
+                }).join('')}</div>`;
+            }
+            document.getElementById('tradeChartDetails').innerHTML = `
+                <div style="font-weight:800;font-size:1em;color:#1e40af;margin-bottom:10px;">${trade.symbol}</div>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:5px;margin-bottom:8px;">
+                    <div style="padding:6px;background:white;border-radius:5px;border:1px solid #e5e7eb;text-align:center;"><div style="font-size:0.65em;color:#9ca3af;">Entry</div><div style="font-weight:700;">$${trade.entryPrice.toFixed(2)}</div><div style="font-size:0.65em;color:#9ca3af;">${trade.entryDate||'—'}</div></div>
+                    <div style="padding:6px;background:white;border-radius:5px;border:1px solid #e5e7eb;text-align:center;"><div style="font-size:0.65em;color:#9ca3af;">Exit</div><div style="font-weight:700;">$${trade.exitPrice.toFixed(2)}</div><div style="font-size:0.65em;color:#9ca3af;">${trade.exitDate||'—'}</div></div>
+                    <div style="padding:6px;background:white;border-radius:5px;border:1px solid #e5e7eb;text-align:center;"><div style="font-size:0.65em;color:#9ca3af;">Stop</div><div style="font-weight:700;">$${(trade.initialStop||0).toFixed(2)}</div></div>
+                    <div style="padding:6px;background:white;border-radius:5px;border:1px solid #e5e7eb;text-align:center;"><div style="font-size:0.65em;color:#9ca3af;">Hold</div><div style="font-weight:700;">${holdDays!==null?holdDays+'d':'—'}</div></div>
+                </div>
+                <div style="padding:10px;background:${trade.rMultiple>=0?'#dcfce7':'#fee2e2'};border-radius:6px;text-align:center;margin-bottom:8px;">
+                    <div style="font-size:0.72em;color:#6b7280;">Result</div>
+                    <div style="font-size:1.5em;font-weight:800;color:${pnlColor};">${pnlSign}${trade.rMultiple.toFixed(2)}R</div>
+                    <div style="font-size:0.78em;color:${pnlColor};font-weight:600;">${pnlSign}${trade.portfolioPnlPercent.toFixed(2)}% portfolio</div>
+                </div>
+                <div style="padding:8px;background:#f0f9ff;border-radius:5px;border:1px solid #bfdbfe;font-size:0.72em;color:#1e40af;line-height:1.8;"><strong>Legend</strong><br>🟡 21 EMA &nbsp;🟣 50 SMA<br>▲ Entry (green) ▼ Exit (red) ▼ Partial (orange)</div>
+                ${trade.notes?`<div style="margin-top:8px;padding:8px;background:#fefce8;border-radius:5px;border:1px solid #fde68a;font-size:0.78em;color:#78350f;"><strong>Notes:</strong> ${trade.notes}</div>`:''}
+                ${partialsHTML}`;
         }
 
         function updateAllDisplays() {
