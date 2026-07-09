@@ -3278,9 +3278,20 @@
                     qtyTooltip += `\nRemaining: ${pos.shares} shares`;
                 }
                 
+                // Status badge for desktop table
+                const hasPartialD     = pos.partialSells && pos.partialSells.length > 0;
+                const atBED           = pos.currentStop >= metrics.adjustedPrice;
+                const desktopBadge    = (atBED && hasPartialD)
+                    ? ' <span style="background:#15803d;color:white;border-radius:8px;padding:1px 5px;font-size:0.65em;vertical-align:middle;">✓ BE</span>'
+                    : atBED
+                    ? ' <span style="background:#dcfce7;color:#15803d;border:1px solid #86efac;border-radius:8px;padding:1px 5px;font-size:0.65em;vertical-align:middle;">✓ BE</span>'
+                    : hasPartialD
+                    ? ' <span style="background:#bbf7d0;color:#166534;border-radius:8px;padding:1px 5px;font-size:0.65em;vertical-align:middle;">½</span>'
+                    : '';
+
                 html += `
                     <tr style="${rowBg}">
-                        <td style="${symbolStyle}"><strong><span onclick="openHarvestModal(${pos.id})" style="cursor:pointer; border-bottom:2px dotted currentColor; padding-bottom:1px;" title="Click to open Harvest Calculator">${pos.symbol}</span></strong></td>
+                        <td style="${symbolStyle}"><strong><span onclick="openHarvestModal(${pos.id})" style="cursor:pointer; border-bottom:2px dotted currentColor; padding-bottom:1px;" title="Click to open Harvest Calculator">${pos.symbol}</span>${desktopBadge}</strong></td>
                         <td>$${pos.currentPrice.toFixed(2)}</td>
                         <td>$${pos.entryPrice.toFixed(2)}</td>
                         <td title="${adjTooltip}" style="cursor:help; border-bottom:1px dotted #9ca3af;">$${metrics.adjustedPrice.toFixed(2)}</td>
