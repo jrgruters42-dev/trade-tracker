@@ -2586,6 +2586,7 @@
                     ncfd: parseFloat(document.getElementById('ncfdInput')?.value) || null
                 },
                 taxPayments: taxPayments,
+                rewardMilestoneClaimed: rewardMilestoneClaimed,
                 lastModified: new Date().toISOString()
             };
 
@@ -3060,6 +3061,7 @@
                         qqq: document.getElementById('chkQQQ')?.checked || false,
                         ncfd: parseFloat(document.getElementById('ncfdInput')?.value) || null
                     },
+                    rewardMilestoneClaimed: rewardMilestoneClaimed,
                     lastModified: new Date().toISOString()
                 };
 
@@ -4937,7 +4939,8 @@
                         ${reached ? '<div style="font-size:0.7em; color:#15803d; margin-top:3px;">✓ REACHED</div>' : ''}
                     </div>`;
             }).join('');
-            document.getElementById('harvestLadder').innerHTML = ladder;
+            const ladderEl = document.getElementById('harvestLadder');
+            if (ladderEl) ladderEl.innerHTML = ladder;
 
             // ── Plan selection logic (async — fetch ADR from Firebase cache) ──
             const bannerEl2 = document.getElementById('harvestPlanBanner');
@@ -7585,8 +7588,8 @@
             // Progress bar
             document.getElementById('rewardProgressBar').style.width = `${progressPct.toFixed(1)}%`;
 
-            // Suggested reward = claimingMilestone × 10% of milestoneSize, capped at 40% (M4)
-            const rewardPct       = Math.min(40, claimingMilestone * 10) / 100;
+            // Reward % steps up 5% per milestone: 10%, 15%, 20%, 25% (capped)
+            const rewardPct       = Math.min(25, 10 + (claimingMilestone - 1) * 5) / 100;
             const suggestedReward = milestoneSize * rewardPct;
 
             // Milestone label (header)
@@ -7641,8 +7644,8 @@
             const rewardAmtEl = document.getElementById('rewardSuggestedAmt');
             if (allGreenEl) allGreenEl.style.display = allMet ? 'block' : 'none';
             if (rewardAmtEl) {
-                const displayPct = Math.min(40, claimingMilestone * 10);
-                const capped     = claimingMilestone > 4 ? ' (capped)' : '';
+                const displayPct = Math.min(25, 10 + (claimingMilestone - 1) * 5);
+                const capped     = claimingMilestone > 4 ? ' (capped at 25%)' : '';
                 rewardAmtEl.textContent = `$${suggestedReward.toLocaleString(undefined,{maximumFractionDigits:0})} (${displayPct}%${capped} of $${milestoneSize.toLocaleString(undefined,{maximumFractionDigits:0})})`;
             }
         }
