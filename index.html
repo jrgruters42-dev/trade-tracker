@@ -2080,6 +2080,10 @@
                         <input type="date" id="editClosedExitDate" required>
                     </div>
                     <div class="form-group">
+                        <label>Entry Date <span style="color:#9ca3af;font-weight:400;font-size:0.85em;">(for chart)</span></label>
+                        <input type="date" id="editClosedEntryDate">
+                    </div>
+                    <div class="form-group">
                         <label>Account Weight (%)</label>
                         <input type="number" id="editClosedAccountWeight" step="0.01" required>
                     </div>
@@ -3903,13 +3907,14 @@
                             <th>Symbol</th>
                             <th>Entry</th>
                             <th>Exit</th>
-                            <th title="Account Weight%: Size of this position as a % of total account at the time of the trade. Used to calculate portfolio-level P&L impact.">Acct Wt% ℹ</th>
-                            <th title="RISK LEVEL: % of portfolio risked on this trade at entry. Note: historical trades before mid-2025 show legacy position size % (e.g. 9% = 9% position), not % risk. Newer trades show actual % risk per trade (e.g. 0.5%).">Risk Level</th>
+                            <th title="Shares: hover for partial sell history">Shares ℹ</th>
+                            <th title="Hold Days: number of days position was open">Hold</th>
+                            <th title="RISK LEVEL: % of portfolio risked on this trade at entry.">Risk Level</th>
                             <th>P&L%</th>
-                            <th title="Portfolio P&L%: This trade's gain or loss as a % of your total account (not just the position). A 20% gain on a 10% position = 2% portfolio P&L. This is what actually matters for account growth.">Port P&L% ℹ</th>
-                            <th title="R-Multiple: How many times your initial risk you made or lost. 1R = broke even on risk. 2R = made 2x your risk. -1R = lost your full risk amount. Formula: Total P&L ÷ Initial Risk Dollars. This is the core metric — it normalizes all trades to be comparable regardless of position size.">R Multiple ℹ</th>
+                            <th title="Portfolio P&L%: This trade's gain or loss as a % of your total account.">Port P&L% ℹ</th>
+                            <th title="R-Multiple: How many times your initial risk you made or lost.">R ℹ</th>
                             <th>Date</th>
-                            <th title="Cumulative Portfolio P&L%: Running total of all closed trade gains and losses as a % of your account. Shows your equity curve in table form — each trade's contribution stacked on top of the previous.">Cum P/L% ℹ</th>
+                            <th title="Cumulative Portfolio P&L%: Running total of all closed trade gains and losses.">Cum P/L% ℹ</th>
                             <th>Notes</th>
                             <th>Actions</th>
                         </tr>
@@ -3938,7 +3943,23 @@
                         <td><strong style="cursor:pointer; color:#1e40af; text-decoration:underline dotted;" onclick="openTradeChart(${trade.originalIndex})" title="Click to view chart">${trade.symbol}</strong></td>
                         <td>$${trade.entryPrice.toFixed(2)}</td>
                         <td>$${trade.exitPrice.toFixed(2)}</td>
-                        <td>${trade.accountWeight.toFixed(2)}%</td>
+                        <td>${(() => {
+                            const initSh = trade.initialShares || '—';
+                            let tip = `Initial: ${initSh} shares`;
+                            if (trade.partialSells && trade.partialSells.length > 0) {
+                                tip += '&#10;&#10;Partial Sells:';
+                                trade.partialSells.forEach((ps, i) => {
+                                    const d = ps.date ? new Date(ps.date).toLocaleDateString() : '—';
+                                    tip += `&#10;- ${ps.shares} sh @ $${parseFloat(ps.price).toFixed(2)} on ${d}`;
+                                });
+                            }
+                            tip += `&#10;&#10;Final exit: @ $${trade.exitPrice.toFixed(2)} on ${trade.exitDate}`;
+                            return `<span title="${tip}" style="cursor:help; border-bottom:1px dotted #9ca3af;">${trade.initialShares || '—'}</span>`;
+                        })()}</td>
+                        <td>${(() => {
+                            if (!trade.entryDate || !trade.exitDate) return '—';
+                            return Math.round((new Date(trade.exitDate) - new Date(trade.entryDate)) / (1000*60*60*24)) + 'd';
+                        })()}</td>
                         <td>${riskPercent.toFixed(3)}%</td>
                         <td class="${pnlClass}">${trade.pnlPercent.toFixed(2)}%</td>
                         <td class="${pnlClass}">${trade.portfolioPnlPercent.toFixed(2)}%</td>
@@ -4146,33 +4167,34 @@
                 Plotly.newPlot('dailyPnlChart', [traceWins, traceLosses], layout2, {responsive:true});
             }
 
-            if (dailyEquity.length === 0) {
-                document.getElementById('accountValueCurve').innerHTML = '<div class="empty-state">No daily snapshots yet. Click "Save Daily Snapshot" to start tracking your equity curve.</div>';
+            // Account Value Curve — use manually logged dailyEquityEntries (accurate)
+            const sortedEntries = [...dailyEquityEntries].sort((a,b) => a.date.localeCompare(b.date));
+            if (sortedEntries.length === 0) {
+                document.getElementById('accountValueCurve').innerHTML = '<div class="empty-state">No daily entries yet. Use ⚡ Quick Snapshot to start tracking your equity curve.</div>';
             } else {
-                const dates = dailyEquity.map(snap => snap.date);
-                const values = dailyEquity.map(snap => snap.accountValue);
-                
+                const dates  = sortedEntries.map(e => e.date);
+                const values = sortedEntries.map(e => e.accountValue);
+                const maValues = sortedEntries.map((e, i) => {
+                    if (i < 9) return null;
+                    return sortedEntries.slice(i-9, i+1).reduce((s,x) => s + x.accountValue, 0) / 10;
+                });
                 const trace3 = {
-                    x: dates,
-                    y: values,
-                    type: 'scatter',
-                    mode: 'lines+markers',
-                    name: 'Account Value',
-                    line: { color: '#10b981', width: 3 },
-                    marker: { size: 6 },
-                    fill: 'tozeroy',
-                    fillcolor: 'rgba(16, 185, 129, 0.1)'
+                    x: dates, y: values, type: 'scatter', mode: 'lines+markers',
+                    name: 'Account Value', line: { color: '#10b981', width: 3 },
+                    marker: { size: 5 }, fill: 'tozeroy', fillcolor: 'rgba(16,185,129,0.1)'
                 };
-
+                const traceMA = {
+                    x: dates, y: maValues, type: 'scatter', mode: 'lines',
+                    name: '10-Day Avg', line: { color: '#f59e0b', width: 2, dash: 'dot' },
+                    connectgaps: false
+                };
                 const layout3 = {
                     xaxis: { title: 'Date' },
-                    yaxis: { title: 'Account Value ($)' },
-                    hovermode: 'closest',
-                    plot_bgcolor: '#f9f9f9',
-                    paper_bgcolor: 'white'
+                    yaxis: { title: 'Account Value ($)', tickformat: '$,.0f' },
+                    hovermode: 'closest', legend: { orientation: 'h', y: -0.2 },
+                    plot_bgcolor: '#f9f9f9', paper_bgcolor: 'white'
                 };
-
-                Plotly.newPlot('accountValueCurve', [trace3], layout3, {responsive: true});
+                Plotly.newPlot('accountValueCurve', [trace3, traceMA], layout3, {responsive: true});
             }
         }
 
@@ -4862,6 +4884,7 @@
             document.getElementById('editClosedInitialStop').value = trade.initialStop || trade.entryPrice * 0.97;
             document.getElementById('editClosedInitialShares').value = trade.initialShares || '';
             document.getElementById('editClosedExitDate').value = trade.exitDate;
+            document.getElementById('editClosedEntryDate').value = trade.entryDate || '';
             document.getElementById('editClosedAccountWeight').value = trade.accountWeight;
             document.getElementById('editClosedPortfolioPnl').value = parseFloat((trade.portfolioPnlPercent || 0).toFixed(4));
             document.getElementById('editClosedRMultiple').value = parseFloat((trade.rMultiple || 0).toFixed(4));
@@ -5578,6 +5601,7 @@
                 trade.exitPrice    = exitPrice;
                 trade.initialStop  = initialStop;
                 trade.exitDate     = document.getElementById('editClosedExitDate').value;
+                trade.entryDate    = document.getElementById('editClosedEntryDate').value || trade.entryDate || null;
                 trade.accountWeight = accountWeight;
                 trade.notes        = document.getElementById('editClosedNotes').value;
                 if (initialShares) trade.initialShares = initialShares;
