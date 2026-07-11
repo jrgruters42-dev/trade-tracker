@@ -1823,10 +1823,13 @@
                             <tr>
                                 <th>Date</th>
                                 <th>Account Equity</th>
+                                <th title="10-Day Moving Average. Amber highlight when account is BELOW average — warning signal.">10-Day Avg</th>
                                 <th>Daily % Change</th>
-                                <th>10-Day Avg</th>
-                                <th>Drawdown %</th>
+                                <th title="YTD P&L%: account growth from starting value adjusted for cash flows">YTD P&L%</th>
+                                <th title="DD from Peak: how far account has dropped from its highest point up to that date">DD from Peak</th>
+                                <th title="Closed DD from Peak: drawdown in cumulative closed trade P&L only">Closed DD from Peak</th>
                                 <th>Exposure %</th>
+                                <th title="Total Risk: sum of Port Risk% across all open positions at time of snapshot">Total Risk %</th>
                                 <th>FOMO</th>
                                 <th>Notes</th>
                                 <th>Actions</th>
@@ -4362,53 +4365,84 @@
         // Update the daily equity table
         function updateDailyEquityTable() {
             const tbody = document.getElementById('dailyEquityTableBody');
-            
-            // ALWAYS sort newest first before displaying
+
             dailyEquityEntries.sort((a, b) => new Date(b.date) - new Date(a.date));
-            
-            // Update entry count
+
             const entryCountSpan = document.getElementById('entryCount');
-            if (entryCountSpan) {
-                entryCountSpan.textContent = `${dailyEquityEntries.length} ${dailyEquityEntries.length === 1 ? 'entry' : 'entries'}`;
-            }
-            
+            if (entryCountSpan) entryCountSpan.textContent = `${dailyEquityEntries.length} ${dailyEquityEntries.length === 1 ? 'entry' : 'entries'}`;
+
             if (dailyEquityEntries.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="9" class="empty-state">No daily entries yet. Click "Add Today\'s Entry" to start tracking.</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="12" class="empty-state">No daily entries yet. Click "Add Today\'s Entry" to start tracking.</td></tr>';
                 return;
             }
-            
+
+            // Pre-compute running peak for DD from Peak (needs oldest-first order)
+            const sortedAsc = [...dailyEquityEntries].sort((a,b) => a.date.localeCompare(b.date));
+            const peakByDate = {};
+            let runningPeak = 0;
+            sortedAsc.forEach(e => {
+                if (e.accountValue > runningPeak) runningPeak = e.accountValue;
+                peakByDate[e.date] = runningPeak;
+            });
+
+            // Pre-compute closed DD from peak per date
+            const closedByDate = {};
+            let cumClosedPnl = 0, closedPeak = 0;
+            [...closedTrades].sort((a,b) => (a.exitDate||'').localeCompare(b.exitDate||'')).forEach(t => {
+                cumClosedPnl += t.portfolioPnlPercent || 0;
+                if (cumClosedPnl > closedPeak) closedPeak = cumClosedPnl;
+                closedByDate[t.exitDate] = { cum: cumClosedPnl, peak: closedPeak };
+            });
+            function getClosedDDForDate(date) {
+                const entries = Object.entries(closedByDate).filter(([d]) => d <= date).sort(([a],[b]) => b.localeCompare(a));
+                if (!entries.length) return null;
+                const [, latest] = entries[0];
+                return latest.cum - latest.peak;
+            }
+
+            const startingAccount = parseFloat(document.getElementById('startingAccount')?.value) || 250000;
+
             let html = '';
-            
             dailyEquityEntries.forEach((entry, index) => {
-                // Calculate 10-day moving average
-                let tenDayAvg = 0;
-                let belowAvg = false;
-                
+                // 10-day moving average
+                let tenDayAvg = 0, belowAvg = false;
                 if (index <= dailyEquityEntries.length - 10) {
                     const last10 = dailyEquityEntries.slice(index, index + 10);
-                    tenDayAvg = last10.reduce((sum, e) => sum + e.accountValue, 0) / 10;
+                    tenDayAvg = last10.reduce((s,e) => s + e.accountValue, 0) / 10;
                     belowAvg = entry.accountValue < tenDayAvg;
                 }
-                
-                // Alternating row colors
-                const rowBg = index % 2 === 0 ? 'background: #f9fafb;' : 'background: white;';
-                
-                // Highlight 10-day avg if below average
-                const belowAvgStyle = belowAvg ? 'background: #fef3c7; color: #92400e; font-weight: 700;' : '';
-                
-                // Escape HTML in notes for display
+                const belowAvgStyle = belowAvg ? 'background:#fef3c7;color:#92400e;font-weight:700;' : '';
+
+                // DD from Peak
+                const peak = peakByDate[entry.date] || entry.accountValue;
+                const ddFromPeak = peak > 0 ? ((peak - entry.accountValue) / peak) * 100 : 0;
+                const ddColor = ddFromPeak >= 10 ? '#dc2626' : ddFromPeak >= 5 ? '#d97706' : '#374151';
+
+                // Closed DD from Peak
+                const closedDD = getClosedDDForDate(entry.date);
+                const closedDDColor = closedDD === null ? '#9ca3af' : closedDD < -5 ? '#dc2626' : closedDD < -2 ? '#d97706' : '#15803d';
+                const closedDDDisplay = closedDD === null ? '—' : closedDD === 0 ? '✓ Peak' : `${closedDD.toFixed(2)}%`;
+
+                // YTD P&L%
+                const ytdPct = ((entry.accountValue - startingAccount - getNetCashFlows()) / startingAccount) * 100;
+                const ytdColor = ytdPct >= 0 ? '#15803d' : '#dc2626';
+
+                const rowBg = index % 2 === 0 ? 'background:#f9fafb;' : 'background:white;';
                 const notesDisplay = entry.notes || '';
                 const notesPreview = notesDisplay.length > 30 ? notesDisplay.substring(0, 30) + '...' : notesDisplay;
-                
+
                 html += `
                     <tr style="${rowBg}">
                         <td>${entry.date}</td>
-                        <td>$${entry.accountValue.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+                        <td>$${entry.accountValue.toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2})}</td>
+                        <td style="${belowAvgStyle}">${tenDayAvg > 0 ? '$' + tenDayAvg.toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2}) : '—'}</td>
                         <td class="${entry.dailyChange >= 0 ? 'profit' : 'loss'}">${entry.dailyChange.toFixed(2)}%</td>
-                        <td style="${belowAvgStyle}">${tenDayAvg > 0 ? '$' + tenDayAvg.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}) : '-'}</td>
-                        <td>${entry.drawdown.toFixed(2)}%</td>
-                        <td>${entry.exposure.toFixed(2)}%</td>
-                        <td><input type="text" value="${entry.fomo}" onchange="updateDailyEquityEntry('${entry.date}', 'fomo', this.value)" style="width: 80px; padding: 4px;"></td>
+                        <td style="font-weight:600;color:${ytdColor};">${ytdPct >= 0 ? '+' : ''}${ytdPct.toFixed(2)}%</td>
+                        <td style="color:${ddColor};font-weight:${ddFromPeak >= 5 ? '700' : '400'};">${ddFromPeak > 0 ? '-' : ''}${ddFromPeak.toFixed(2)}%</td>
+                        <td style="color:${closedDDColor};font-weight:${(closedDD||0) < -2 ? '700' : '400'};">${closedDDDisplay}</td>
+                        <td>${(entry.exposure||0).toFixed(2)}%</td>
+                        <td style="color:${(entry.totalRisk||0) >= 3 ? '#dc2626' : (entry.totalRisk||0) >= 2 ? '#d97706' : '#15803d'};font-weight:600;">${entry.totalRisk ? entry.totalRisk.toFixed(2) + '%' : '—'}</td>
+                        <td><input type="text" value="${entry.fomo||''}" onchange="updateDailyEquityEntry('${entry.date}', 'fomo', this.value)" style="width:80px;padding:4px;"></td>
                         <td class="notes-cell">
                             <div class="notes-preview" onclick="editDailyNote('${entry.date}', '${notesDisplay.replace(/'/g, "\\'")}')">
                                 ${notesPreview || 'Click to add notes...'}
@@ -4416,16 +4450,15 @@
                             ${notesDisplay ? `<div class="notes-tooltip" id="tooltip-${index}">${notesDisplay}</div>` : ''}
                         </td>
                         <td>
-                            <button class="btn-secondary btn-small" onclick="editJournalEntry('${entry.date}')" style="margin-right: 5px;">Edit</button>
+                            <button class="btn-secondary btn-small" onclick="editJournalEntry('${entry.date}')" style="margin-right:5px;">Edit</button>
                             <button class="btn-danger btn-small" onclick="deleteDailyEquityEntry('${entry.date}')">Delete</button>
                         </td>
                     </tr>
                 `;
             });
-            
+
             tbody.innerHTML = html;
-            
-            // Add hover positioning for tooltips
+
             document.querySelectorAll('.notes-preview').forEach((preview, idx) => {
                 const tooltip = document.getElementById('tooltip-' + idx);
                 if (tooltip) {
@@ -4433,7 +4466,7 @@
                         const rect = preview.getBoundingClientRect();
                         tooltip.style.display = 'block';
                         tooltip.style.left = rect.left + 'px';
-                        tooltip.style.top = (rect.bottom + 10) + 'px';
+                        tooltip.style.top = (rect.bottom + 5) + 'px';
                     });
                     preview.addEventListener('mouseleave', function() {
                         tooltip.style.display = 'none';
@@ -4441,7 +4474,6 @@
                 }
             });
         }
-        
         // Edit daily note with a modal/prompt
         function editDailyNote(date, currentNotes) {
             const newNotes = prompt('Edit your notes for ' + date + ':', currentNotes);
@@ -4455,24 +4487,32 @@
         function editJournalEntry(date) {
             const entry = dailyEquityEntries.find(e => e.date === date);
             if (!entry) return;
-            
-            const newAccountValue = prompt('Account Value for ' + date + ':', entry.accountValue);
-            if (newAccountValue === null) return; // User canceled
-            
-            const newFomo = prompt('FOMO for ' + date + ':', entry.fomo);
+
+            const newDate = prompt('Date (YYYY-MM-DD):', entry.date);
+            if (newDate === null) return;
+            if (newDate !== date && dailyEquityEntries.find(e => e.date === newDate)) {
+                alert('An entry already exists for ' + newDate); return;
+            }
+
+            const newAccountValue = prompt('Account Value for ' + newDate + ':', entry.accountValue);
+            if (newAccountValue === null) return;
+
+            const newTotalRisk = prompt('Total Risk % for ' + newDate + ':', entry.totalRisk ? entry.totalRisk.toFixed(2) : '0');
+            if (newTotalRisk === null) return;
+
+            const newFomo = prompt('FOMO for ' + newDate + ':', entry.fomo || '');
             if (newFomo === null) return;
-            
-            const newNotes = prompt('Notes for ' + date + ':', entry.notes);
+
+            const newNotes = prompt('Notes for ' + newDate + ':', entry.notes || '');
             if (newNotes === null) return;
-            
-            // Update the entry
+
+            entry.date         = newDate;
             entry.accountValue = parseFloat(newAccountValue);
-            entry.fomo = newFomo;
-            entry.notes = newNotes;
-            
-            // Recalculate daily % change for this entry and subsequent entries
+            entry.totalRisk    = parseFloat(newTotalRisk) || 0;
+            entry.fomo         = newFomo;
+            entry.notes        = newNotes;
+
             recalculateDailyChanges();
-            
             saveToFirebase();
             updateDailyEquityTable();
         }
@@ -7092,10 +7132,12 @@
 
             const accountSize = getAccountSize();
             let totalExposure = 0, totalDrawdown = 0;
+            let totalPortfolioRisk = 0;
             openPositions.forEach(pos => {
                 const metrics = calculatePositionMetrics(pos);
                 totalExposure += metrics.accountWeight;
                 totalDrawdown += metrics.portfolioDrawdown;
+                totalPortfolioRisk += metrics.portfolioCapitalRisk || 0;
             });
 
             const newEntry = {
@@ -7103,6 +7145,7 @@
                 accountValue: accountSize,
                 drawdown: totalDrawdown,
                 exposure: totalExposure,
+                totalRisk: totalPortfolioRisk,
                 fomo: isNaN(ncfdVal) ? '' : ncfdVal,
                 notes: 'Daily snapshot',
                 dailyChange: 0
