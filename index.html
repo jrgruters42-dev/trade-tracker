@@ -2560,6 +2560,9 @@
                 return Promise.resolve();
             }
 
+            // Mark that we have unsaved changes (for auto-save interval)
+            _dataDirty = false; // reset since we're saving now
+
             window.pendingSave = true;
             console.log('💾 Starting save to Firebase...', {
                 openPositions: openPositions.length,
@@ -2689,13 +2692,30 @@
                 return 'Save in progress - closing now may lose data!';
             }
         });
-        
-        // Backup auto-save every 30 seconds to prevent data loss
-        setInterval(() => {
-            if (isFirebaseInitialized && dbRef) {
-                saveToFirebase();
+
+        // Save when user switches away from the tab (most reliable cross-device sync trigger)
+        document.addEventListener('visibilitychange', function() {
+            if (document.hidden && isFirebaseInitialized && dbRef) {
+                if (openPositions.length > 0 || closedTrades.length > 0 || dailyEquityEntries.length > 0) {
+                    console.log('📤 Tab hidden — saving to Firebase');
+                    saveToFirebase();
+                }
             }
-        }, 30000); // 30 seconds
+        });
+        
+        // Backup auto-save every 60 seconds — only if data has changed since last save
+        let _dataDirty = false;
+        const _origSaveToFirebase = saveToFirebase;
+        // Mark dirty whenever a real save is triggered by user action
+        window._markDirty = () => { _dataDirty = true; };
+
+        setInterval(() => {
+            if (isFirebaseInitialized && dbRef && _dataDirty) {
+                console.log('⏱ Auto-save: dirty data detected, saving...');
+                saveToFirebase();
+                _dataDirty = false;
+            }
+        }, 60000); // 60 seconds
         
         // Force save to Firebase (user-triggered)
         function forceSaveToFirebase() {
