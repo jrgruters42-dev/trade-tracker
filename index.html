@@ -2355,6 +2355,11 @@
         let dbRef = null;
         let firebaseConfig = null;
         let isFirebaseInitialized = false;
+        let isInitialDataLoaded = false;
+        let authenticatedUser = null;
+        let lastLoadedTimestamp = null;
+        let saveQueue = Promise.resolve();
+        let remoteConflictDetected = false;
         let cashFlows = [];  // [{id, type, amount, date, notes}]
         let rewardMilestoneClaimed = 0; // highest milestone number the user has acknowledged
         let spyYTDValue = null; // cached SPY YTD % for gold highlight comparisons
@@ -2407,11 +2412,16 @@
                 firebase.auth().onAuthStateChanged((user) => {
                     if (user) {
                         console.log('✅ Signed in as:', user.email);
+                        authenticatedUser = user;
                         document.getElementById('authScreen').style.display = 'none';
                         document.getElementById('mainApp').style.display = 'block';
                         connectToDatabase();
                     } else {
                         console.log('Not signed in');
+                        authenticatedUser = null;
+                        isInitialDataLoaded = false;
+                        if (dbRef) dbRef.off();
+                        dbRef = null;
                         document.getElementById('authScreen').style.display = 'flex';
                         document.getElementById('mainApp').style.display = 'none';
                     }
@@ -2426,11 +2436,14 @@
         }
 
         function connectToDatabase() {
+            // Auth changes can fire more than once. Never leave duplicate listeners attached.
+            if (dbRef) dbRef.off();
             db    = firebase.database();
             dbRef = db.ref('tradeData');
-
-            let lastLoadedTimestamp = null;
-            let dataLoaded = false;
+            isInitialDataLoaded = false;
+            lastLoadedTimestamp = null;
+            remoteConflictDetected = false;
+            updateSyncStatus('Loading cloud data…', true);
 
             // STEP 1: Load data once first
             dbRef.once('value').then((snapshot) => {
@@ -2439,12 +2452,13 @@
                     console.log('📥 Initial data load from Firebase');
                     loadDataFromFirebase(data);
                     lastLoadedTimestamp = data.lastModified || null;
-                    dataLoaded = true;
                     updateAllDisplays();
                 } else {
                     console.log('No data in Firebase yet');
-                    dataLoaded = true;
                 }
+                // This flag is set only after a successful authenticated read. A failed or
+                // pending read can therefore never enable a write.
+                isInitialDataLoaded = true;
                 updateSyncStatus('Synced ✓', true);
                 const now = new Date();
                 document.getElementById('lastSavedTime').textContent =
@@ -2452,12 +2466,20 @@
 
                 // STEP 2: Only AFTER data is loaded, set up real-time listener for OTHER devices
                 dbRef.on('value', (snapshot) => {
-                    if (!dataLoaded) return; // safety guard
+                    if (!isInitialDataLoaded) return;
                     const data = snapshot.val();
                     if (!data) return;
                     const incomingTimestamp = data.lastModified || '';
                     // Skip if this matches what we last loaded (our own save or initial load)
                     if (incomingTimestamp === lastLoadedTimestamp) return;
+                    // Never replace unsaved local edits. The transaction in saveToFirebase
+                    // will also reject the stale write, leaving both cloud and local data intact.
+                    if (window.pendingSave || _dataDirty) {
+                        remoteConflictDetected = true;
+                        updateSyncStatus('Conflict — reload required', false);
+                        console.warn('⚠️ Remote data changed while local edits were pending');
+                        return;
+                    }
                     console.log('📥 Remote change detected — reloading');
                     loadDataFromFirebase(data);
                     lastLoadedTimestamp = incomingTimestamp;
@@ -2471,11 +2493,9 @@
                     updateSyncStatus('Sync error', false);
                 });
 
-                // Expose timestamp setter for saveToFirebase
-                window._setLastLoadedTimestamp = (t) => { lastLoadedTimestamp = t; };
-
             }).catch((error) => {
                 console.error('Initial load error:', error);
+                isInitialDataLoaded = false;
                 updateSyncStatus('Load error: ' + error.message, false);
             });
         }
@@ -2546,31 +2566,8 @@
             }
         }
 
-        // Save data to Firebase
-        function saveToFirebase() {
-            if (!isFirebaseInitialized || !dbRef) {
-                console.error('❌ Cannot save: Firebase not initialized');
-                return Promise.reject('Firebase not initialized');
-            }
-
-            // CRITICAL: Never save if data looks empty — this prevents wiping Firebase
-            // if the page hasn't finished loading yet
-            if (openPositions.length === 0 && closedTrades.length === 0 && dailyEquityEntries.length === 0) {
-                console.warn('⚠️ Save blocked — all arrays empty, likely not loaded yet');
-                return Promise.resolve();
-            }
-
-            // Mark that we have unsaved changes (for auto-save interval)
-            _dataDirty = false; // reset since we're saving now
-
-            window.pendingSave = true;
-            console.log('💾 Starting save to Firebase...', {
-                openPositions: openPositions.length,
-                closedTrades: closedTrades.length,
-                dailyEquityEntries: dailyEquityEntries.length
-            });
-
-            const data = {
+        function buildFirebaseData() {
+            return {
                 openPositions,
                 closedTrades,
                 cashFlows,
@@ -2597,13 +2594,43 @@
                 },
                 taxPayments: taxPayments,
                 rewardMilestoneClaimed: rewardMilestoneClaimed,
-                lastModified: new Date().toISOString()
+                lastModified: new Date().toISOString(),
+                lastModifiedBy: authenticatedUser ? authenticatedUser.email : null
             };
+        }
 
-            // Tell listener this timestamp is ours so it won't reload
-            if (window._setLastLoadedTimestamp) window._setLastLoadedTimestamp(data.lastModified);
+        // Save data using optimistic concurrency. A stale device can never overwrite a
+        // newer cloud snapshot: Firebase atomically checks lastModified before committing.
+        function saveToFirebase(propagateError = false) {
+            _dataDirty = true;
+            const queuedSave = () => {
+                if (!isFirebaseInitialized || !dbRef || !authenticatedUser) {
+                    throw new Error('Firebase is not authenticated');
+                }
+                if (!isInitialDataLoaded) {
+                    throw new Error('Cloud data has not finished loading; save blocked for safety');
+                }
+                if (remoteConflictDetected) {
+                    throw new Error('Cloud data changed on another device. Reload before saving.');
+                }
 
-            return dbRef.set(data).then(() => {
+                const data = buildFirebaseData();
+                const expectedTimestamp = lastLoadedTimestamp;
+                window.pendingSave = true;
+                updateSyncStatus('Saving…', true);
+
+                return dbRef.transaction((currentData) => {
+                    const currentTimestamp = currentData ? (currentData.lastModified || null) : null;
+                    if (currentTimestamp !== expectedTimestamp) return; // abort stale write
+                    return data;
+                }, undefined, false).then((result) => {
+                    if (!result.committed) {
+                        remoteConflictDetected = true;
+                        throw new Error('Cloud data changed on another device. Your local changes were not overwritten; reload and review them.');
+                    }
+                    lastLoadedTimestamp = data.lastModified;
+                    _dataDirty = false;
+                    remoteConflictDetected = false;
                 const now = new Date();
                 const timeStr = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
                 updateSyncStatus('Synced ✓', true);
@@ -2613,13 +2640,22 @@
                     closedTrades: closedTrades.length
                 });
                 window.pendingSave = false; // Save complete
-            }).catch((error) => {
+                return result;
+                }).catch((error) => {
                 console.error('❌ Save error:', error);
-                updateSyncStatus('Sync error', false);
+                updateSyncStatus(remoteConflictDetected ? 'Conflict — reload required' : 'Sync error', false);
                 document.getElementById('lastSavedTime').textContent = `Save failed`;
-                alert('Firebase sync error: ' + error.message);
                 window.pendingSave = false;
+                throw error;
             });
+            };
+
+            // Serialize rapid UI changes so saves cannot finish out of order.
+            const result = saveQueue.then(queuedSave, queuedSave);
+            saveQueue = result.catch(() => {});
+            // Most UI handlers are fire-and-forget. Avoid unhandled promise rejections while
+            // still letting workflows that show success/failure explicitly request errors.
+            return propagateError ? result : result.catch(() => null);
         }
         
         // Expectancy Calculator functions
@@ -2718,18 +2754,19 @@
         }, 60000); // 60 seconds
         
         // Force save to Firebase (user-triggered)
-        function forceSaveToFirebase() {
+        async function forceSaveToFirebase() {
             if (!isFirebaseInitialized || !dbRef) {
                 alert('❌ Firebase is not connected! Click ⚙️ to configure Firebase first.');
                 return;
             }
             
             updateSyncStatus('Saving...', true);
-            saveToFirebase();
-            
-            setTimeout(() => {
+            try {
+                await saveToFirebase(true);
                 alert('✅ Force save complete! Check "Last saved" timestamp above.');
-            }, 1000);
+            } catch (error) {
+                alert('❌ Save blocked: ' + error.message);
+            }
         }
         
         // Force reload from Firebase (user-triggered)
@@ -2749,6 +2786,10 @@
                 const data = snapshot.val();
                 if (data) {
                     loadDataFromFirebase(data);
+                    lastLoadedTimestamp = data.lastModified || null;
+                    isInitialDataLoaded = true;
+                    remoteConflictDetected = false;
+                    _dataDirty = false;
                     const now = new Date();
                     const timeStr = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
                     document.getElementById('lastSavedTime').textContent = `Loaded: ${timeStr}`;
@@ -3058,48 +3099,8 @@
             // Save and VERIFY it worked
             updateSyncStatus('Saving...', true);
             
-            // Save to Firebase
-            const savePromise = new Promise((resolve, reject) => {
-                if (!isFirebaseInitialized || !dbRef) {
-                    reject(new Error('Firebase not initialized'));
-                    return;
-                }
-                
-                const data = {
-                    openPositions,
-                    closedTrades,
-                    cashFlows,
-                    dailyEquity,
-                    dailyEquityEntries,
-                    positionIdCounter,
-                    accountSize: parseFloat(document.getElementById('accountSize').value),
-                    startingAccount: parseFloat(document.getElementById('startingAccount').value),
-                    myRoth: parseFloat(document.getElementById('myRoth').value),
-                    myRothJan1: parseFloat(document.getElementById('myRothJan1').value),
-                    wifeRoth: parseFloat(document.getElementById('wifeRoth').value),
-                    wifeRothJan1: parseFloat(document.getElementById('wifeRothJan1').value),
-                    apiKey: document.getElementById('apiKey').value,
-                alphaVantageKey: document.getElementById('alphaVantageKey')?.value || '',
-                    stockProfiles: stockProfiles,
-                    calculatorSettings: buildCalculatorSettings(),
-                    marketConditions: {
-                        netNewHighs: document.getElementById('chkNetNewHighs')?.checked || false,
-                        jnk: document.getElementById('chkJNK')?.checked || false,
-                        qqq: document.getElementById('chkQQQ')?.checked || false,
-                        ncfd: parseFloat(document.getElementById('ncfdInput')?.value) || null
-                    },
-                    rewardMilestoneClaimed: rewardMilestoneClaimed,
-                    lastModified: new Date().toISOString()
-                };
-
-                dbRef.set(data).then(() => {
-                    console.log(`✓ Position ${symbol} saved to Firebase successfully`);
-                    resolve();
-                }).catch((error) => {
-                    console.error('Save failed:', error);
-                    reject(error);
-                });
-            });
+            // Use the same guarded, conflict-aware save path as every other edit.
+            const savePromise = saveToFirebase(true);
             
             // Wait for save to complete and verify
             savePromise.then(() => {
