@@ -1,7 +1,9 @@
-const CACHE_NAME = 'trade-tracker-v1';
+const CACHE_NAME = 'trade-tracker-firestore-v2';
 const urlsToCache = [
-  '/trade-tracker/',
-  '/trade-tracker/index.html'
+  './',
+  './index.html',
+  './sync-safety.js',
+  './firestore-sync.js'
 ];
 
 // Install service worker and cache files

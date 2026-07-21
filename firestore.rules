@@ -1,0 +1,15 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function isJournalOwner(userId) {
+      return request.auth != null
+        && request.auth.uid == userId
+        && request.auth.token.email == 'jrgruters42@gmail.com';
+    }
+
+    match /users/{userId}/{document=**} {
+      allow read, write: if isJournalOwner(userId);
+    }
+  }
+}
