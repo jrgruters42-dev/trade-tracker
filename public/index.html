@@ -264,6 +264,12 @@
             color: #92400e;
         }
 
+        /* Keep the ticker and its status badge visible in the wide positions table. */
+        #openPositionsTable .symbol-column {
+            min-width: 112px;
+            white-space: nowrap;
+        }
+
         tr:hover td:not(.highlight-col) {
             background: #e0e7ff;
         }
@@ -3664,9 +3670,8 @@
                 <table>
                     <thead>
                         <tr>
-                            <th onclick="sortOpenPositions('symbol')" style="cursor: pointer;" title="Stock ticker symbol">Symbol ▼</th>
+                            <th class="symbol-column" onclick="sortOpenPositions('symbol')" style="cursor: pointer;" title="Stock ticker symbol">Symbol ▼</th>
                             <th onclick="sortOpenPositions('currentPrice')" style="cursor: pointer;" title="Most recent market price">Current Price ▼</th>
-                            <th onclick="sortOpenPositions('atrFrom50')" style="cursor: pointer;" title="DISTANCE FROM 50 SMA IN ATRs: (Current Price − 50-day SMA) ÷ 20-day ATR. Positive is above the 50-day line; negative is below it. Updated with prices when an Alpha Vantage key is configured.">ATR from 50 SMA ▼</th>
                             <th onclick="sortOpenPositions('entryPrice')" style="cursor: pointer;" title="Original purchase price">Entry ▼</th>
                             <th onclick="sortOpenPositions('adjustedPrice')" style="cursor: pointer;" title="ADJUSTED PRICE: Your effective cost basis after partial sells. When you sell part of a position, the proceeds reduce your effective cost basis on the remaining shares — making your 'breakeven' lower. P&L% is calculated off this adjusted price, not the original entry.">Adj Price ▼</th>
                             <th onclick="sortOpenPositions('shares')" style="cursor: pointer;" title="Current number of shares held">QTY ▼</th>
@@ -3680,6 +3685,7 @@
                             <th class="highlight-col" onclick="sortOpenPositions('portfolioRisk')" style="cursor: pointer;" title="PORTFOLIO RISK%: Net dollar risk as % of account. Formula: max(0, (Entry - Current Stop) × Remaining Shares - Locked Partial Profits) ÷ Account Size. Goes to 0 when: (1) stop is moved up to entry price, OR (2) partial sell profits cover the remaining position's risk — e.g. selling ⅓ at 2R locks in exactly enough profit to offset the risk on the remaining ⅔ position.">Port Risk% ▼</th>
                             <th class="highlight-col" onclick="sortOpenPositions('initialR')" style="cursor: pointer;" title="INIT RISK RATIO (R-Multiple): Where the current stock price is relative to your initial risk — unrealized only, does not include partial sell profits. Formula: Unrealized P&L ÷ Initial Risk Dollars. If price is at your 2R target, this shows 2R regardless of whether you've taken partials. Partial profits are tracked separately in the harvest tools and loss buffer.">Init Risk Ratio (R) ▼</th>
                             <th onclick="sortOpenPositions('twoRTarget')" style="cursor: pointer;" title="2R TARGET PRICE: The stock price at which your position would be up exactly 2x your initial risk. This is your first harvest trigger in the Minervini hybrid approach — consider selling 1/3 to 1/2 at this level to lock in something real while letting the rest run.">2R Target ▼</th>
+                            <th onclick="sortOpenPositions('atrFrom50')" style="cursor: pointer;" title="DISTANCE FROM 50 SMA IN ATRs: (Current Price − 50-day SMA) ÷ 20-day ATR. Positive is above the 50-day line; negative is below it. Updated with prices when an Alpha Vantage key is configured.">ATR from 50 SMA ▼</th>
                             <th title="Edit, partial sell, update stop, close, or delete position">Actions</th>
                         </tr>
                     </thead>
@@ -3792,9 +3798,8 @@
 
                 html += `
                     <tr style="${rowBg}">
-                        <td style="${symbolStyle}"><strong><span onclick="openHarvestModal(${pos.id})" style="cursor:pointer; border-bottom:2px dotted currentColor; padding-bottom:1px;" title="Click to open Harvest Calculator">${pos.symbol}</span>${desktopBadge}</strong></td>
+                        <td class="symbol-column" style="${symbolStyle}"><strong><span onclick="openHarvestModal(${pos.id})" style="cursor:pointer; border-bottom:2px dotted currentColor; padding-bottom:1px;" title="Click to open Harvest Calculator">${pos.symbol}</span>${desktopBadge}</strong></td>
                         <td>$${pos.currentPrice.toFixed(2)}</td>
-                        <td title="${getAtrFrom50Tooltip(pos)}">${formatAtrFrom50(pos)}</td>
                         <td>$${pos.entryPrice.toFixed(2)}</td>
                         <td title="${adjTooltip}" style="cursor:help; border-bottom:1px dotted #9ca3af;">$${metrics.adjustedPrice.toFixed(2)}</td>
                         <td title="${qtyTooltip}" style="cursor: help;">${pos.shares}</td>
@@ -3808,6 +3813,7 @@
                         <td class="highlight-col" style="${portRiskStyle}">${metrics.portfolioCapitalRisk.toFixed(2)}%</td>
                         <td class="highlight-col ${riskRatioColor}" style="${riskRatioStyle}">${metrics.initialR.toFixed(2)}R</td>
                         <td>$${metrics.twoRTarget.toFixed(2)}</td>
+                        <td title="${getAtrFrom50Tooltip(pos)}">${formatAtrFrom50(pos)}</td>
                         <td>
                             <div class="action-buttons" style="display: flex; gap: 3px; flex-wrap: nowrap;">
                                 <button class="btn-secondary" style="padding: 3px 6px; font-size: 0.75em; white-space: nowrap;" onclick="openEditPositionModal(${pos.id})">Edit</button>

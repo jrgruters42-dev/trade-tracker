@@ -21,3 +21,20 @@ test('one daily-history request derives both SMA and ATR and is cached on positi
     assert.match(html, /const maxAgeMs = 20 \* 60 \* 60 \* 1000/);
     assert.match(html, /positions\.forEach\(pos => Object\.assign\(pos, technical\)\)/);
 });
+
+test('desktop positions keep status badges visible and place ATR after the 2R target', () => {
+    assert.match(html, /#openPositionsTable \.symbol-column\s*\{[\s\S]*?min-width:\s*112px;[\s\S]*?white-space:\s*nowrap;/);
+    assert.match(html, /<th class="symbol-column"[^>]*>Symbol ▼<\/th>/);
+    assert.match(html, /<td class="symbol-column" style="\$\{symbolStyle\}">/);
+
+    const headerStart = html.indexOf('<th class="symbol-column"');
+    const headerEnd = html.indexOf('</tr>', headerStart);
+    const header = html.slice(headerStart, headerEnd);
+    assert.ok(header.indexOf('2R Target ▼') < header.indexOf('ATR from 50 SMA ▼'));
+    assert.ok(header.indexOf('ATR from 50 SMA ▼') < header.indexOf('>Actions</th>'));
+
+    const rowStart = html.indexOf('<td class="symbol-column"');
+    const rowEnd = html.indexOf('</tr>', rowStart);
+    const row = html.slice(rowStart, rowEnd);
+    assert.ok(row.indexOf('metrics.twoRTarget') < row.indexOf('formatAtrFrom50(pos)'));
+});
