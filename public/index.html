@@ -2767,6 +2767,7 @@
             const schwabEquity = Number(snapshot.val());
             const accountInput = document.getElementById('accountSize');
             if (!accountInput || !Number.isFinite(schwabEquity) || schwabEquity <= 0) return;
+            if (document.activeElement === accountInput) return;
             const currentEquity = Number(accountInput.value);
             if (Math.abs(currentEquity - schwabEquity) < 0.005) return;
 
