@@ -13,6 +13,12 @@
     ];
 
     const TRANSIENT_ROOT_FIELDS = new Set(['lastModified', 'lastModifiedBy']);
+    // These fields are produced by background market-data refreshes rather than a
+    // deliberate journal edit. If two devices refresh them at the same time, the
+    // already-committed cloud value wins instead of interrupting the user.
+    const AUTOMATIC_MERGE_FIELDS = new Set([
+        'currentPrice', 'sma50', 'atr20', 'technicalUpdatedAt'
+    ]);
 
     class FirestoreConflictError extends Error {
         constructor(conflicts) {
@@ -155,11 +161,61 @@
     function mergeValue(base, local, remote, path, conflicts) {
         const localChanged = !equal(base, local);
         const remoteChanged = !equal(base, remote);
-        if (localChanged && remoteChanged && !equal(local, remote)) {
-            conflicts.push(path);
-            return local;
+        if (!localChanged) return remote;
+        if (!remoteChanged || equal(local, remote)) return local;
+        if (isPlainObject(local) && isPlainObject(remote)) {
+            return mergeObjectFields(base, local, remote, path, conflicts);
         }
-        return localChanged ? local : remote;
+        const field = path.split('.').pop();
+        if (AUTOMATIC_MERGE_FIELDS.has(field)) return clone(remote);
+        conflicts.push(path);
+        return local;
+    }
+
+    function isPlainObject(value) {
+        return value !== null && typeof value === 'object' && !Array.isArray(value);
+    }
+
+    function mergeObjectFields(baseValue, localValue, remoteValue, path, conflicts) {
+        const base = isPlainObject(baseValue) ? baseValue : {};
+        const local = isPlainObject(localValue) ? localValue : {};
+        const remote = isPlainObject(remoteValue) ? remoteValue : {};
+        const merged = {};
+        new Set([...Object.keys(base), ...Object.keys(local), ...Object.keys(remote)])
+            .forEach(key => {
+                const value = mergeValue(base[key], local[key], remote[key], `${path}.${key}`, conflicts);
+                if (value !== undefined) merged[key] = clone(value);
+            });
+        return merged;
+    }
+
+    function operationBasePayload(data, operation) {
+        if (operation.collection === 'settings') return extractSettings(data || {});
+        const definition = COLLECTIONS.find(item => item.name === operation.collection);
+        return definition ? collectionMap(normalizeData(data || {}), definition).get(operation.id) : undefined;
+    }
+
+    function applyCommittedOperations(data, operations) {
+        let result = normalizeData(data || {});
+        operations.forEach(operation => {
+            if (operation.collection === 'settings') {
+                const collections = Object.fromEntries(
+                    COLLECTIONS.map(definition => [definition.key, result[definition.key]])
+                );
+                result = normalizeData(Object.assign({}, clone(operation.payload || {}), collections));
+                return;
+            }
+
+            const definition = COLLECTIONS.find(item => item.name === operation.collection);
+            if (!definition) return;
+            const items = collectionItems(result, definition).filter(item => item._syncId !== operation.id);
+            if (operation.type !== 'delete') items.push(clone(operation.payload));
+            items.sort((left, right) => (left._syncOrder || 0) - (right._syncOrder || 0));
+            result[definition.key] = definition.shape === 'indexedObject'
+                ? Object.fromEntries(items.map(item => [item._slot, item]))
+                : items;
+        });
+        return normalizeData(result);
     }
 
     function threeWayMerge(baseData, localData, remoteData) {
@@ -456,22 +512,43 @@
             }
 
             const expectedVersions = base.versions || {};
-            await this.db.runTransaction(async transaction => {
+            const commitResult = await this.db.runTransaction(async transaction => {
                 const snapshots = await Promise.all(operations.map(operation => transaction.get(this.refFor(operation.collection, operation.id))));
                 const conflicts = [];
-                snapshots.forEach((snapshot, index) => {
-                    const operation = operations[index];
+                const committedOperations = operations.map((operation, index) => {
+                    const snapshot = snapshots[index];
                     const expected = expectedVersions[this.versionKey(operation.collection, operation.id)] || 0;
                     const actual = snapshot.exists ? (snapshot.data().revision || 0) : 0;
-                    if (actual !== expected) conflicts.push(`${operation.collection}/${operation.id}`);
+                    if (actual === expected) return operation;
+
+                    if (operation.type === 'delete') {
+                        conflicts.push(`${operation.collection}/${operation.id}`);
+                        return operation;
+                    }
+
+                    const remotePayload = snapshot.exists ? clone(snapshot.data().payload || {}) : undefined;
+                    const fieldConflicts = [];
+                    const payload = mergeValue(
+                        operationBasePayload(base.data, operation),
+                        operation.payload,
+                        remotePayload,
+                        `${operation.collection}.${operation.id}`,
+                        fieldConflicts
+                    );
+                    conflicts.push(...fieldConflicts);
+                    return Object.assign({}, operation, { payload });
                 });
                 if (conflicts.length) throw new FirestoreConflictError(conflicts);
 
-                operations.forEach((operation, index) => {
+                const committedVersions = {};
+                committedOperations.forEach((operation, index) => {
                     const reference = this.refFor(operation.collection, operation.id);
                     const previousRevision = snapshots[index].exists ? (snapshots[index].data().revision || 0) : 0;
                     if (operation.type === 'delete') transaction.delete(reference);
                     else transaction.set(reference, this.wrapper(operation.payload, previousRevision + 1));
+                    committedVersions[this.versionKey(operation.collection, operation.id)] = operation.type === 'delete'
+                        ? null
+                        : previousRevision + 1;
                 });
                 transaction.set(this.metaRef, {
                     schemaVersion: SCHEMA_VERSION,
@@ -479,16 +556,20 @@
                     lastModified: this.firebase.firestore.FieldValue.serverTimestamp(),
                     updatedBy: this.user.email || this.user.uid
                 }, { merge: true });
+                return { operations: committedOperations, versions: committedVersions };
             });
 
             const nextData = clone(this.currentCheckpoint.data);
             const nextVersions = Object.assign({}, this.currentCheckpoint.versions);
             const applied = threeWayMerge(base.data, normalized, nextData);
-            this.currentCheckpoint.data = normalizeData(applied.conflicts.length ? normalized : applied.merged);
-            operations.forEach(operation => {
+            const optimisticData = applied.conflicts.length ? normalized : applied.merged;
+            // Use the payloads actually accepted by the transaction. This matters when a
+            // stale device was automatically rebased onto a newer cloud document.
+            this.currentCheckpoint.data = applyCommittedOperations(optimisticData, commitResult.operations);
+            commitResult.operations.forEach(operation => {
                 const key = this.versionKey(operation.collection, operation.id);
                 if (operation.type === 'delete') delete nextVersions[key];
-                else nextVersions[key] = (expectedVersions[key] || 0) + 1;
+                else nextVersions[key] = commitResult.versions[key];
             });
             this.currentCheckpoint.versions = nextVersions;
             return this.getCheckpoint();
@@ -540,6 +621,8 @@
         extractSettings,
         diffSnapshots,
         threeWayMerge,
+        mergeValue,
+        applyCommittedOperations,
         countCollections,
         validateMigration
     };

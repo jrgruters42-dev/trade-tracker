@@ -118,14 +118,58 @@ test('different records edited on two devices merge without a conflict', () => {
     assert.equal(result.merged.openPositions[1].currentPrice, desktop.openPositions[1].currentPrice);
 });
 
-test('the same record edited on two devices produces a narrow conflict', () => {
+test('different fields on the same position merge without a conflict', () => {
+    const base = sync.normalizeData(legacy, deterministicId);
+    const laptop = sync.normalizeData(base);
+    const desktop = sync.normalizeData(base);
+    laptop.openPositions[0].currentPrice += 1;
+    desktop.openPositions[0].symbol = 'EDITED';
+    const result = sync.threeWayMerge(base, laptop, desktop);
+    assert.deepEqual(result.conflicts, []);
+    assert.equal(result.merged.openPositions[0].currentPrice, laptop.openPositions[0].currentPrice);
+    assert.equal(result.merged.openPositions[0].symbol, 'EDITED');
+});
+
+test('the same user-entered field edited on two devices produces a field-level conflict', () => {
+    const base = sync.normalizeData(legacy, deterministicId);
+    const laptop = sync.normalizeData(base);
+    const desktop = sync.normalizeData(base);
+    laptop.openPositions[0].symbol = 'LAPTOP';
+    desktop.openPositions[0].symbol = 'DESKTOP';
+    const result = sync.threeWayMerge(base, laptop, desktop);
+    assert.deepEqual(result.conflicts, [`openPositions.${base.openPositions[0]._syncId}.symbol`]);
+});
+
+test('competing automatic price refreshes keep the cloud value without a conflict', () => {
     const base = sync.normalizeData(legacy, deterministicId);
     const laptop = sync.normalizeData(base);
     const desktop = sync.normalizeData(base);
     laptop.openPositions[0].currentPrice += 1;
     desktop.openPositions[0].currentPrice += 2;
     const result = sync.threeWayMerge(base, laptop, desktop);
-    assert.deepEqual(result.conflicts, [`openPositions.${base.openPositions[0]._syncId}`]);
+    assert.deepEqual(result.conflicts, []);
+    assert.equal(result.merged.openPositions[0].currentPrice, desktop.openPositions[0].currentPrice);
+});
+
+test('a rebased transaction checkpoint reflects the payload actually committed to cloud', () => {
+    const base = sync.normalizeData(legacy, deterministicId);
+    const id = base.openPositions[0]._syncId;
+    const committed = { ...base.openPositions[0], currentPrice: 777, symbol: 'CLOUD' };
+    const result = sync.applyCommittedOperations(base, [
+        { type: 'set', collection: 'openPositions', id, payload: committed }
+    ]);
+    assert.equal(result.openPositions[0].currentPrice, 777);
+    assert.equal(result.openPositions[0].symbol, 'CLOUD');
+});
+
+test('a record deleted on one device stays deleted when the other device did not edit it', () => {
+    const base = sync.normalizeData(legacy, deterministicId);
+    const laptop = sync.normalizeData(base);
+    const desktop = sync.normalizeData(base);
+    laptop.openPositions.splice(0, 1);
+    const result = sync.threeWayMerge(base, laptop, desktop);
+    assert.deepEqual(result.conflicts, []);
+    assert.equal(result.merged.openPositions.length, base.openPositions.length - 1);
 });
 
 test('different settings merge field by field', () => {
