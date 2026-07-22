@@ -2494,6 +2494,8 @@
         let syncCheckpoint = null;
         let schwabEquityRef = null;
         let pendingRemoteCheckpoint = null;
+        let deferredRemoteCheckpoint = null;
+        let deferredPriceDisplayRefresh = false;
         let firebaseConfig = null;
         let isFirebaseInitialized = false;
         let isInitialDataLoaded = false;
@@ -2509,6 +2511,30 @@
         let rewardMilestoneClaimed = 0; // highest milestone number the user has acknowledged
         let spyYTDValue = null; // cached SPY YTD % for gold highlight comparisons
         let taxPayments = {}; // { "2025-Q1": { paid: true, amount: 1200, date: "2025-04-15" }, ... }
+
+        function isUserEditingField() {
+            const active = document.activeElement;
+            if (!active) return false;
+            return active.matches('input:not([type="button"]):not([type="submit"]), select, textarea, [contenteditable="true"]');
+        }
+
+        function applyDeferredRefreshes() {
+            if (isUserEditingField()) return;
+            if (deferredRemoteCheckpoint) {
+                const checkpoint = deferredRemoteCheckpoint;
+                deferredRemoteCheckpoint = null;
+                handleRemoteCheckpoint(checkpoint);
+                return;
+            }
+            if (deferredPriceDisplayRefresh) {
+                deferredPriceDisplayRefresh = false;
+                updateAllDisplays();
+            }
+        }
+
+        // Background price/cloud updates may finish while a value is only half typed.
+        // Wait until the user leaves the field before allowing either path to redraw it.
+        document.addEventListener('focusout', () => setTimeout(applyDeferredRefreshes, 0));
 
         // Configuration
         // Get recovery status lookback period from user input
@@ -2684,6 +2710,12 @@
 
         function handleRemoteCheckpoint(remoteCheckpoint) {
             if (!isInitialDataLoaded || !syncCheckpoint) return;
+
+            if (isUserEditingField()) {
+                deferredRemoteCheckpoint = remoteCheckpoint;
+                updateSyncStatus('Update waiting for edit…', true);
+                return;
+            }
 
             if (window.pendingSave || _dataDirty || spyJan1EditPending) {
                 const localData = buildFirebaseData();
@@ -5310,7 +5342,8 @@
 
             if (updatedCount > 0 || technicalCount > 0) {
                 saveToFirebase();
-                updateAllDisplays();
+                if (isUserEditingField()) deferredPriceDisplayRefresh = true;
+                else updateAllDisplays();
                 const now = new Date().toLocaleTimeString();
                 document.getElementById('lastUpdate').textContent = `Last updated: ${now}${technicalCount ? ` · ${technicalCount} technical` : ''}`;
             } else {
