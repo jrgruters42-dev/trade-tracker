@@ -76,3 +76,28 @@ test('position-sizing drafts save while incomplete and are restored field by fie
         /SymbolInput`\)\.value\s*=\s*profile\.symbol\s*\|\|\s*'';[\s\S]*?Price`\)\.value\s*=\s*profile\.price\s*\|\|\s*'';[\s\S]*?Stop`\)\.value\s*=\s*profile\.stop\s*\|\|\s*'';/
     );
 });
+
+
+test('background updates cannot redraw or overwrite a field while the user is editing', () => {
+    const sections = appSections();
+    assert.match(
+        sections.html,
+        /function isUserEditingField\(\)[\s\S]*?document\.activeElement[\s\S]*?input:not/
+    );
+    assert.match(
+        sections.html,
+        /function handleRemoteCheckpoint\(remoteCheckpoint\)[\s\S]*?if \(isUserEditingField\(\)\)[\s\S]*?deferredRemoteCheckpoint = remoteCheckpoint;[\s\S]*?return;/
+    );
+    assert.match(
+        sections.html,
+        /if \(document\.activeElement === accountInput\) return;/
+    );
+    assert.match(
+        sections.html,
+        /if \(isUserEditingField\(\)\) deferredPriceDisplayRefresh = true;[\s\S]*?else updateAllDisplays\(\);/
+    );
+    assert.match(
+        sections.html,
+        /document\.addEventListener\('focusout', \(\) => setTimeout\(applyDeferredRefreshes, 0\)\)/
+    );
+});
