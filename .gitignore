@@ -67,3 +67,8 @@ node_modules/
 
 # dataconnect generated files
 .dataconnect
+
+.schwab-tokens.json
+.schwab-sync-settings.json
+
+schwab-sync-settings.json
