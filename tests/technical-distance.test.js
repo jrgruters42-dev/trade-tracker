@@ -17,7 +17,7 @@ test('open positions show sortable 20-day ATR distance from the 50 SMA', () => {
 test('one daily-history request derives both SMA and ATR and is cached on positions', () => {
     assert.match(html, /function fetchPositionTechnicalData\(symbol\)/);
     assert.match(html, /function=TIME_SERIES_DAILY/);
-    assert.match(html, /return \{ sma50, atr20, technicalUpdatedAt: Date\.now\(\) \}/);
+    assert.match(html, /return \{ ok: true, data: \{ sma50, atr20, technicalUpdatedAt: Date\.now\(\) \} \}/);
     assert.match(html, /const maxAgeMs = 20 \* 60 \* 60 \* 1000/);
     assert.match(html, /positions\.forEach\(pos => Object\.assign\(pos, technical\)\)/);
 });
@@ -49,9 +49,12 @@ test('ATR distance is yellow at 5 and red at 8 on desktop and mobile', () => {
     assert.match(html, /style="\$\{getAtrFrom50Style\(metrics\.atrFrom50\)\}"/);
 });
 
-test('technical refresh reports symbols that could not update', () => {
+test('technical refresh prioritizes missing symbols and reports the daily quota accurately', () => {
     assert.match(html, /const failedSymbols = \[\]/);
     assert.match(html, /failedSymbols\.push\(symbol\)/);
     assert.match(html, /ATR\/50 SMA data could not be retrieved for:/);
-    assert.match(html, /Alpha Vantage may be rate-limited/);
+    assert.match(html, /const prioritizedGroups = \[\.\.\.groups\.entries\(\)\]\.sort/);
+    assert.match(html, /if \(result\.reason === 'rate-limit'\)/);
+    assert.match(html, /free allowance resets daily/);
+    assert.doesNotMatch(html, /Wait a minute and press Update All Prices again/);
 });

@@ -3261,6 +3261,7 @@
 
             const cloudPositions = data.openPositions || [];
             const cloudPositionIds = new Set(cloudPositions.map(position => position._syncId).filter(Boolean));
+            cloudPositionIds.forEach(syncId => pendingPositionOverlays.delete(syncId));
             const protectedPositions = [...pendingPositionOverlays.values()]
                 .filter(position => !cloudPositionIds.has(position._syncId));
             // A realtime listener can briefly contain an older collection snapshot even
@@ -3557,15 +3558,13 @@
 
             // Use the same guarded, conflict-aware save path as every other edit.
             try {
-                await saveToFirebase(true);
-                const confirmedCheckpoint = await syncStore.load();
+                const confirmedCheckpoint = await saveToFirebase(true);
                 const confirmedPosition = (confirmedCheckpoint.data.openPositions || [])
                     .find(item => item._syncId === position._syncId);
                 if (!confirmedPosition) {
-                    throw new Error('Firestore did not confirm the new position after saving.');
+                    throw new Error('The completed Firestore transaction did not contain the new position.');
                 }
                 syncCheckpoint = confirmedCheckpoint;
-                pendingPositionOverlays.delete(position._syncId);
                 loadDataFromFirebase(confirmedCheckpoint.data);
 
                 // Show BIG centered confirmation
@@ -5282,19 +5281,19 @@
         // This avoids spending separate Alpha Vantage requests on SMA and ATR.
         async function fetchPositionTechnicalData(symbol) {
             const avKey = document.getElementById('alphaVantageKey')?.value?.trim();
-            if (!avKey) return null;
+            if (!avKey) return { ok: false, reason: 'missing-key' };
             try {
                 const url = `https://www.alphavantage.co/query?function=TIME_SERIES_DAILY&symbol=${encodeURIComponent(symbol)}&outputsize=compact&apikey=${avKey}`;
                 const response = await fetch(url);
                 const data = await response.json();
                 if (data['Note'] || data['Information']) {
                     console.warn('Alpha Vantage limit while updating technical data:', data['Note'] || data['Information']);
-                    return null;
+                    return { ok: false, reason: 'rate-limit', message: data['Note'] || data['Information'] };
                 }
                 const series = data['Time Series (Daily)'];
-                if (!series) return null;
+                if (!series) return { ok: false, reason: 'no-series', message: data['Error Message'] || '' };
                 const dates = Object.keys(series).sort().reverse();
-                if (dates.length < 51) return null;
+                if (dates.length < 51) return { ok: false, reason: 'insufficient-history' };
 
                 const closes = dates.slice(0, 50).map(date => Number(series[date]['4. close']));
                 const sma50 = closes.reduce((sum, close) => sum + close, 0) / closes.length;
@@ -5306,11 +5305,11 @@
                     return Math.max(high - low, Math.abs(high - previousClose), Math.abs(low - previousClose));
                 });
                 const atr20 = trueRanges.reduce((sum, range) => sum + range, 0) / trueRanges.length;
-                if (!(sma50 > 0) || !(atr20 > 0)) return null;
-                return { sma50, atr20, technicalUpdatedAt: Date.now() };
+                if (!(sma50 > 0) || !(atr20 > 0)) return { ok: false, reason: 'invalid-data' };
+                return { ok: true, data: { sma50, atr20, technicalUpdatedAt: Date.now() } };
             } catch (error) {
                 console.warn(`Technical data update failed for ${symbol}:`, error);
-                return null;
+                return { ok: false, reason: 'network', message: error.message };
             }
         }
 
@@ -5325,10 +5324,18 @@
                 if (!groups.has(symbol)) groups.set(symbol, []);
                 groups.get(symbol).push(pos);
             });
+            // Fill blank technical values before refreshing older cached values. This
+            // gives newly added symbols first use of Alpha Vantage's limited free quota.
+            const prioritizedGroups = [...groups.entries()].sort(([, left], [, right]) => {
+                const leftMissing = !left.some(pos => Number(pos.sma50) > 0 && Number(pos.atr20) > 0);
+                const rightMissing = !right.some(pos => Number(pos.sma50) > 0 && Number(pos.atr20) > 0);
+                return Number(rightMissing) - Number(leftMissing);
+            });
 
             let updatedSymbols = 0;
             const failedSymbols = [];
-            for (const [symbol, positions] of groups) {
+            let rateLimited = false;
+            for (const [symbol, positions] of prioritizedGroups) {
                 const fresh = positions.find(pos =>
                     Number(pos.sma50) > 0 && Number(pos.atr20) > 0 &&
                     Date.now() - Number(pos.technicalUpdatedAt || 0) < maxAgeMs
@@ -5337,16 +5344,24 @@
                     sma50: Number(fresh.sma50),
                     atr20: Number(fresh.atr20),
                     technicalUpdatedAt: Number(fresh.technicalUpdatedAt)
-                } : await fetchPositionTechnicalData(symbol);
+                } : null;
                 if (!technical) {
-                    failedSymbols.push(symbol);
-                    continue;
+                    const result = await fetchPositionTechnicalData(symbol);
+                    if (!result.ok) {
+                        failedSymbols.push(symbol);
+                        if (result.reason === 'rate-limit') {
+                            rateLimited = true;
+                            break;
+                        }
+                        continue;
+                    }
+                    technical = result.data;
                 }
                 positions.forEach(pos => Object.assign(pos, technical));
                 updatedSymbols++;
                 if (!fresh) await new Promise(resolve => setTimeout(resolve, 250));
             }
-            return { updatedSymbols, failedSymbols, missingApiKey: false };
+            return { updatedSymbols, failedSymbols, missingApiKey: false, rateLimited };
         }
 
         // Update SPY YTD display
@@ -5441,7 +5456,10 @@
                 const now = new Date().toLocaleTimeString();
                 document.getElementById('lastUpdate').textContent = `Last updated: ${now}${technicalCount ? ` · ${technicalCount} technical` : ''}`;
                 if (technicalResult.failedSymbols.length > 0) {
-                    alert(`Prices updated, but ATR/50 SMA data could not be retrieved for: ${technicalResult.failedSymbols.join(', ')}.\n\nAlpha Vantage may be rate-limited. Wait a minute and press Update All Prices again.`);
+                    const explanation = technicalResult.rateLimited
+                        ? 'Alpha Vantage reported that its request quota is exhausted. The free allowance resets daily; retrying repeatedly before the reset will not help.'
+                        : 'The historical data provider did not return enough daily data for these symbols.';
+                    alert(`Prices updated, but ATR/50 SMA data could not be retrieved for: ${technicalResult.failedSymbols.join(', ')}.\n\n${explanation}`);
                 }
             } else {
                 document.getElementById('lastUpdate').textContent = 'Update failed';
