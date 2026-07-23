@@ -15,22 +15,25 @@ test('new positions remain overlaid while Firestore snapshots are incomplete', (
     );
 });
 
-test('position success waits for an authoritative Firestore read-back', () => {
+test('position success uses the completed Firestore transaction checkpoint', () => {
     const start = html.indexOf("document.getElementById('addPositionForm').addEventListener");
     const end = html.indexOf('// Auto-save form data', start);
     const handler = html.slice(start, end);
 
-    assert.match(handler, /await saveToFirebase\(true\)/);
-    assert.match(handler, /const confirmedCheckpoint = await syncStore\.load\(\)/);
+    assert.match(handler, /const confirmedCheckpoint = await saveToFirebase\(true\)/);
+    assert.doesNotMatch(handler, /await syncStore\.load\(\)/);
     assert.match(handler, /\.find\(item => item\._syncId === position\._syncId\)/);
-    assert.match(handler, /pendingPositionOverlays\.delete\(position\._syncId\)/);
     assert.ok(
-        handler.indexOf('const confirmedCheckpoint = await syncStore.load()')
+        handler.indexOf('const confirmedCheckpoint = await saveToFirebase(true)')
             < handler.indexOf('confirmation.textContent'),
-        'the green saved confirmation must appear only after Firestore read-back'
+        'the green saved confirmation must appear only after the Firestore transaction completes'
     );
 });
 
+test('pending overlay is cleared only after a cloud snapshot contains the position', () => {
+    assert.match(html, /cloudPositionIds\.forEach\(syncId => pendingPositionOverlays\.delete\(syncId\)\)/);
+});
+
 test('service worker cache version is bumped for the position fix', () => {
-    assert.match(serviceWorker, /trade-tracker-firestore-v5/);
+    assert.match(serviceWorker, /trade-tracker-firestore-v6/);
 });
