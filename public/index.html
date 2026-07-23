@@ -2993,8 +2993,16 @@
 
         // Save only records that actually changed. Different records edited on two devices
         // merge normally; an edit to the same record is rejected by its revision check.
+        let queuedSaveCount = 0;
+
         function saveToFirebase(propagateError = false) {
             _dataDirty = true;
+            // Capture the journal at the moment the user made the change. A previous save
+            // can finish while this request is waiting in the serialized queue, and its
+            // Firestore snapshot must not erase a newly added position before we save it.
+            const requestedData = buildFirebaseData();
+            queuedSaveCount += 1;
+            window.pendingSave = true;
             const queuedSave = async () => {
                 const blockReason = TradeSyncSafety.getSaveBlockReason({
                     firebaseInitialized: isFirebaseInitialized,
@@ -3005,27 +3013,25 @@
                 });
                 if (blockReason) throw new Error(blockReason);
 
-                const data = buildFirebaseData();
-                window.pendingSave = true;
+                const data = requestedData;
                 updateSyncStatus('Saving…', true);
 
                 try {
                     syncCheckpoint = await syncStore.save(data, syncCheckpoint);
-                    _dataDirty = false;
+                    _dataDirty = queuedSaveCount > 1;
                     remoteConflictDetected = false;
                     const now = new Date();
                     const timeStr = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
                     updateSyncStatus('Synced ✓', true);
                     document.getElementById('lastSavedTime').textContent = `Last saved: ${timeStr}`;
                     console.log('✅ Granular Firestore save completed at', timeStr);
-                    window.pendingSave = false;
                     return syncCheckpoint;
                 } catch (error) {
                     console.error('❌ Save error:', error);
                     remoteConflictDetected = error && error.name === 'FirestoreConflictError';
                     updateSyncStatus(remoteConflictDetected ? 'Conflict — action required' : 'Sync error', false);
                     document.getElementById('lastSavedTime').textContent = 'Save failed';
-                    window.pendingSave = false;
+                    _dataDirty = true;
                     if (remoteConflictDetected && syncStore) {
                         try {
                             pendingRemoteCheckpoint = await syncStore.load();
@@ -3035,6 +3041,9 @@
                         }
                     }
                     throw error;
+                } finally {
+                    queuedSaveCount = Math.max(0, queuedSaveCount - 1);
+                    window.pendingSave = queuedSaveCount > 0;
                 }
             };
 
@@ -3589,8 +3598,15 @@
         }
 
         // Sort open positions table
-        let currentSortColumn = null;
-        let currentSortDirection = 'desc';
+        const savedOpenPositionSort = (() => {
+            try {
+                return JSON.parse(localStorage.getItem('openPositionSort') || 'null');
+            } catch (error) {
+                return null;
+            }
+        })();
+        let currentSortColumn = savedOpenPositionSort?.column || null;
+        let currentSortDirection = savedOpenPositionSort?.direction === 'asc' ? 'asc' : 'desc';
 
         function sortOpenPositions(column) {
             // Toggle direction if same column clicked
@@ -3601,12 +3617,19 @@
                 currentSortDirection = 'desc';
             }
 
-            openPositions.sort((a, b) => {
+            localStorage.setItem('openPositionSort', JSON.stringify({
+                column: currentSortColumn,
+                direction: currentSortDirection
+            }));
+            updateOpenPositionsTable();
+        }
+
+        function compareOpenPositions(a, b) {
                 let valA, valB;
                 const metricsA = calculatePositionMetrics(a);
                 const metricsB = calculatePositionMetrics(b);
 
-                switch(column) {
+                switch(currentSortColumn) {
                     case 'symbol':
                         valA = a.symbol;
                         valB = b.symbol;
@@ -3686,9 +3709,13 @@
                 } else {
                     return currentSortDirection === 'desc' ? valB - valA : valA - valB;
                 }
-            });
+        }
 
-            updateOpenPositionsTable();
+        function getDisplayedOpenPositions() {
+            if (!currentSortColumn) return openPositions;
+            // Sorting is a display preference, not journal data. Keep the canonical array
+            // in Firestore order and reapply this view after every background refresh.
+            return [...openPositions].sort(compareOpenPositions);
         }
 
         function updateOpenPositionsTable() {
@@ -3725,7 +3752,7 @@
                     <tbody>
             `;
 
-            openPositions.forEach((pos, index) => {
+            getDisplayedOpenPositions().forEach((pos, index) => {
                 const metrics = calculatePositionMetrics(pos);
                 const pnlClass = metrics.pnlPercent >= 0 ? 'profit' : 'loss';
 
