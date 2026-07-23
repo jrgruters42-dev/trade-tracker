@@ -1,4 +1,4 @@
-const CACHE_NAME = 'trade-tracker-firestore-v5';
+const CACHE_NAME = 'trade-tracker-firestore-v6';
 const urlsToCache = [
   './',
   './index.html',
