@@ -38,3 +38,20 @@ test('desktop positions keep status badges visible and place ATR after the 2R ta
     const row = html.slice(rowStart, rowEnd);
     assert.ok(row.indexOf('metrics.twoRTarget') < row.indexOf('formatAtrFrom50(pos)'));
 });
+
+test('ATR distance is yellow at 5 and red at 8 on desktop and mobile', () => {
+    assert.match(html, /function getAtrFrom50Style\(posOrMultiple\)/);
+    assert.match(html, /multiple < 5/);
+    assert.match(html, /multiple >= 8/);
+    assert.match(html, /background: #fef3c7/);
+    assert.match(html, /background: #ef4444/);
+    assert.match(html, /style="\$\{getAtrFrom50Style\(pos\)\}"/);
+    assert.match(html, /style="\$\{getAtrFrom50Style\(metrics\.atrFrom50\)\}"/);
+});
+
+test('technical refresh reports symbols that could not update', () => {
+    assert.match(html, /const failedSymbols = \[\]/);
+    assert.match(html, /failedSymbols\.push\(symbol\)/);
+    assert.match(html, /ATR\/50 SMA data could not be retrieved for:/);
+    assert.match(html, /Alpha Vantage may be rate-limited/);
+});
