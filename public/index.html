@@ -2507,6 +2507,7 @@
         let spyJan1SaveTimer = null;
         let spyJan1EditPending = false;
         let spyJan1EditVersion = 0;
+        const pendingPositionOverlays = new Map();
         let cashFlows = [];  // [{id, type, amount, date, notes}]
         let rewardMilestoneClaimed = 0; // highest milestone number the user has acknowledged
         let spyYTDValue = null; // cached SPY YTD % for gold highlight comparisons
@@ -3258,7 +3259,14 @@
                 lastModified: data.lastModified
             });
 
-            openPositions = data.openPositions || [];
+            const cloudPositions = data.openPositions || [];
+            const cloudPositionIds = new Set(cloudPositions.map(position => position._syncId).filter(Boolean));
+            const protectedPositions = [...pendingPositionOverlays.values()]
+                .filter(position => !cloudPositionIds.has(position._syncId));
+            // A realtime listener can briefly contain an older collection snapshot even
+            // after a write transaction resolves. Keep newly submitted rows visible until
+            // an explicit Firestore read confirms their durable document.
+            openPositions = [...cloudPositions, ...protectedPositions];
             closedTrades = data.closedTrades || [];
             cashFlows = data.cashFlows || [];
             dailyEquity = data.dailyEquity || [];
@@ -3539,15 +3547,27 @@
             };
 
             openPositions.push(position);
+            // Assign the durable Firestore identity before any async work starts, then keep
+            // this exact row overlaid across incoming snapshots until a read-back confirms it.
+            TradeFirestoreSync.ensureIdentities({ openPositions });
+            pendingPositionOverlays.set(position._syncId, JSON.parse(JSON.stringify(position)));
 
             // Save and VERIFY it worked
             updateSyncStatus('Saving...', true);
 
             // Use the same guarded, conflict-aware save path as every other edit.
-            const savePromise = saveToFirebase(true);
+            try {
+                await saveToFirebase(true);
+                const confirmedCheckpoint = await syncStore.load();
+                const confirmedPosition = (confirmedCheckpoint.data.openPositions || [])
+                    .find(item => item._syncId === position._syncId);
+                if (!confirmedPosition) {
+                    throw new Error('Firestore did not confirm the new position after saving.');
+                }
+                syncCheckpoint = confirmedCheckpoint;
+                pendingPositionOverlays.delete(position._syncId);
+                loadDataFromFirebase(confirmedCheckpoint.data);
 
-            // Wait for save to complete and verify
-            savePromise.then(() => {
                 // Show BIG centered confirmation
                 const confirmation = document.createElement('div');
                 confirmation.style.cssText = 'position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: #10b981; color: white; padding: 30px 50px; border-radius: 12px; font-weight: 700; font-size: 1.5em; z-index: 10000; box-shadow: 0 8px 16px rgba(0,0,0,0.4);';
@@ -3558,7 +3578,7 @@
                 updateSyncStatus('Synced ✓', true);
                 const timeStr = new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
                 document.getElementById('lastSavedTime').textContent = `Last saved: ${timeStr}`;
-            }).catch((error) => {
+            } catch (error) {
                 // Show ERROR message
                 const errorMsg = document.createElement('div');
                 errorMsg.style.cssText = 'position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: #ef4444; color: white; padding: 30px 50px; border-radius: 12px; font-weight: 700; font-size: 1.5em; z-index: 10000; box-shadow: 0 8px 16px rgba(0,0,0,0.4);';
@@ -3567,8 +3587,8 @@
                 setTimeout(() => errorMsg.remove(), 5000);
 
                 updateSyncStatus('Save error', false);
-                alert(`❌ SAVE FAILED for ${symbol}!\n\nError: ${error.message}\n\nYour data was NOT saved. Try again!`);
-            });
+                alert(`❌ SAVE NOT CONFIRMED for ${symbol}!\n\nError: ${error.message}\n\nThe position remains visible on this device so you do not lose what you entered. Do not add it again until sync is resolved.`);
+            }
 
             updateAllDisplays();
             this.reset();
