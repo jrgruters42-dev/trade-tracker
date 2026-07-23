@@ -2717,7 +2717,18 @@
                 return;
             }
 
-            if (window.pendingSave || _dataDirty || spyJan1EditPending) {
+            // Never redraw journal state while a local save is in flight. The Firestore
+            // listener can briefly deliver an older collection snapshot before the write
+            // acknowledgement arrives, which would otherwise make a just-added position
+            // flash on screen and disappear. syncStore.save() already rebases the local
+            // write onto concurrent remote changes, so this interim snapshot is disposable.
+            if (window.pendingSave) {
+                deferredRemoteCheckpoint = remoteCheckpoint;
+                updateSyncStatus('Saving…', true);
+                return;
+            }
+
+            if (_dataDirty || spyJan1EditPending) {
                 const localData = buildFirebaseData();
                 const result = TradeFirestoreSync.threeWayMerge(syncCheckpoint.data, localData, remoteCheckpoint.data);
                 if (result.conflicts.length) {
@@ -3044,6 +3055,13 @@
                 } finally {
                     queuedSaveCount = Math.max(0, queuedSaveCount - 1);
                     window.pendingSave = queuedSaveCount > 0;
+                    if (!window.pendingSave) {
+                        // The completed checkpoint returned by syncStore.save() contains
+                        // this write plus any concurrent remote changes. Applying a listener
+                        // snapshot captured during the transaction could only move the UI
+                        // backward, so discard it.
+                        deferredRemoteCheckpoint = null;
+                    }
                 }
             };
 
@@ -3588,6 +3606,17 @@
             return `${multiple >= 0 ? '+' : ''}${multiple.toFixed(2)} ATR`;
         }
 
+        function getAtrFrom50Style(posOrMultiple) {
+            const multiple = typeof posOrMultiple === 'number'
+                ? posOrMultiple
+                : getAtrFrom50Multiple(posOrMultiple);
+            if (multiple === null || multiple < 5) return '';
+            if (multiple >= 8) {
+                return 'background: #ef4444; color: white; font-weight: 700;';
+            }
+            return 'background: #fef3c7; color: #92400e; font-weight: 700;';
+        }
+
         function getAtrFrom50Tooltip(pos) {
             const multiple = getAtrFrom50Multiple(pos);
             if (multiple === null) return 'Technical data unavailable. Add an Alpha Vantage key and use Update All Prices.';
@@ -3873,7 +3902,7 @@
                         <td class="highlight-col" style="${portRiskStyle}">${metrics.portfolioCapitalRisk.toFixed(2)}%</td>
                         <td class="highlight-col ${riskRatioColor}" style="${riskRatioStyle}">${metrics.initialR.toFixed(2)}R</td>
                         <td>$${metrics.twoRTarget.toFixed(2)}</td>
-                        <td title="${getAtrFrom50Tooltip(pos)}">${formatAtrFrom50(pos)}</td>
+                        <td title="${getAtrFrom50Tooltip(pos)}" style="${getAtrFrom50Style(pos)}">${formatAtrFrom50(pos)}</td>
                         <td>
                             <div class="action-buttons" style="display: flex; gap: 3px; flex-wrap: nowrap;">
                                 <button class="btn-secondary" style="padding: 3px 6px; font-size: 0.75em; white-space: nowrap;" onclick="openEditPositionModal(${pos.id})">Edit</button>
@@ -5255,7 +5284,7 @@
 
         async function refreshPositionTechnicalData() {
             const avKey = document.getElementById('alphaVantageKey')?.value?.trim();
-            if (!avKey) return 0;
+            if (!avKey) return { updatedSymbols: 0, failedSymbols: [], missingApiKey: true };
             const maxAgeMs = 20 * 60 * 60 * 1000;
             const groups = new Map();
             openPositions.forEach(pos => {
@@ -5266,6 +5295,7 @@
             });
 
             let updatedSymbols = 0;
+            const failedSymbols = [];
             for (const [symbol, positions] of groups) {
                 const fresh = positions.find(pos =>
                     Number(pos.sma50) > 0 && Number(pos.atr20) > 0 &&
@@ -5276,12 +5306,15 @@
                     atr20: Number(fresh.atr20),
                     technicalUpdatedAt: Number(fresh.technicalUpdatedAt)
                 } : await fetchPositionTechnicalData(symbol);
-                if (!technical) continue;
+                if (!technical) {
+                    failedSymbols.push(symbol);
+                    continue;
+                }
                 positions.forEach(pos => Object.assign(pos, technical));
                 updatedSymbols++;
                 if (!fresh) await new Promise(resolve => setTimeout(resolve, 250));
             }
-            return updatedSymbols;
+            return { updatedSymbols, failedSymbols, missingApiKey: false };
         }
 
         // Update SPY YTD display
@@ -5366,7 +5399,8 @@
                 await new Promise(resolve => setTimeout(resolve, 200));
             }
 
-            const technicalCount = await refreshPositionTechnicalData();
+            const technicalResult = await refreshPositionTechnicalData();
+            const technicalCount = technicalResult.updatedSymbols;
 
             if (updatedCount > 0 || technicalCount > 0) {
                 saveToFirebase();
@@ -5374,6 +5408,9 @@
                 else updateAllDisplays();
                 const now = new Date().toLocaleTimeString();
                 document.getElementById('lastUpdate').textContent = `Last updated: ${now}${technicalCount ? ` · ${technicalCount} technical` : ''}`;
+                if (technicalResult.failedSymbols.length > 0) {
+                    alert(`Prices updated, but ATR/50 SMA data could not be retrieved for: ${technicalResult.failedSymbols.join(', ')}.\n\nAlpha Vantage may be rate-limited. Wait a minute and press Update All Prices again.`);
+                }
             } else {
                 document.getElementById('lastUpdate').textContent = 'Update failed';
             }
@@ -8784,7 +8821,7 @@
                         <div class="pos-item"><span class="pos-label">Avg entry</span><span class="pos-value">${formatMobileMoney(metrics.averageEntry, 2)}</span></div>
                         <div class="pos-item"><span class="pos-label">Avg adj basis</span><span class="pos-value">${formatMobileMoney(metrics.averageAdjustedPrice, 2)}</span></div>
                         <div class="pos-item"><span class="pos-label">Current R</span><span class="pos-value" style="color:${metrics.currentR >= 0 ? '#15803d' : '#dc2626'};">${metrics.currentR.toFixed(2)}R</span></div>
-                        <div class="pos-item"><span class="pos-label">ATR from 50 SMA</span><span class="pos-value">${metrics.atrFrom50 === null ? '—' : `${metrics.atrFrom50 >= 0 ? '+' : ''}${metrics.atrFrom50.toFixed(2)} ATR`}</span></div>
+                        <div class="pos-item" style="${getAtrFrom50Style(metrics.atrFrom50)}"><span class="pos-label">ATR from 50 SMA</span><span class="pos-value">${metrics.atrFrom50 === null ? '—' : `${metrics.atrFrom50 >= 0 ? '+' : ''}${metrics.atrFrom50.toFixed(2)} ATR`}</span></div>
                         <div class="pos-item"><span class="pos-label">Allocation</span><span class="pos-value">${metrics.accountWeight.toFixed(1)}%</span></div>
                         <div class="pos-item"><span class="pos-label">Drop to stops</span><span class="pos-value">${formatMobileMoney(metrics.toStopsDollars)} · ${metrics.toStopsPercent.toFixed(2)}%</span></div>
                         <div class="pos-item"><span class="pos-label">Stop${group.lots.length > 1 ? ' range' : ''}</span><span class="pos-value">${metrics.stopLabel}</span></div>
