@@ -2593,6 +2593,18 @@
         let dailyEquity = [];
         let positionIdCounter = 1;
 
+        function allocatePositionId() {
+            const usedIds = new Set(
+                openPositions
+                    .map(position => Number(position.id))
+                    .filter(Number.isSafeInteger)
+            );
+            let candidate = Math.max(Date.now(), Number(positionIdCounter) || 1);
+            while (usedIds.has(candidate)) candidate += 1;
+            positionIdCounter = candidate + 1;
+            return candidate;
+        }
+
         // Initialize Firebase
         // ── Hardcoded Firebase config + Google Auth ───────────────────────────
         const FIREBASE_CONFIG = {
@@ -3511,7 +3523,7 @@
             const initialStop = parseFloat(document.getElementById('initialStop').value);
 
             const position = {
-                id: positionIdCounter++,
+                id: allocatePositionId(),
                 symbol: symbol,
                 entryPrice: entryPrice,
                 currentPrice: entryPrice,
