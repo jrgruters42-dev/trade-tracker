@@ -52,9 +52,10 @@ test('ATR distance is yellow at 5 and red at 8 on desktop and mobile', () => {
 test('technical refresh prioritizes missing symbols and reports the daily quota accurately', () => {
     assert.match(html, /const failedSymbols = \[\]/);
     assert.match(html, /failedSymbols\.push\(symbol\)/);
-    assert.match(html, /ATR\/50 SMA data could not be retrieved for:/);
+    assert.match(html, /ATR\/50 SMA data unavailable for:/);
     assert.match(html, /const prioritizedGroups = \[\.\.\.groups\.entries\(\)\]\.sort/);
     assert.match(html, /if \(result\.reason === 'rate-limit'\)/);
-    assert.match(html, /free allowance resets daily/);
+    assert.match(html, /Alpha Vantage daily quota exhausted/);
+    assert.doesNotMatch(html, /alert\(`Prices updated, but ATR\/50 SMA data/);
     assert.doesNotMatch(html, /Wait a minute and press Update All Prices again/);
 });
