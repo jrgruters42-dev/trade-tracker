@@ -548,14 +548,32 @@
             #rewardReadinessCard,
             #tradeQualityCard,
             .tab-nav,
-            .tabs,
             #performanceStatsCard,
             #equity-curves,
             #closed-trades,
             #what-if,
-            #options-hedge,
-            #position-sizer {
+            #options-hedge {
                 display: none !important;
+            }
+
+            /* Use the real desktop navigation on phones. It scrolls sideways so
+               the six stock position-sizing profiles remain fully available. */
+            .tabs {
+                display: flex !important;
+                flex-wrap: nowrap;
+                gap: 6px;
+                overflow-x: auto;
+                overscroll-behavior-x: contain;
+                scrollbar-width: thin;
+                margin: 0 0 8px;
+                padding: 0 0 5px;
+                -webkit-overflow-scrolling: touch;
+            }
+            .tabs .tab {
+                flex: 0 0 auto;
+                padding: 8px 11px;
+                font-size: 12px;
+                white-space: nowrap;
             }
 
             /* Compact the top stats */
@@ -603,12 +621,52 @@
             #exposureScalingCard.mobile-expanded .mobile-exposure-chevron { transform: rotate(90deg); }
             #exposureScalingCard .mobile-exposure-chevron { transition: transform 0.15s ease; }
 
-            /* Hide open positions TABLE, show mobile cards instead */
-            #openPositionsTable { display: none !important; }
-            #mobilePositionCards { display: block !important; }
+            /* Use the full desktop positions table on phones. The table scrolls
+               inside its card while the ticker stays pinned at the left edge. */
+            #openPositionsTable {
+                display: block !important;
+                width: 100%;
+                overflow-x: auto;
+                overscroll-behavior-x: contain;
+                -webkit-overflow-scrolling: touch;
+                border: 1px solid #e5e7eb;
+                border-radius: 8px;
+            }
+            #openPositionsTable table {
+                width: max-content;
+                min-width: 100%;
+                font-size: 10px;
+            }
+            #openPositionsTable th,
+            #openPositionsTable td {
+                padding: 7px 6px;
+                white-space: nowrap;
+            }
+            #openPositionsTable .symbol-column {
+                position: sticky;
+                left: 0;
+                z-index: 3;
+                min-width: 88px;
+                max-width: 112px;
+                box-shadow: 2px 0 4px rgba(15, 23, 42, 0.14);
+            }
+            #openPositionsTable th.symbol-column {
+                z-index: 5;
+                background: #f5f5f5;
+            }
+            #openPositionsTable tbody tr:nth-child(odd) td.symbol-column {
+                background: #f9fafb;
+            }
+            #openPositionsTable tbody tr:nth-child(even) td.symbol-column {
+                background: #fff;
+            }
+            #openPositionsTable .action-buttons button {
+                min-height: 30px;
+            }
+            #mobilePositionCards { display: none !important; }
 
             /* Positions are the first decision area on a phone. */
-            #open-positions { display: flex !important; flex-direction: column; }
+            #open-positions.tab-content.active { display: flex; flex-direction: column; }
             #currentPositionsCard { order: -20; }
             #portfolioHealthCard { order: -10; }
 
@@ -637,6 +695,27 @@
 
             /* Exposure scaling compact */
             #exposureScalingCard { display: block !important; }
+
+            /* Keep the stock position-sizing profiles usable at phone width. */
+            [id^="stock"].tab-content > .card > div:first-child {
+                align-items: stretch !important;
+                flex-direction: column;
+                gap: 8px;
+                margin-bottom: 10px !important;
+            }
+            [id^="stock"].tab-content > .card > div:first-child > div {
+                display: grid !important;
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+                gap: 6px !important;
+            }
+            [id^="stock"].tab-content > .card > div:first-child input,
+            [id^="stock"].tab-content > .card > div:first-child button {
+                width: 100% !important;
+                min-width: 0;
+            }
+            [id^="stock"].tab-content > .card > div:first-child button {
+                grid-column: 1 / -1;
+            }
         }
 
         /* Mobile position cards — hidden on desktop */

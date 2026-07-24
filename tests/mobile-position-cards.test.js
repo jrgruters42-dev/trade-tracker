@@ -114,12 +114,22 @@ test('mobile cards expose the decision metrics and separate lot actions', () => 
     assert.match(html, /openClosePositionModal\(\$\{pos\.id\}\)/);
 });
 
-test('mobile layout puts positions first and keeps position entry collapsed', () => {
+test('mobile layout uses the full scrollable positions table with a pinned symbol column', () => {
     assert.match(html, /#currentPositionsCard\s*\{\s*order:\s*-20;/);
     assert.match(html, /#addPositionCard #addPositionForm\s*\{\s*display:\s*none !important;/);
     assert.match(html, /#addPositionCard\.mobile-expanded #addPositionForm\s*\{\s*display:\s*grid !important;/);
     assert.match(html, /\.account-setup-section \.account-summary-row\s*\{\s*display:\s*none !important;/);
     assert.match(html, /#exposureScalingCard \.exposure-scaling-body\s*\{\s*display:\s*none !important;/);
     assert.match(html, /#exposureScalingCard\.mobile-expanded \.exposure-scaling-body\s*\{\s*display:\s*flex !important;/);
-    assert.match(html, /\.tabs,/);
+    assert.match(html, /#openPositionsTable\s*\{[\s\S]*?display:\s*block !important;[\s\S]*?overflow-x:\s*auto;/);
+    assert.match(html, /#openPositionsTable \.symbol-column\s*\{[\s\S]*?position:\s*sticky;[\s\S]*?left:\s*0;/);
+    assert.match(html, /#mobilePositionCards\s*\{\s*display:\s*none !important;/);
+});
+
+test('mobile layout exposes horizontally scrollable position-sizing tabs', () => {
+    assert.match(html, /\.tabs\s*\{[\s\S]*?display:\s*flex !important;[\s\S]*?flex-wrap:\s*nowrap;[\s\S]*?overflow-x:\s*auto;/);
+    assert.doesNotMatch(html, /\.tabs,\s*#performanceStatsCard/);
+    for (let index = 1; index <= 6; index += 1) {
+        assert.match(html, new RegExp(`switchTab\\('stock${index}'\\)`));
+    }
 });
