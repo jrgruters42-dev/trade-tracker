@@ -43,7 +43,7 @@ test('ATR distance is yellow at 5 and red at 8 on desktop and mobile', () => {
     assert.match(html, /function getAtrFrom50Style\(posOrMultiple\)/);
     assert.match(html, /multiple < 5/);
     assert.match(html, /multiple >= 8/);
-    assert.match(html, /background: #fef3c7/);
+    assert.match(html, /background: #fbbf24/);
     assert.match(html, /background: #ef4444/);
     assert.match(html, /style="\$\{getAtrFrom50Style\(pos\)\}"/);
     assert.match(html, /style="\$\{getAtrFrom50Style\(metrics\.atrFrom50\)\}"/);
