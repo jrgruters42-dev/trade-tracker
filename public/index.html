@@ -5456,10 +5456,12 @@
                 const now = new Date().toLocaleTimeString();
                 document.getElementById('lastUpdate').textContent = `Last updated: ${now}${technicalCount ? ` · ${technicalCount} technical` : ''}`;
                 if (technicalResult.failedSymbols.length > 0) {
-                    const explanation = technicalResult.rateLimited
-                        ? 'Alpha Vantage reported that its request quota is exhausted. The free allowance resets daily; retrying repeatedly before the reset will not help.'
-                        : 'The historical data provider did not return enough daily data for these symbols.';
-                    alert(`Prices updated, but ATR/50 SMA data could not be retrieved for: ${technicalResult.failedSymbols.join(', ')}.\n\n${explanation}`);
+                    console.warn(
+                        `ATR/50 SMA data unavailable for: ${technicalResult.failedSymbols.join(', ')}.`,
+                        technicalResult.rateLimited
+                            ? 'Alpha Vantage daily quota exhausted.'
+                            : 'Historical data was unavailable.'
+                    );
                 }
             } else {
                 document.getElementById('lastUpdate').textContent = 'Update failed';
