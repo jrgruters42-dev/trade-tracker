@@ -24,10 +24,18 @@ test('journal saves use the granular Firestore store', () => {
     assert.doesNotMatch(html, /dbRef\.transaction\(/);
 });
 
-test('Schwab equity is mirrored from its restricted RTDB field into granular Firestore settings', () => {
-    assert.match(html, /db\.ref\(['"`]tradeData\/accountSize['"`]\)/);
-    assert.match(html, /accountInput\.value = schwabEquity\.toFixed\(2\)/);
-    assert.match(html, /await saveToFirebase\(true\)/);
+test('Trading Account stays manual in Firestore and ignores the legacy Schwab RTDB field', () => {
+    assert.doesNotMatch(html, /tradeData\/accountSize/);
+    assert.doesNotMatch(html, /connectSchwabEquitySync/);
+    assert.doesNotMatch(html, /handleSchwabEquitySnapshot/);
+    assert.match(
+        html,
+        /accountSize:\s*parseFloat\(document\.getElementById\('accountSize'\)\.value\)/
+    );
+    assert.match(
+        html,
+        /document\.getElementById\('accountSize'\)\.value\s*=\s*data\.accountSize/
+    );
     assert.doesNotMatch(html, /db\.ref\(['"`]tradeData['"`]\)\.set\(/);
 });
 
