@@ -2582,7 +2582,6 @@
         let firestoreReadyPromise = Promise.resolve();
         let syncStore = null;
         let syncCheckpoint = null;
-        let schwabEquityRef = null;
         let pendingRemoteCheckpoint = null;
         let deferredRemoteCheckpoint = null;
         let deferredPriceDisplayRefresh = false;
@@ -2751,7 +2750,6 @@
                         authenticatedUser = null;
                         isInitialDataLoaded = false;
                         if (syncStore) syncStore.unsubscribe();
-                        disconnectSchwabEquitySync();
                         syncStore = null;
                         syncCheckpoint = null;
                         document.getElementById('authScreen').style.display = 'flex';
@@ -2798,7 +2796,6 @@
                 document.getElementById('lastSavedTime').textContent =
                     `Loaded: ${now.toLocaleTimeString('en-US', {hour:'2-digit',minute:'2-digit',second:'2-digit'})}`;
                 createDailyRestorePoint(syncCheckpoint.data);
-                connectSchwabEquitySync();
 
                 store.subscribe(handleRemoteCheckpoint, (error) => {
                     console.error('Firestore listener error:', error);
@@ -2856,43 +2853,6 @@
             const now = new Date();
             document.getElementById('lastSavedTime').textContent =
                 `Updated: ${now.toLocaleTimeString('en-US', {hour:'2-digit',minute:'2-digit',second:'2-digit'})}`;
-        }
-
-        // The restricted desktop updater writes only this legacy RTDB field. Mirror that
-        // single value into Firestore settings so the granular journal remains the source
-        // of truth and every device sees the newest Schwab equity without whole-journal writes.
-        function connectSchwabEquitySync() {
-            disconnectSchwabEquitySync();
-            if (!db || !authenticatedUser || !isInitialDataLoaded) return;
-            schwabEquityRef = db.ref('tradeData/accountSize');
-            schwabEquityRef.on('value', handleSchwabEquitySnapshot, error => {
-                console.error('Schwab equity listener error:', error);
-                updateSyncStatus('Synced — Schwab warning', false);
-            });
-        }
-
-        function disconnectSchwabEquitySync() {
-            if (schwabEquityRef) schwabEquityRef.off('value', handleSchwabEquitySnapshot);
-            schwabEquityRef = null;
-        }
-
-        async function handleSchwabEquitySnapshot(snapshot) {
-            if (!isInitialDataLoaded || !syncStore || remoteConflictDetected) return;
-            const schwabEquity = Number(snapshot.val());
-            const accountInput = document.getElementById('accountSize');
-            if (!accountInput || !Number.isFinite(schwabEquity) || schwabEquity <= 0) return;
-            if (document.activeElement === accountInput) return;
-            const currentEquity = Number(accountInput.value);
-            if (Math.abs(currentEquity - schwabEquity) < 0.005) return;
-
-            accountInput.value = schwabEquity.toFixed(2);
-            updateAllDisplays();
-            try {
-                await saveToFirebase(true);
-                console.log('✅ Schwab equity mirrored to Firestore:', schwabEquity);
-            } catch (error) {
-                console.error('Could not mirror Schwab equity to Firestore:', error);
-            }
         }
 
         // Load Firebase config (now hardcoded, just initialize)
