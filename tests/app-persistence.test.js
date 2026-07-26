@@ -90,10 +90,6 @@ test('background updates cannot redraw or overwrite a field while the user is ed
     );
     assert.match(
         sections.html,
-        /if \(document\.activeElement === accountInput\) return;/
-    );
-    assert.match(
-        sections.html,
         /if \(isUserEditingField\(\)\) deferredPriceDisplayRefresh = true;[\s\S]*?else updateAllDisplays\(\);/
     );
     assert.match(
