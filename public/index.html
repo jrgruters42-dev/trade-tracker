@@ -1006,6 +1006,17 @@
 
                 <!-- Reward Readiness Bar -->
                 <div id="rewardReadinessBar" style="margin-top: 8px; display: none; padding: 8px 10px; border-radius: 6px; font-size: 0.82em;"></div>
+
+                <!-- 50-Day Giveback Exposure -->
+                <div id="fiftyDayGivebackBar"
+                     style="margin-top:8px; padding:8px 10px; border-radius:6px; border:1px solid #bbf7d0; background:#f0fdf4; display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap;"
+                     title="50-DAY GIVEBACK EXPOSURE: For each open position, current account weight × percentage distance above its 50-day SMA. Positions at or below the 50-day contribute 0%. The portfolio total estimates how much account-level exposure is sitting between current prices and the 50-day lines.">
+                    <div>
+                        <div style="font-size:0.7em; font-weight:800; color:#475569; text-transform:uppercase; letter-spacing:0.4px;">50-Day Giveback Exposure</div>
+                        <div id="fiftyDayGivebackAction" style="font-size:0.72em; color:#64748b; margin-top:2px;">Waiting for technical data</div>
+                    </div>
+                    <div id="fiftyDayGivebackValue" style="font-size:1.25em; font-weight:800; color:#15803d;">—</div>
+                </div>
             </div>
 
             <!-- Core Stats (Compact) -->
@@ -3736,6 +3747,136 @@
             return `50 SMA: $${Number(pos.sma50).toFixed(2)}\n20-day ATR: $${Number(pos.atr20).toFixed(2)}\nUpdated: ${updated}`;
         }
 
+        function calculate50DayGivebackForPosition(pos, accountSize) {
+            const currentPrice = Number(pos?.currentPrice);
+            const sma50 = Number(pos?.sma50);
+            const shares = Number(pos?.shares);
+            const equity = Number(accountSize);
+
+            if (!(currentPrice > 0) || !(sma50 > 0) || !(shares > 0) || !(equity > 0)) {
+                return null;
+            }
+
+            const positionWeightPct = ((currentPrice * shares) / equity) * 100;
+            const distanceAbove50Pct = Math.max(0, ((currentPrice - sma50) / sma50) * 100);
+            const givebackExposurePct = (positionWeightPct * distanceAbove50Pct) / 100;
+
+            return {
+                positionWeightPct,
+                distanceAbove50Pct,
+                givebackExposurePct
+            };
+        }
+
+        function calculatePortfolio50DayGiveback(positions, accountSize) {
+            const equity = Number(accountSize);
+            const positionList = Array.isArray(positions) ? positions : [];
+            let totalGivebackExposurePct = 0;
+            let coveredExposurePct = 0;
+            let totalExposurePct = 0;
+            let coveredPositions = 0;
+
+            positionList.forEach(pos => {
+                const currentPrice = Number(pos?.currentPrice);
+                const shares = Number(pos?.shares);
+                if (currentPrice > 0 && shares > 0 && equity > 0) {
+                    totalExposurePct += ((currentPrice * shares) / equity) * 100;
+                }
+
+                const metric = calculate50DayGivebackForPosition(pos, equity);
+                if (metric === null) return;
+
+                coveredPositions += 1;
+                coveredExposurePct += metric.positionWeightPct;
+                totalGivebackExposurePct += metric.givebackExposurePct;
+            });
+
+            return {
+                totalGivebackExposurePct,
+                coveredPositions,
+                missingPositions: positionList.length - coveredPositions,
+                totalPositions: positionList.length,
+                coveredExposurePct,
+                totalExposurePct,
+                coveragePct: totalExposurePct > 0
+                    ? Math.min(100, (coveredExposurePct / totalExposurePct) * 100)
+                    : (positionList.length === 0 ? 100 : 0)
+            };
+        }
+
+        function get50DayGivebackStyle(value) {
+            if (value === null) return '';
+            if (value >= 2) return 'background:#ef4444; color:white; font-weight:700;';
+            if (value >= 1) return 'background:#fbbf24; color:#78350f; font-weight:700;';
+            return '';
+        }
+
+        function get50DayGivebackTooltip(pos) {
+            const metric = calculate50DayGivebackForPosition(pos, getAccountSize());
+            if (metric === null) {
+                return 'Giveback exposure unavailable until current price, shares, account equity, and 50-day SMA are available.';
+            }
+            return `Position weight: ${metric.positionWeightPct.toFixed(2)}%\nDistance above 50 SMA: ${metric.distanceAbove50Pct.toFixed(2)}%\nFormula: ${metric.positionWeightPct.toFixed(2)}% × ${metric.distanceAbove50Pct.toFixed(2)}% = ${metric.givebackExposurePct.toFixed(2)}% of account`;
+        }
+
+        function update50DayGivebackExposure() {
+            const bar = document.getElementById('fiftyDayGivebackBar');
+            const valueEl = document.getElementById('fiftyDayGivebackValue');
+            const actionEl = document.getElementById('fiftyDayGivebackAction');
+            if (!bar || !valueEl || !actionEl) return;
+
+            const summary = calculatePortfolio50DayGiveback(openPositions, getAccountSize());
+            if (summary.totalPositions === 0) {
+                valueEl.textContent = '0.00%';
+                valueEl.style.color = '#15803d';
+                actionEl.textContent = 'No open positions';
+                bar.style.background = '#f0fdf4';
+                bar.style.borderColor = '#bbf7d0';
+                return;
+            }
+
+            if (summary.coveredPositions === 0) {
+                valueEl.textContent = '—';
+                valueEl.style.color = '#64748b';
+                actionEl.textContent = 'No positions have a 50-day SMA yet — use Update All Prices';
+                bar.style.background = '#f8fafc';
+                bar.style.borderColor = '#cbd5e1';
+                return;
+            }
+
+            const value = summary.totalGivebackExposurePct;
+            let color = '#15803d';
+            let background = '#f0fdf4';
+            let border = '#bbf7d0';
+            let action = 'Within the 8% limit';
+
+            if (value >= 10) {
+                color = '#dc2626';
+                background = '#fef2f2';
+                border = '#fca5a5';
+                action = 'Trim extended positions until this is below 8%';
+            } else if (value >= 8) {
+                color = '#b45309';
+                background = '#fefce8';
+                border = '#fde68a';
+                action = 'No new buys; review the most extended positions';
+            }
+
+            const coverage = `${summary.coveredPositions}/${summary.totalPositions} positions · ${summary.coveragePct.toFixed(0)}% of exposure measured`;
+            if (summary.missingPositions > 0) {
+                action += ` · ${coverage} (total may be understated)`;
+            } else {
+                action += ` · ${coverage}`;
+            }
+
+            valueEl.textContent = `${value.toFixed(2)}%`;
+            valueEl.style.color = color;
+            actionEl.textContent = action;
+            actionEl.style.color = color;
+            bar.style.background = background;
+            bar.style.borderColor = border;
+        }
+
         // Sort open positions table
         const savedOpenPositionSort = (() => {
             try {
@@ -3780,6 +3921,10 @@
                     case 'atrFrom50':
                         valA = getAtrFrom50Multiple(a) ?? Number.NEGATIVE_INFINITY;
                         valB = getAtrFrom50Multiple(b) ?? Number.NEGATIVE_INFINITY;
+                        break;
+                    case 'fiftyDayGiveback':
+                        valA = calculate50DayGivebackForPosition(a, getAccountSize())?.givebackExposurePct ?? Number.NEGATIVE_INFINITY;
+                        valB = calculate50DayGivebackForPosition(b, getAccountSize())?.givebackExposurePct ?? Number.NEGATIVE_INFINITY;
                         break;
                     case 'entryPrice':
                         valA = a.entryPrice;
@@ -3878,6 +4023,7 @@
                             <th onclick="sortOpenPositions('currentStop')" style="cursor: pointer; background: #dbeafe; font-weight: 700;" title="Current stop loss price (update as position moves)">Current Stop ▼</th>
                             <th onclick="sortOpenPositions('initialWeight')" style="cursor: pointer;" title="RISK LEVEL: % of account risked when position was opened. Formula: (Entry - Initial Stop) × Shares ÷ Account Size × 100. This is your initial risk budget for the trade — it drives position sizing. 0.125% in weak markets, up to 1.0% when all 3 market conditions are green.">Risk Level ▼</th>
                             <th onclick="sortOpenPositions('accountWeight')" style="cursor: pointer;" title="Current position size as % of account">Acct Wt% ▼</th>
+                            <th onclick="sortOpenPositions('fiftyDayGiveback')" style="cursor:pointer;" title="50-DAY GIVEBACK EXPOSURE: Current account weight × percentage distance above the 50-day SMA. This position's contribution to the portfolio total. Positions at or below the 50-day contribute 0%.">50D Giveback ▼</th>
                             <th class="highlight-col" onclick="sortOpenPositions('pnlPercent')" style="cursor: pointer;" title="Profit/loss on this position (includes partial sells)">P&L% ▼</th>
                             <th class="highlight-col" onclick="sortOpenPositions('portfolioPnl')" style="cursor: pointer;" title="P&L as % of total account">Port P&L% ▼</th>
                             <th class="highlight-col" onclick="sortOpenPositions('portfolioDrawdown')" style="cursor: pointer;" title="PORTFOLIO DRAWDOWN: If this position hits your current stop right now, how much would your total account drop? Calculated as position size × distance to stop ÷ account size. Red = >8% portfolio drawdown (dangerous). Yellow = 5-8% (caution). Keep all positions' combined drawdown in check.">Port Drawdown ▼</th>
@@ -3893,6 +4039,7 @@
 
             getDisplayedOpenPositions().forEach((pos, index) => {
                 const metrics = calculatePositionMetrics(pos);
+                const fiftyDayGiveback = calculate50DayGivebackForPosition(pos, getAccountSize());
                 const pnlClass = metrics.pnlPercent >= 0 ? 'profit' : 'loss';
 
                 // Alternating row background
@@ -4006,6 +4153,7 @@
                         <td style="background: #dbeafe;">$${pos.currentStop.toFixed(2)}</td>
                         <td>${pos.initialWeight.toFixed(3)}%</td>
                         <td>${metrics.accountWeight.toFixed(2)}%</td>
+                        <td title="${get50DayGivebackTooltip(pos)}" style="${get50DayGivebackStyle(fiftyDayGiveback?.givebackExposurePct ?? null)}">${fiftyDayGiveback === null ? '—' : `${fiftyDayGiveback.givebackExposurePct.toFixed(2)}%`}</td>
                         <td class="highlight-col ${pnlClass}">${metrics.pnlPercent.toFixed(2)}%</td>
                         <td class="highlight-col ${pnlClass}">${metrics.portfolioPnlPercent.toFixed(2)}%</td>
                         <td class="highlight-col" style="${portDrawdownStyle}">${metrics.portfolioDrawdown.toFixed(2)}%</td>
@@ -6610,6 +6758,27 @@
                 recommendation = `💡 Watch closely. Consider 10-20% harvest if YTD Protection rises above 2.5x.`;
             }
 
+            // The portfolio should not show HEALTHY while the amount sitting
+            // above 50-day lines has crossed its own action threshold.
+            const fiftyDayGivebackSummary = calculatePortfolio50DayGiveback(openPositions, accountSize);
+            const fiftyDayGivebackValue = fiftyDayGivebackSummary.coveredPositions > 0
+                ? fiftyDayGivebackSummary.totalGivebackExposurePct
+                : null;
+
+            if (fiftyDayGivebackValue !== null && fiftyDayGivebackValue >= 10 && safetyLevel !== 'CRITICAL') {
+                safetyLevel = 'WARNING';
+                safetyColor = '#f59e0b';
+                safetyIcon = '⚠';
+                safetyBorder = '#f59e0b';
+                recommendation = `⚠️ 50-day giveback exposure is ${fiftyDayGivebackValue.toFixed(2)}%. Trim extended positions until it is below 8%.`;
+            } else if (fiftyDayGivebackValue !== null && fiftyDayGivebackValue >= 8 && safetyLevel === 'HEALTHY') {
+                safetyLevel = 'CAUTION';
+                safetyColor = '#fbbf24';
+                safetyIcon = '◐';
+                safetyBorder = '#fbbf24';
+                recommendation = `💡 50-day giveback exposure is ${fiftyDayGivebackValue.toFixed(2)}%. Pause new buys and review extended positions.`;
+            }
+
             // Update safety dashboard styling
             document.getElementById('safetyDashboard').style.borderLeftColor = safetyBorder;
             document.getElementById('safetyStatusIcon').style.background = `linear-gradient(135deg, ${safetyColor} 0%, ${safetyColor} 100%)`;
@@ -9130,6 +9299,7 @@
             updateExposureScaling();
             populateHedgePositionDropdown();
             updateRewardReadiness();
+            update50DayGivebackExposure();
             updateMobilePositionCards();
             // Trade quality only updates when panel is open (performance)
             if (document.getElementById('tradeQualityContent')?.style.display !== 'none') {
