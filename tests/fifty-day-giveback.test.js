@@ -85,3 +85,14 @@ test('dashboard and position table expose the new metric and thresholds', () => 
     assert.match(html, /below 8%/);
     assert.match(html, /total may be understated/);
 });
+
+test('50-day giveback column follows ATR from 50 SMA at the end of position metrics', () => {
+    assert.match(
+        html,
+        /sortOpenPositions\('atrFrom50'\)[\s\S]*?ATR from 50 SMA ▼<\/th>\s*<th onclick="sortOpenPositions\('fiftyDayGiveback'\)"[\s\S]*?50D Giveback ▼<\/th>\s*<th title="Edit, partial sell, update stop, close, or delete position">Actions<\/th>/
+    );
+    assert.match(
+        html,
+        /<td title="\$\{getAtrFrom50Tooltip\(pos\)\}"[\s\S]*?\$\{formatAtrFrom50\(pos\)\}<\/td>\s*<td title="\$\{get50DayGivebackTooltip\(pos\)\}"[\s\S]*?<\/td>\s*<td>\s*<div class="action-buttons"/
+    );
+});
