@@ -39,4 +39,8 @@ test('service worker uses a versioned trade-tracker cache', () => {
         serviceWorker,
         /const CACHE_NAME = 'trade-tracker-firestore-v\d+';/
     );
+    assert.match(
+        serviceWorker,
+        /response\.ok && response\.type === 'basic'/
+    );
 });

@@ -13,7 +13,7 @@ test('loads the safety helper before the journal application code', () => {
 
 test('loads Firestore and the granular sync layer before the journal application code', () => {
     const sdkIndex = html.indexOf('firebase-firestore-compat.js');
-    const helperIndex = html.indexOf('<script src="firestore-sync.js"></script>');
+    const helperIndex = html.search(/<script src="firestore-sync\.js(?:\?v=\d+)?"><\/script>/);
     const appIndex = html.indexOf('// Firebase and data variables');
     assert.ok(sdkIndex >= 0 && sdkIndex < helperIndex && helperIndex < appIndex);
 });
