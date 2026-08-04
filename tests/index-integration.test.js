@@ -59,3 +59,21 @@ test('conflict dialog offers local download and cloud recovery', () => {
     assert.match(html, /Download My Copy/);
     assert.match(html, /Load Cloud Version/);
 });
+
+test('parses every inline script in public/index.html to ensure valid JavaScript syntax', () => {
+    const vm = require('node:vm');
+    const scriptRegex = /<script\b[^>]*>([\s\S]*?)<\/script>/gi;
+    let match;
+    let count = 0;
+    while ((match = scriptRegex.exec(html)) !== null) {
+        const opening = match[0].match(/<script\b([^>]*)>/i)[1];
+        if (opening.includes('src=')) continue;
+        count++;
+        const code = match[1];
+        assert.doesNotThrow(() => {
+            new vm.Script(code);
+        }, `Inline script ${count} in public/index.html contains syntax errors`);
+    }
+    assert.ok(count > 0, 'At least one inline script was parsed');
+});
+

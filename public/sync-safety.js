@@ -55,6 +55,10 @@
 
     const activeTokens = new Map();
 
+    /**
+     * Single-use client-side workflow token (not a cryptographic token).
+     * Issued to authorize explicit record deletions during user-initiated workflows.
+     */
     function issueDeletionToken(dataset, recordId, payloadId) {
         const nonce = 'del-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 10);
         const token = {
@@ -182,36 +186,21 @@
                 }
             }
 
-            if (cloudItems.length > 0 && proposedItems.length === 0) {
-                if (cloudItems.length > 1) {
+            if (removedIds.length > 0) {
+                if (cloudItems.length > 1 && proposedItems.length === 0) {
                     return { safe: false, reason: 'EMPTY_DATASET_OVERWRITE:' + key };
                 }
-                if (consumedToken) {
-                    if (consumedToken.dataset !== key || !tokenMatchesId(consumedToken, removedIds)) {
-                        return { safe: false, reason: 'UNAUTHORIZED_DELETION' };
-                    }
-                } else if (removedIds.length > 0) {
-                    if (options && options.requireTokenForDeletion) {
-                        return { safe: false, reason: 'UNAUTHORIZED_DELETION' };
-                    }
+                if (!consumedToken) {
+                    return { safe: false, reason: 'UNAUTHORIZED_DELETION' };
                 }
-            }
-
-            if (removedIds.length > 0) {
-                if (consumedToken) {
-                    if (consumedToken.dataset !== key) {
-                        return { safe: false, reason: 'UNAUTHORIZED_DELETION' };
-                    }
-                    if (removedIds.length > 1) {
-                        return { safe: false, reason: 'UNAUTHORIZED_DELETION' };
-                    }
-                    if (!tokenMatchesId(consumedToken, removedIds)) {
-                        return { safe: false, reason: 'UNAUTHORIZED_DELETION' };
-                    }
-                } else {
-                    if (removedIds.length > 1) {
-                        return { safe: false, reason: 'UNAUTHORIZED_DELETION' };
-                    }
+                if (consumedToken.dataset !== key) {
+                    return { safe: false, reason: 'UNAUTHORIZED_DELETION' };
+                }
+                if (removedIds.length > 1) {
+                    return { safe: false, reason: 'UNAUTHORIZED_DELETION' };
+                }
+                if (!tokenMatchesId(consumedToken, removedIds)) {
+                    return { safe: false, reason: 'UNAUTHORIZED_DELETION' };
                 }
             }
         }

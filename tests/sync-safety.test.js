@@ -178,3 +178,51 @@ test('circuit breaker: failed-deletion rollback restores local array and state',
     assert.equal(localPositions.length, 2);
     assert.deepEqual(localPositions[0], backupPos);
 });
+
+test('circuit breaker: blocks deletion of exactly one record without a single-use client-side workflow token', () => {
+    const checkpoint = mockValidCheckpoint(); // Has 2 openPositions
+    const proposed = JSON.parse(JSON.stringify(checkpoint.data));
+    proposed.openPositions.splice(0, 1); // 1 record removed
+
+    const result = safety.validatePayloadSafety(proposed, checkpoint);
+    assert.equal(result.safe, false);
+    assert.equal(result.reason, 'UNAUTHORIZED_DELETION');
+});
+
+test('circuit breaker: blocks a one-record collection becoming empty without a single-use client-side workflow token', () => {
+    const checkpoint = mockValidCheckpoint();
+    checkpoint.data.openPositions = [
+        { _syncId: 'position-1', id: 1, symbol: 'AAPL', entryPrice: 150 }
+    ];
+    const proposed = JSON.parse(JSON.stringify(checkpoint.data));
+    proposed.openPositions = []; // 1-record collection becomes empty
+
+    const result = safety.validatePayloadSafety(proposed, checkpoint);
+    assert.equal(result.safe, false);
+    assert.equal(result.reason, 'UNAUTHORIZED_DELETION');
+});
+
+test('circuit breaker: single-use client-side workflow token allows a one-record collection to become empty', () => {
+    const checkpoint = mockValidCheckpoint();
+    checkpoint.data.openPositions = [
+        { _syncId: 'position-1', id: 1, symbol: 'AAPL', entryPrice: 150 }
+    ];
+    const proposed = JSON.parse(JSON.stringify(checkpoint.data));
+    proposed.openPositions = [];
+
+    const token = safety.issueDeletionToken('openPositions', 'position-1', 1);
+    const result = safety.validatePayloadSafety(proposed, checkpoint, { deletionToken: token });
+    assert.equal(result.safe, true);
+});
+
+test('circuit breaker: deletion tokens are single-use client-side workflow tokens, not cryptographic tokens', () => {
+    const token = safety.issueDeletionToken('openPositions', 'position-1', 1);
+    assert.ok(token && typeof token.nonce === 'string');
+    assert.equal(token.dataset, 'openPositions');
+    assert.equal(token.recordId, 'position-1');
+    // Consuming invalidates token (single-use client-side workflow token)
+    const consumed = safety.consumeToken(token);
+    assert.ok(consumed);
+    assert.equal(safety.consumeToken(token), null);
+});
+

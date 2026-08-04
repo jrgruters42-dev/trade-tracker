@@ -50,3 +50,17 @@ test('open-position sorting survives redraws and does not rewrite canonical jour
     assert.match(html, /getDisplayedOpenPositions\(\)\.forEach\(\(pos, index\) =>/);
     assert.doesNotMatch(html, /function sortOpenPositions\(column\)[\s\S]*?openPositions\.sort\(/);
 });
+
+test('closing a position initiates only one cloud save and contains the single-use client-side workflow deletion token', () => {
+    const handlerStart = html.indexOf("document.getElementById('closePositionForm').addEventListener('submit'");
+    const handlerEnd = html.indexOf("// Edit position", handlerStart);
+    const handlerCode = html.slice(handlerStart, handlerEnd);
+
+    assert.match(handlerCode, /document\.getElementById\('closePositionForm'\)\.addEventListener\('submit',\s*async\s*function\s*\(e\)/);
+    assert.match(handlerCode, /saveDailySnapshot\(false\)/);
+    assert.match(handlerCode, /await saveToFirebase\(true,\s*\{\s*deletionToken:\s*token\s*\}\)/);
+
+    const saveCalls = handlerCode.match(/saveToFirebase\(/g);
+    assert.equal(saveCalls ? saveCalls.length : 0, 1, 'Closing a position must initiate exactly one cloud save');
+});
+

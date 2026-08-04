@@ -5421,7 +5421,7 @@
         }
 
         // Save daily snapshot
-        function saveDailySnapshot() {
+        function saveDailySnapshot(autoSave = true) {
             const accountSize = getAccountSize();
             const today = getTodayLocal();
 
@@ -5452,7 +5452,9 @@
 
             dailyEquity.sort((a, b) => new Date(a.date) - new Date(b.date));
 
-            saveToFirebase();
+            if (autoSave) {
+                saveToFirebase();
+            }
         }
 
         function takeSnapshot() {
@@ -6334,7 +6336,7 @@
         });
 
         // Close position
-        document.getElementById('closePositionForm').addEventListener('submit', function(e) {
+        document.getElementById('closePositionForm').addEventListener('submit', async function(e) {
             e.preventDefault();
 
             const id = parseInt(document.getElementById('closePositionId').value);
@@ -6420,7 +6422,7 @@
 
                 closedTrades.push(closedTrade);
                 openPositions.splice(posIndex, 1);
-                saveDailySnapshot();
+                saveDailySnapshot(false);
                 updateAllDisplays();
 
                 try {
