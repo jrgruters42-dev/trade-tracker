@@ -1,0 +1,238 @@
+(function (root) {
+    'use strict';
+
+    function getSaveBlockReason(state) {
+        if (!state.firebaseInitialized || !state.hasDatabaseRef || !state.authenticated) {
+            return 'Firebase is not authenticated';
+        }
+        if (!state.initialDataLoaded) {
+            return 'Cloud data has not finished loading; save blocked for safety';
+        }
+        if (state.remoteConflictDetected) {
+            return 'Cloud data changed on another device. Resolve the conflict before saving.';
+        }
+        return null;
+    }
+
+    function chooseTransactionValue(currentData, expectedTimestamp, nextData) {
+        const currentTimestamp = currentData ? (currentData.lastModified || null) : null;
+        return currentTimestamp === expectedTimestamp
+            ? { commit: true, value: nextData }
+            : { commit: false, value: undefined };
+    }
+
+    function sanitizeBackupData(data) {
+        const clean = JSON.parse(JSON.stringify(data || {}));
+        delete clean.apiKey;
+        delete clean.alphaVantageKey;
+        return clean;
+    }
+
+    function makeBackupEnvelope(data, metadata) {
+        return {
+            backupMetadata: Object.assign({
+                schemaVersion: 1,
+                exportedAt: new Date().toISOString(),
+                apiKeysIncluded: false
+            }, metadata || {}),
+            tradeData: sanitizeBackupData(data)
+        };
+    }
+
+    function backupKeysToPrune(keys, keepCount) {
+        const limit = Math.max(1, keepCount || 30);
+        return [...keys].sort().slice(0, Math.max(0, keys.length - limit));
+    }
+
+    function createSerializedQueue() {
+        let tail = Promise.resolve();
+        return function enqueue(task) {
+            const result = tail.then(task, task);
+            tail = result.catch(() => {});
+            return result;
+        };
+    }
+
+    const activeTokens = new Map();
+
+    function issueDeletionToken(dataset, recordId, payloadId) {
+        const nonce = 'del-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 10);
+        const token = {
+            nonce,
+            dataset,
+            recordId: String(recordId),
+            payloadId: payloadId !== undefined ? String(payloadId) : null,
+            createdAt: Date.now()
+        };
+        activeTokens.set(nonce, token);
+        return token;
+    }
+
+    function consumeToken(tokenOrNonce) {
+        if (!tokenOrNonce) return null;
+        const nonce = typeof tokenOrNonce === 'object' ? tokenOrNonce.nonce : tokenOrNonce;
+        if (!nonce || !activeTokens.has(nonce)) return null;
+        const token = activeTokens.get(nonce);
+        activeTokens.delete(nonce);
+        if (Date.now() - token.createdAt > 120000) return null;
+        return token;
+    }
+
+    function invalidateToken(tokenOrNonce) {
+        if (!tokenOrNonce) return;
+        const nonce = typeof tokenOrNonce === 'object' ? tokenOrNonce.nonce : tokenOrNonce;
+        if (nonce) activeTokens.delete(nonce);
+    }
+
+    function getStableRecordId(item, collectionKey) {
+        if (!item || typeof item !== 'object') return null;
+        if (item._syncId) return String(item._syncId);
+        if (collectionKey === 'stockProfiles' && item._slot !== undefined && item._slot !== null && item._slot !== '') {
+            return String(item._slot);
+        }
+        if (item.id !== undefined && item.id !== null && item.id !== '') return String(item.id);
+        if (item.date !== undefined && item.date !== null && item.date !== '') return String(item.date);
+        if (item._slot !== undefined && item._slot !== null && item._slot !== '') return String(item._slot);
+        if (item.symbol !== undefined && item.symbol !== null && item.symbol !== '') return String(item.symbol);
+        return null;
+    }
+
+    function tokenMatchesId(token, removedIds) {
+        if (!token) return false;
+        const targetRecordId = String(token.recordId || '');
+        const targetPayloadId = String(token.payloadId || '');
+        return removedIds.some(id => {
+            const strId = String(id);
+            return (targetRecordId && (strId === targetRecordId || strId.includes(targetRecordId) || targetRecordId.includes(strId))) ||
+                   (targetPayloadId && (strId === targetPayloadId || strId.includes(targetPayloadId) || targetPayloadId.includes(strId)));
+        });
+    }
+
+    const REQUIRED_ARRAY_KEYS = ['openPositions', 'closedTrades', 'cashFlows', 'dailyEquity', 'dailyEquityEntries'];
+
+    function validatePayloadSafety(proposedPayload, baseCheckpoint, options = {}) {
+        if (!proposedPayload || typeof proposedPayload !== 'object') {
+            return { safe: false, reason: 'MALFORMED_DATASET:payload' };
+        }
+
+        for (const key of REQUIRED_ARRAY_KEYS) {
+            if (!Array.isArray(proposedPayload[key])) {
+                return { safe: false, reason: 'MALFORMED_DATASET:' + key };
+            }
+        }
+
+        if (!proposedPayload.stockProfiles || typeof proposedPayload.stockProfiles !== 'object') {
+            return { safe: false, reason: 'MALFORMED_DATASET:stockProfiles' };
+        }
+
+        if (!baseCheckpoint || typeof baseCheckpoint !== 'object' || !baseCheckpoint.data || typeof baseCheckpoint.data !== 'object') {
+            return { safe: false, reason: 'AUTHORITATIVE_CHECKPOINT_MISSING' };
+        }
+
+        const baseData = baseCheckpoint.data;
+
+        for (const key of REQUIRED_ARRAY_KEYS) {
+            if (!Array.isArray(baseData[key])) {
+                return { safe: false, reason: 'MALFORMED_CHECKPOINT_DATASET:' + key };
+            }
+        }
+
+        if (!baseData.stockProfiles || typeof baseData.stockProfiles !== 'object') {
+            return { safe: false, reason: 'MALFORMED_CHECKPOINT_DATASET:stockProfiles' };
+        }
+
+        let consumedToken = null;
+        if (options && options.deletionToken) {
+            consumedToken = consumeToken(options.deletionToken);
+            if (!consumedToken) {
+                return { safe: false, reason: 'EXPIRED_OR_CONSUMED_TOKEN' };
+            }
+        }
+
+        const allKeys = [...REQUIRED_ARRAY_KEYS, 'stockProfiles'];
+
+        for (const key of allKeys) {
+            const cloudSource = baseData[key];
+            const proposedSource = proposedPayload[key];
+
+            const cloudItems = key === 'stockProfiles'
+                ? (Array.isArray(cloudSource) ? cloudSource : Object.values(cloudSource || {}).filter(item => item && typeof item === 'object'))
+                : (Array.isArray(cloudSource) ? cloudSource : []);
+
+            const proposedItems = key === 'stockProfiles'
+                ? (Array.isArray(proposedSource) ? proposedSource : Object.values(proposedSource || {}).filter(item => item && typeof item === 'object'))
+                : (Array.isArray(proposedSource) ? proposedSource : []);
+
+            const cloudIdsMap = new Map();
+            cloudItems.forEach(item => {
+                const id = getStableRecordId(item, key);
+                if (id) cloudIdsMap.set(id, item);
+            });
+
+            const proposedIdsSet = new Set();
+            proposedItems.forEach(item => {
+                const id = getStableRecordId(item, key);
+                if (id) proposedIdsSet.add(id);
+            });
+
+            const removedIds = [];
+            for (const cloudId of cloudIdsMap.keys()) {
+                if (!proposedIdsSet.has(cloudId)) {
+                    removedIds.push(cloudId);
+                }
+            }
+
+            if (cloudItems.length > 0 && proposedItems.length === 0) {
+                if (cloudItems.length > 1) {
+                    return { safe: false, reason: 'EMPTY_DATASET_OVERWRITE:' + key };
+                }
+                if (consumedToken) {
+                    if (consumedToken.dataset !== key || !tokenMatchesId(consumedToken, removedIds)) {
+                        return { safe: false, reason: 'UNAUTHORIZED_DELETION' };
+                    }
+                } else if (removedIds.length > 0) {
+                    if (options && options.requireTokenForDeletion) {
+                        return { safe: false, reason: 'UNAUTHORIZED_DELETION' };
+                    }
+                }
+            }
+
+            if (removedIds.length > 0) {
+                if (consumedToken) {
+                    if (consumedToken.dataset !== key) {
+                        return { safe: false, reason: 'UNAUTHORIZED_DELETION' };
+                    }
+                    if (removedIds.length > 1) {
+                        return { safe: false, reason: 'UNAUTHORIZED_DELETION' };
+                    }
+                    if (!tokenMatchesId(consumedToken, removedIds)) {
+                        return { safe: false, reason: 'UNAUTHORIZED_DELETION' };
+                    }
+                } else {
+                    if (removedIds.length > 1) {
+                        return { safe: false, reason: 'UNAUTHORIZED_DELETION' };
+                    }
+                }
+            }
+        }
+
+        return { safe: true, tokenUsed: consumedToken };
+    }
+
+    const api = {
+        getSaveBlockReason,
+        chooseTransactionValue,
+        sanitizeBackupData,
+        makeBackupEnvelope,
+        backupKeysToPrune,
+        createSerializedQueue,
+        issueDeletionToken,
+        consumeToken,
+        invalidateToken,
+        getStableRecordId,
+        validatePayloadSafety
+    };
+
+    root.TradeSyncSafety = api;
+    if (typeof module !== 'undefined' && module.exports) module.exports = api;
+})(typeof window !== 'undefined' ? window : globalThis);
