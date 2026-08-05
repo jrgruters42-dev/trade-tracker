@@ -103,12 +103,12 @@
 
     function tokenMatchesId(token, removedIds) {
         if (!token) return false;
-        const targetRecordId = String(token.recordId || '');
-        const targetPayloadId = String(token.payloadId || '');
+        const targetRecordId = token.recordId !== null && token.recordId !== undefined && token.recordId !== '' ? String(token.recordId) : null;
+        const targetPayloadId = token.payloadId !== null && token.payloadId !== undefined && token.payloadId !== '' ? String(token.payloadId) : null;
         return removedIds.some(id => {
             const strId = String(id);
-            return (targetRecordId && (strId === targetRecordId || strId.includes(targetRecordId) || targetRecordId.includes(strId))) ||
-                   (targetPayloadId && (strId === targetPayloadId || strId.includes(targetPayloadId) || targetPayloadId.includes(strId)));
+            return (targetRecordId !== null && strId === targetRecordId) ||
+                   (targetPayloadId !== null && strId === targetPayloadId);
         });
     }
 

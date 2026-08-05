@@ -226,3 +226,53 @@ test('circuit breaker: deletion tokens are single-use client-side workflow token
     assert.equal(safety.consumeToken(token), null);
 });
 
+test('circuit breaker: token for position-1 cannot authorize deletion of position-10', () => {
+    const checkpoint = mockValidCheckpoint();
+    checkpoint.data.openPositions = [
+        { _syncId: 'position-1', id: 1, symbol: 'AAPL' },
+        { _syncId: 'position-10', id: 10, symbol: 'MSFT' }
+    ];
+    const proposed = JSON.parse(JSON.stringify(checkpoint.data));
+    proposed.openPositions = [
+        { _syncId: 'position-1', id: 1, symbol: 'AAPL' }
+    ];
+
+    const token = safety.issueDeletionToken('openPositions', 'position-1', 1);
+    const result = safety.validatePayloadSafety(proposed, checkpoint, { deletionToken: token });
+    assert.equal(result.safe, false);
+    assert.equal(result.reason, 'UNAUTHORIZED_DELETION');
+});
+
+test('circuit breaker: payload ID of 1 cannot authorize deletion of another record merely because identifier contains 1', () => {
+    const checkpoint = mockValidCheckpoint();
+    checkpoint.data.openPositions = [
+        { _syncId: 'position-100', id: 100, symbol: 'TSLA' },
+        { _syncId: 'position-11', id: 11, symbol: 'NVDA' }
+    ];
+    const proposed = JSON.parse(JSON.stringify(checkpoint.data));
+    proposed.openPositions = [
+        { _syncId: 'position-100', id: 100, symbol: 'TSLA' }
+    ];
+
+    const token = safety.issueDeletionToken('openPositions', 'pos-1', 1);
+    const result = safety.validatePayloadSafety(proposed, checkpoint, { deletionToken: token });
+    assert.equal(result.safe, false);
+    assert.equal(result.reason, 'UNAUTHORIZED_DELETION');
+});
+
+test('circuit breaker: correctly matching token authorizes its intended deletion', () => {
+    const checkpoint = mockValidCheckpoint();
+    checkpoint.data.openPositions = [
+        { _syncId: 'position-1', id: 1, symbol: 'AAPL' },
+        { _syncId: 'position-2', id: 2, symbol: 'GOOGL' }
+    ];
+    const proposed = JSON.parse(JSON.stringify(checkpoint.data));
+    proposed.openPositions = [
+        { _syncId: 'position-2', id: 2, symbol: 'GOOGL' }
+    ];
+
+    const token = safety.issueDeletionToken('openPositions', 'position-1', 1);
+    const result = safety.validatePayloadSafety(proposed, checkpoint, { deletionToken: token });
+    assert.equal(result.safe, true);
+});
+
