@@ -5544,45 +5544,135 @@
             return null;
         }
 
-        // Fetch one daily history per ticker and derive both indicators locally.
-        // This avoids spending separate Alpha Vantage requests on SMA and ATR.
-        async function fetchPositionTechnicalData(symbol) {
-            const avKey = document.getElementById('alphaVantageKey')?.value?.trim();
-            if (!avKey) return { ok: false, reason: 'missing-key' };
+        async function fetchFinnhubTechnicalData(symbol) {
+            const apiKey = document.getElementById('apiKey')?.value?.trim();
+            if (!apiKey) return null;
             try {
-                const url = `https://www.alphavantage.co/query?function=TIME_SERIES_DAILY&symbol=${encodeURIComponent(symbol)}&outputsize=compact&apikey=${avKey}`;
+                const nowSec = Math.floor(Date.now() / 1000);
+                const hundredDaysAgoSec = nowSec - (120 * 24 * 60 * 60);
+                const url = `https://finnhub.io/api/v1/stock/candle?symbol=${encodeURIComponent(symbol)}&resolution=D&from=${hundredDaysAgoSec}&to=${nowSec}&token=${apiKey}`;
                 const response = await fetch(url);
                 const data = await response.json();
-                if (data['Note'] || data['Information']) {
-                    console.warn('Alpha Vantage limit while updating technical data:', data['Note'] || data['Information']);
-                    return { ok: false, reason: 'rate-limit', message: data['Note'] || data['Information'] };
-                }
-                const series = data['Time Series (Daily)'];
-                if (!series) return { ok: false, reason: 'no-series', message: data['Error Message'] || '' };
-                const dates = Object.keys(series).sort().reverse();
-                if (dates.length < 51) return { ok: false, reason: 'insufficient-history' };
+                if (data && data.s === 'ok' && Array.isArray(data.c) && data.c.length >= 50) {
+                    const closes = data.c;
+                    const highs = data.h;
+                    const lows = data.l;
+                    const len = closes.length;
+                    const recentCloses = closes.slice(-50);
+                    const sma50 = recentCloses.reduce((sum, c) => sum + c, 0) / 50;
 
-                const closes = dates.slice(0, 50).map(date => Number(series[date]['4. close']));
-                const sma50 = closes.reduce((sum, close) => sum + close, 0) / closes.length;
-                const trueRanges = dates.slice(0, 20).map((date, index) => {
-                    const day = series[date];
-                    const high = Number(day['2. high']);
-                    const low = Number(day['3. low']);
-                    const previousClose = Number(series[dates[index + 1]]['4. close']);
-                    return Math.max(high - low, Math.abs(high - previousClose), Math.abs(low - previousClose));
-                });
-                const atr20 = trueRanges.reduce((sum, range) => sum + range, 0) / trueRanges.length;
-                if (!(sma50 > 0) || !(atr20 > 0)) return { ok: false, reason: 'invalid-data' };
-                return { ok: true, data: { sma50, atr20, technicalUpdatedAt: Date.now() } };
-            } catch (error) {
-                console.warn(`Technical data update failed for ${symbol}:`, error);
-                return { ok: false, reason: 'network', message: error.message };
+                    const trueRanges = [];
+                    for (let i = Math.max(1, len - 20); i < len; i++) {
+                        const h = highs[i];
+                        const l = lows[i];
+                        const prevC = closes[i - 1];
+                        if (h != null && l != null && prevC != null) {
+                            trueRanges.push(Math.max(h - l, Math.abs(h - prevC), Math.abs(l - prevC)));
+                        }
+                    }
+                    if (trueRanges.length >= 15) {
+                        const atr20 = trueRanges.reduce((sum, r) => sum + r, 0) / trueRanges.length;
+                        if (sma50 > 0 && atr20 > 0) {
+                            return { sma50, atr20, technicalUpdatedAt: Date.now() };
+                        }
+                    }
+                }
+            } catch (e) {
+                console.warn(`Finnhub technical fetch failed for ${symbol}:`, e);
             }
+            return null;
+        }
+
+        async function fetchYahooTechnicalData(symbol) {
+            try {
+                const yahooUrl = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(symbol)}?interval=1d&range=4m`;
+                let response = await fetch(yahooUrl).catch(() => null);
+                if (!response || !response.ok) {
+                    response = await fetch(`https://corsproxy.io/?${encodeURIComponent(yahooUrl)}`).catch(() => null);
+                }
+                if (!response || !response.ok) return null;
+                const data = await response.json();
+                const result = data?.chart?.result?.[0];
+                if (!result) return null;
+                const quote = result.indicators?.quote?.[0];
+                if (!quote) return null;
+                const closes = (quote.close || []).filter(v => typeof v === 'number' && !isNaN(v));
+                const highs = (quote.high || []).filter(v => typeof v === 'number' && !isNaN(v));
+                const lows = (quote.low || []).filter(v => typeof v === 'number' && !isNaN(v));
+                if (closes.length < 50) return null;
+
+                const recentCloses = closes.slice(-50);
+                const sma50 = recentCloses.reduce((sum, c) => sum + c, 0) / 50;
+
+                const len = closes.length;
+                const trueRanges = [];
+                for (let i = Math.max(1, len - 20); i < len; i++) {
+                    const h = highs[i];
+                    const l = lows[i];
+                    const prevC = closes[i - 1];
+                    if (h != null && l != null && prevC != null) {
+                        trueRanges.push(Math.max(h - l, Math.abs(h - prevC), Math.abs(l - prevC)));
+                    }
+                }
+                if (trueRanges.length >= 15) {
+                    const atr20 = trueRanges.reduce((sum, r) => sum + r, 0) / trueRanges.length;
+                    if (sma50 > 0 && atr20 > 0) {
+                        return { sma50, atr20, technicalUpdatedAt: Date.now() };
+                    }
+                }
+            } catch (e) {
+                console.warn(`Yahoo technical fetch failed for ${symbol}:`, e);
+            }
+            return null;
+        }
+
+        // Fetch daily history per ticker via Finnhub, Yahoo, or Alpha Vantage fallback
+        async function fetchPositionTechnicalData(symbol) {
+            // 1. Try Finnhub Candle API (uses existing Finnhub key, 60 calls/min, no daily cap)
+            const finnhubData = await fetchFinnhubTechnicalData(symbol);
+            if (finnhubData) return { ok: true, data: finnhubData, source: 'Finnhub' };
+
+            // 2. Try Yahoo Finance (free, keyless)
+            const yahooData = await fetchYahooTechnicalData(symbol);
+            if (yahooData) return { ok: true, data: yahooData, source: 'Yahoo Finance' };
+
+            // 3. Fallback to Alpha Vantage if key is provided
+            const avKey = document.getElementById('alphaVantageKey')?.value?.trim();
+            if (avKey) {
+                try {
+                    const url = `https://www.alphavantage.co/query?function=TIME_SERIES_DAILY&symbol=${encodeURIComponent(symbol)}&outputsize=compact&apikey=${avKey}`;
+                    const response = await fetch(url);
+                    const data = await response.json();
+                    if (data['Note'] || data['Information']) {
+                        console.warn('Alpha Vantage limit while updating technical data:', data['Note'] || data['Information']);
+                        return { ok: false, reason: 'rate-limit', message: data['Note'] || data['Information'] };
+                    }
+                    const series = data['Time Series (Daily)'];
+                    if (!series) return { ok: false, reason: 'no-series', message: data['Error Message'] || '' };
+                    const dates = Object.keys(series).sort().reverse();
+                    if (dates.length < 51) return { ok: false, reason: 'insufficient-history' };
+
+                    const closes = dates.slice(0, 50).map(date => Number(series[date]['4. close']));
+                    const sma50 = closes.reduce((sum, close) => sum + close, 0) / closes.length;
+                    const trueRanges = dates.slice(0, 20).map((date, index) => {
+                        const day = series[date];
+                        const high = Number(day['2. high']);
+                        const low = Number(day['3. low']);
+                        const previousClose = Number(series[dates[index + 1]]['4. close']);
+                        return Math.max(high - low, Math.abs(high - previousClose), Math.abs(low - previousClose));
+                    });
+                    const atr20 = trueRanges.reduce((sum, range) => sum + range, 0) / trueRanges.length;
+                    if (!(sma50 > 0) || !(atr20 > 0)) return { ok: false, reason: 'invalid-data' };
+                    return { ok: true, data: { sma50, atr20, technicalUpdatedAt: Date.now() }, source: 'Alpha Vantage' };
+                } catch (error) {
+                    console.warn(`Alpha Vantage update failed for ${symbol}:`, error);
+                }
+            }
+
+            return { ok: false, reason: 'all-sources-failed' };
         }
 
         async function refreshPositionTechnicalData() {
-            const avKey = document.getElementById('alphaVantageKey')?.value?.trim();
-            if (!avKey) return { updatedSymbols: 0, failedSymbols: [], missingApiKey: true };
             const maxAgeMs = 20 * 60 * 60 * 1000;
             const groups = new Map();
             openPositions.forEach(pos => {
@@ -5591,8 +5681,7 @@
                 if (!groups.has(symbol)) groups.set(symbol, []);
                 groups.get(symbol).push(pos);
             });
-            // Fill blank technical values before refreshing older cached values. This
-            // gives newly added symbols first use of Alpha Vantage's limited free quota.
+            // Fill blank technical values before refreshing older cached values.
             const prioritizedGroups = [...groups.entries()].sort(([, left], [, right]) => {
                 const leftMissing = !left.some(pos => Number(pos.sma50) > 0 && Number(pos.atr20) > 0);
                 const rightMissing = !right.some(pos => Number(pos.sma50) > 0 && Number(pos.atr20) > 0);
