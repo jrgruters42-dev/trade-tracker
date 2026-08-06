@@ -1,0 +1,705 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Iron Log</title>
+  <link rel="manifest" href="ironlog-manifest.json" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+  <meta name="apple-mobile-web-app-title" content="Iron Log" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="theme-color" content="#ffffff" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@600;700&family=Barlow:wght@600;700&display=swap" rel="stylesheet" />
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.2/babel.min.js"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { width: 100%; background: #f0f0f0; font-family: 'Barlow', sans-serif; color: #111; overscroll-behavior: none; }
+    #root { width: 100%; padding-top: env(safe-area-inset-top); padding-bottom: env(safe-area-inset-bottom); min-height: 100vh; }
+    input[type=number]::-webkit-inner-spin-button, input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; }
+    input[type=number] { -moz-appearance: textfield; }
+    input:focus, select:focus, textarea:focus { border-color: #e85d04 !important; outline: none; }
+    select option { background: #fff; color: #111; }
+    button:active { opacity: 0.75; transform: scale(0.97); }
+    @keyframes toastIn  { 0% { opacity:0; transform:translateX(-50%) translateY(20px) scale(0.9); } 100% { opacity:1; transform:translateX(-50%) translateY(0) scale(1); } }
+    @keyframes toastOut { 0% { opacity:1; } 100% { opacity:0; } }
+  </style>
+</head>
+<body>
+<div id="root"></div>
+
+<script>
+  const firebaseConfig = {
+    apiKey: "AIzaSyCOnsbvHzyhh5x5hNvXO0MGTcofBgti1vg",
+    authDomain: "iron-log-45723.firebaseapp.com",
+    projectId: "iron-log-45723",
+    storageBucket: "iron-log-45723.firebasestorage.app",
+    messagingSenderId: "307059739548",
+    appId: "1:307059739548:web:28a9cb45f791c707909659"
+  };
+  firebase.initializeApp(firebaseConfig);
+  const auth = firebase.auth();
+  const db   = firebase.firestore();
+  const googleProvider = new firebase.auth.GoogleAuthProvider();
+</script>
+
+<script type="text/babel">
+  const { useState, useEffect, useRef } = React;
+  const TODAY = new Date().toISOString().split("T")[0];
+
+  async function loadUserData(uid) {
+    try { const doc = await db.collection("users").doc(uid).get(); return doc.exists ? doc.data() : {}; }
+    catch(e) { return {}; }
+  }
+  async function saveUserData(uid, data) {
+    try { await db.collection("users").doc(uid).set(data); } catch(e) { console.error(e); }
+  }
+  function formatDate(ds) {
+    return new Date(ds + "T12:00:00").toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric", year: "numeric" });
+  }
+
+  const ORANGE  = "#e85d04";
+  const BLUE    = "#0077b6";
+  const GREEN   = "#166534";
+  const GREEN_BG= "#f0fdf4";
+  const GREEN_BD= "#86efac";
+  const BLACK   = "#111111";
+  const SUBTEXT = "#555555";
+  const BG      = "#f0f0f0";
+  const CARD    = "#ffffff";
+  const CARD2   = "#f5f5f5";
+  const BORDER  = "#dddddd";
+
+  const thSt  = { fontFamily:"Oswald,sans-serif", fontSize:22, letterSpacing:1, color:BLACK, padding:"18px 8px", textAlign:"center", borderBottom:`2px solid ${BORDER}`, background:CARD2 };
+  const tdSt  = { padding:"16px 8px", textAlign:"center", borderBottom:`1px solid ${BORDER}` };
+  const inSt  = { width:"100%", background:CARD, border:`3px solid ${BORDER}`, borderRadius:12, color:BLACK, fontFamily:"Barlow,sans-serif", fontSize:48, fontWeight:700, padding:"20px 8px", textAlign:"center", outline:"none" };
+  const selSt = (val) => ({ width:"100%", background:CARD, border:`3px solid ${BORDER}`, borderRadius:14, color:val?BLACK:SUBTEXT, fontFamily:"Barlow,sans-serif", fontSize:28, fontWeight:600, padding:"22px 18px" });
+  const slabel= { fontFamily:"Oswald,sans-serif", fontSize:20, letterSpacing:2, color:SUBTEXT, fontWeight:700 };
+  const iconBtn={ background:CARD2, border:`2px solid ${BORDER}`, borderRadius:10, color:SUBTEXT, fontSize:24, padding:"12px 20px", cursor:"pointer", fontFamily:"Barlow,sans-serif", fontWeight:700 };
+
+  function bigBtn(active, isCardio) {
+    return { width:"100%", padding:28, border:"none", borderRadius:16, background:active?(isCardio?BLUE:ORANGE):"#ccc", color:active?"#fff":"#888", fontFamily:"Oswald,sans-serif", fontSize:30, fontWeight:700, letterSpacing:2, cursor:active?"pointer":"not-allowed" };
+  }
+
+  // ── Toast ────────────────────────────────────────────────────────
+  function Toast({ message, visible }) {
+    return (
+      <div style={{ position:"fixed", bottom:40, left:"50%", transform:"translateX(-50%)", background:"#1a1a1a", color:"#fff", fontFamily:"Oswald,sans-serif", fontSize:28, fontWeight:700, letterSpacing:2, padding:"18px 40px", borderRadius:50, zIndex:200, pointerEvents:"none", animation:visible?"toastIn 0.25s ease forwards":"toastOut 0.3s ease forwards", whiteSpace:"nowrap" }}>
+        ✓ {message}
+      </div>
+    );
+  }
+
+  // ── Stopwatch ────────────────────────────────────────────────────
+  function Stopwatch({ watchKey, onDismiss }) {
+    const [sec, setSec] = useState(0);
+    const [running, setRunning] = useState(true);
+    const ref = useRef(null);
+    useEffect(() => { setSec(0); setRunning(true); }, [watchKey]);
+    useEffect(() => {
+      if (!running) { clearInterval(ref.current); return; }
+      ref.current = setInterval(() => setSec(s => s + 1), 1000);
+      return () => clearInterval(ref.current);
+    }, [running]);
+    const mins = Math.floor(sec / 60), secs = sec % 60;
+    const color   = sec < 60 ? "#16a34a" : sec < 120 ? "#d97706" : "#dc2626";
+    const bgColor = sec < 60 ? "#f0fdf4" : sec < 120 ? "#fffbeb" : "#fef2f2";
+    return (
+      <div style={{ position:"fixed", bottom:"calc(14px + env(safe-area-inset-bottom))", left:14, right:14, zIndex:100, background:bgColor, border:`5px solid ${color}`, borderRadius:20, padding:"20px 22px", textAlign:"center", boxShadow:"0 8px 40px rgba(0,0,0,0.25)" }}>
+        <div style={{ fontFamily:"Oswald,sans-serif", fontSize:20, letterSpacing:4, color, marginBottom:4, fontWeight:700 }}>REST STOPWATCH</div>
+        <div style={{ fontFamily:"Oswald,sans-serif", fontSize:110, fontWeight:700, color, lineHeight:1 }}>
+          {String(mins).padStart(2,"0")}:{String(secs).padStart(2,"0")}
+        </div>
+        <div style={{ display:"flex", gap:14, justifyContent:"center", marginTop:16 }}>
+          <button onClick={() => setRunning(r => !r)} style={{ background:running?"#fee2e2":"#dcfce7", border:`2px solid ${color}`, borderRadius:12, color, fontSize:26, padding:"16px 36px", cursor:"pointer", fontFamily:"Barlow,sans-serif", fontWeight:700 }}>{running?"Pause":"Resume"}</button>
+          <button onClick={() => { setSec(0); setRunning(true); }} style={{ background:CARD2, border:`2px solid ${BORDER}`, borderRadius:12, color:BLACK, fontSize:26, padding:"16px 36px", cursor:"pointer", fontFamily:"Barlow,sans-serif", fontWeight:700 }}>Reset</button>
+          <button onClick={onDismiss} style={{ background:CARD2, border:`2px solid ${BORDER}`, borderRadius:12, color:BLACK, fontSize:26, padding:"16px 36px", cursor:"pointer", fontFamily:"Barlow,sans-serif", fontWeight:700 }}>Done</button>
+        </div>
+      </div>
+    );
+  }
+
+  // ── Set Table ────────────────────────────────────────────────────
+  function SetTable({ sets, readonly, entryId, onUpdate, onRepsBlur }) {
+    return (
+      <table style={{ width:"100%", borderCollapse:"collapse" }}>
+        <thead><tr><th style={thSt}>SET</th><th style={thSt}>WEIGHT (lb)</th><th style={thSt}>REPS</th></tr></thead>
+        <tbody>
+          {sets.map((s, i) => (
+            <tr key={i} style={{ background: i%2===0 ? CARD : CARD2 }}>
+              <td style={{ ...tdSt, color:ORANGE, fontFamily:"Oswald,sans-serif", fontSize:40, fontWeight:700, width:64 }}>{i+1}</td>
+              <td style={tdSt}>
+                {readonly ? <span style={{ color:BLACK, fontSize:36, fontWeight:700 }}>{s.weight||"—"}</span>
+                  : <input type="number" inputMode="decimal" placeholder="0" value={s.weight} onChange={e=>onUpdate(entryId,i,"weight",e.target.value)} style={inSt} />}
+              </td>
+              <td style={tdSt}>
+                {readonly ? <span style={{ color:BLACK, fontSize:36, fontWeight:700 }}>{s.reps||"—"}</span>
+                  : <input type="number" inputMode="numeric" placeholder="0" value={s.reps} onChange={e=>onUpdate(entryId,i,"reps",e.target.value)} onBlur={e=>onRepsBlur(e.target.value)} style={inSt} />}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    );
+  }
+
+  // ── Machine Settings Banner ──────────────────────────────────────
+  function MachineSettingsBanner({ settings }) {
+    if (!settings || !settings.trim()) return null;
+    return (
+      <div style={{ background:GREEN_BG, borderLeft:`8px solid ${GREEN_BD}`, padding:"20px 20px", borderRadius:"0 14px 14px 0" }}>
+        <div style={{ fontFamily:"Oswald,sans-serif", fontSize:20, letterSpacing:2, color:GREEN, marginBottom:12, fontWeight:700 }}>
+          ⚙️ MACHINE SETTINGS
+        </div>
+        <div style={{ fontSize:30, color:GREEN, fontWeight:700, lineHeight:1.5 }}>
+          {settings}
+        </div>
+      </div>
+    );
+  }
+
+  // ── Last Time Banner ─────────────────────────────────────────────
+  function LastTimeBanner({ last, isCardio }) {
+    const accent = isCardio ? BLUE : ORANGE;
+    const bg     = isCardio ? "#e8f4fd" : "#fff3ec";
+    if (!last) return (
+      <div style={{ background:bg, borderLeft:`8px solid ${accent}`, padding:"20px 20px", borderRadius:"0 14px 14px 0" }}>
+        <div style={{ color:accent, fontSize:28, fontWeight:700, fontFamily:"Oswald,sans-serif", letterSpacing:1 }}>FIRST TIME — SET A BASELINE! 🔥</div>
+      </div>
+    );
+    return (
+      <div style={{ background:bg, borderLeft:`8px solid ${accent}`, padding:"20px 20px", borderRadius:"0 14px 14px 0" }}>
+        <div style={{ fontFamily:"Oswald,sans-serif", fontSize:20, letterSpacing:2, color:accent, marginBottom:16, fontWeight:700 }}>LAST TIME · {formatDate(last.date)}</div>
+        {isCardio ? (
+          <div style={{ display:"flex", gap:14, flexWrap:"wrap" }}>
+            <span style={{ fontSize:36, color:BLACK, fontWeight:700, background:CARD, padding:"12px 22px", borderRadius:10, border:`2px solid ${BORDER}` }}>{last.duration} min</span>
+            {last.distance && <span style={{ fontSize:36, color:BLACK, fontWeight:700, background:CARD, padding:"12px 22px", borderRadius:10, border:`2px solid ${BORDER}` }}>{last.distance} mi</span>}
+          </div>
+        ) : (
+          <div style={{ display:"flex", flexDirection:"column", gap:12 }}>
+            {last.sets.map((s,i) => (
+              <div key={i} style={{ display:"flex", alignItems:"center", justifyContent:"space-between", background:CARD, padding:"14px 20px", borderRadius:12, border:`2px solid ${BORDER}` }}>
+                <span style={{ fontFamily:"Oswald,sans-serif", fontSize:28, color:accent, fontWeight:700 }}>SET {i+1}</span>
+                <span style={{ fontSize:36, color:BLACK, fontWeight:700 }}>{s.weight||"—"} lb</span>
+                <span style={{ fontSize:36, color:BLACK, fontWeight:700 }}>{s.reps||"—"} reps</span>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  // ── Date Card ────────────────────────────────────────────────────
+  function DateCard({ date, strength, cardio }) {
+    const [open, setOpen] = useState(false);
+    const total = (strength?.length||0) + (cardio?.length||0);
+    return (
+      <div style={{ background:CARD, borderRadius:16, overflow:"hidden", border:`2px solid ${BORDER}` }}>
+        <button onClick={() => setOpen(o=>!o)} style={{ width:"100%", display:"flex", alignItems:"center", justifyContent:"space-between", padding:"22px 18px", background:"none", border:"none", cursor:"pointer" }}>
+          <span style={{ fontFamily:"Oswald,sans-serif", fontSize:28, fontWeight:700, color:BLACK }}>{formatDate(date)}</span>
+          <span style={{ fontSize:22, color:SUBTEXT, fontWeight:700 }}>{total} {open?"▲":"▼"}</span>
+        </button>
+        {open && <>
+          {cardio?.length > 0 && (
+            <div style={{ borderTop:`2px solid ${BORDER}`, padding:"18px", background:"#f8fbff" }}>
+              <div style={{ fontFamily:"Oswald,sans-serif", fontSize:20, letterSpacing:2, color:BLUE, marginBottom:14, fontWeight:700 }}>CARDIO</div>
+              {cardio.map((c,i) => (
+                <div key={i} style={{ display:"flex", alignItems:"center", gap:14, padding:"14px 0", borderBottom:i<cardio.length-1?`1px solid ${BORDER}`:"none" }}>
+                  <span style={{ fontFamily:"Oswald,sans-serif", fontSize:30, color:BLACK, fontWeight:700, flex:1 }}>{c.name}</span>
+                  <span style={{ fontSize:28, color:BLACK, fontWeight:700 }}>{c.duration} min</span>
+                  {c.distance && <span style={{ fontSize:26, color:SUBTEXT, fontWeight:700 }}>{c.distance} mi</span>}
+                </div>
+              ))}
+            </div>
+          )}
+          {strength?.map((entry,i) => (
+            <div key={i} style={{ borderTop:`2px solid ${BORDER}`, padding:"18px" }}>
+              <div style={{ color:ORANGE, fontFamily:"Oswald,sans-serif", fontSize:30, fontWeight:700, marginBottom:14 }}>{entry.name}</div>
+              <SetTable sets={entry.sets} readonly />
+            </div>
+          ))}
+        </>}
+      </div>
+    );
+  }
+
+  // ── Exercise Item in Exercises tab ───────────────────────────────
+  function ExItem({ name, accent, settings, onDelete, onSaveSettings }) {
+    const [editing, setEditing] = useState(false);
+    const [draft, setDraft] = useState(settings || "");
+
+    function save() {
+      onSaveSettings(name, draft);
+      setEditing(false);
+    }
+
+    return (
+      <div style={{ background:CARD, borderRadius:14, border:`2px solid ${BORDER}`, borderLeft:`8px solid ${accent}`, overflow:"hidden" }}>
+        <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", padding:"20px 18px" }}>
+          <span style={{ fontSize:30, color:BLACK, fontFamily:"Barlow,sans-serif", fontWeight:700 }}>{name}</span>
+          <div style={{ display:"flex", gap:10 }}>
+            <button onClick={() => { setDraft(settings||""); setEditing(e=>!e); }}
+              style={{ ...iconBtn, fontSize:20, padding:"10px 16px", color: editing ? ORANGE : SUBTEXT, borderColor: editing ? ORANGE : BORDER }}>
+              ⚙️
+            </button>
+            <button onClick={onDelete} style={iconBtn}>✕</button>
+          </div>
+        </div>
+
+        {/* Machine settings editor */}
+        {editing && (
+          <div style={{ borderTop:`2px solid ${BORDER}`, padding:"16px 18px", background:GREEN_BG, display:"flex", flexDirection:"column", gap:14 }}>
+            <div style={{ fontFamily:"Oswald,sans-serif", fontSize:18, letterSpacing:2, color:GREEN, fontWeight:700 }}>⚙️ MACHINE SETTINGS</div>
+            <textarea
+              value={draft}
+              onChange={e => setDraft(e.target.value)}
+              placeholder="e.g. Seat 4, back pad 2, chest pad 3"
+              rows={3}
+              style={{ width:"100%", background:CARD, border:`3px solid ${GREEN_BD}`, borderRadius:12, color:BLACK, fontFamily:"Barlow,sans-serif", fontSize:26, fontWeight:600, padding:"16px", resize:"none", outline:"none", lineHeight:1.5 }}
+            />
+            <div style={{ display:"flex", gap:12 }}>
+              <button onClick={save}
+                style={{ flex:1, padding:"18px 0", background:GREEN, border:"none", borderRadius:12, color:"#fff", fontFamily:"Oswald,sans-serif", fontSize:24, fontWeight:700, cursor:"pointer" }}>
+                SAVE
+              </button>
+              <button onClick={() => setEditing(false)}
+                style={{ flex:1, padding:"18px 0", background:CARD2, border:`2px solid ${BORDER}`, borderRadius:12, color:SUBTEXT, fontFamily:"Oswald,sans-serif", fontSize:24, fontWeight:700, cursor:"pointer" }}>
+                CANCEL
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Show saved settings as a preview */}
+        {!editing && settings && settings.trim() && (
+          <div style={{ borderTop:`2px solid ${GREEN_BD}`, padding:"12px 18px", background:GREEN_BG }}>
+            <span style={{ fontSize:22, color:GREEN, fontWeight:700 }}>⚙️ {settings}</span>
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  function SectionHeader({ color, label }) {
+    return (
+      <div style={{ display:"flex", alignItems:"center", gap:14, marginBottom:16 }}>
+        <div style={{ width:8, height:40, background:color, borderRadius:4 }} />
+        <span style={{ fontFamily:"Oswald,sans-serif", fontSize:36, fontWeight:700, letterSpacing:3, color }}>{label}</span>
+      </div>
+    );
+  }
+
+  function SignIn() {
+    const [err, setErr] = useState(null);
+    const [loading, setLoading] = useState(false);
+    async function go() {
+      try { setErr(null); setLoading(true); await auth.signInWithPopup(googleProvider); }
+      catch(e) { setErr("Sign in failed — try again."); setLoading(false); }
+    }
+    return (
+      <div style={{ display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", minHeight:"100vh", padding:28, background:BG }}>
+        <div style={{ fontFamily:"Oswald,sans-serif", fontSize:64, fontWeight:700, letterSpacing:6, color:ORANGE }}>IRON LOG</div>
+        <div style={{ fontFamily:"Oswald,sans-serif", fontSize:22, letterSpacing:4, color:SUBTEXT, marginBottom:60, marginTop:12 }}>TRACK · PROGRESS · CRUSH</div>
+        <button onClick={go} disabled={loading} style={{ background:loading?"#ccc":ORANGE, color:"#fff", border:"none", borderRadius:16, padding:"28px 0", fontSize:30, fontFamily:"Barlow,sans-serif", fontWeight:700, cursor:"pointer", width:"100%" }}>
+          {loading?"Signing in...":"Sign in with Google"}
+        </button>
+        {err && <div style={{ color:"#cc0000", marginTop:20, fontSize:26, fontWeight:700 }}>{err}</div>}
+      </div>
+    );
+  }
+
+  // ── Main App ─────────────────────────────────────────────────────
+  function App({ user }) {
+    const [tab, setTab] = useState("log");
+    const [exercises, setExercises] = useState([]);
+    const [machineSettings, setMachineSettings] = useState({}); // { "Bench Press": "Seat 4, pad 2", ... }
+    const [workouts, setWorkouts] = useState({});
+    const [selEx, setSelEx] = useState("");
+    const [numSets, setNumSets] = useState(3);
+    const [newEx, setNewEx] = useState("");
+    const [cardioExercises, setCardioExercises] = useState([]);
+    const [cardioWorkouts, setCardioWorkouts] = useState({});
+    const [selCardio, setSelCardio] = useState("");
+    const [cardioDuration, setCardioDuration] = useState("");
+    const [cardioDistance, setCardioDistance] = useState("");
+    const [newCardioEx, setNewCardioEx] = useState("");
+    const [watchVisible, setWatchVisible] = useState(false);
+    const [watchKey, setWatchKey] = useState(0);
+    const [histView, setHistView] = useState("date");
+    const [histEx, setHistEx] = useState("");
+    const [histCardioEx, setHistCardioEx] = useState("");
+    const [histType, setHistType] = useState("strength");
+    const [loaded, setLoaded] = useState(false);
+    const [saveStatus, setSaveStatus] = useState("saved");
+    const [toast, setToast] = useState({ visible:false, msg:"" });
+    const saveTimer = useRef(null);
+    const toastTimer = useRef(null);
+
+    useEffect(() => {
+      loadUserData(user.uid).then(data => {
+        if (data.exercises) setExercises(data.exercises);
+        if (data.machineSettings) setMachineSettings(data.machineSettings);
+        if (data.workouts) setWorkouts(data.workouts);
+        if (data.cardioExercises) setCardioExercises(data.cardioExercises);
+        if (data.cardioWorkouts) setCardioWorkouts(data.cardioWorkouts);
+        setLoaded(true);
+      });
+    }, [user.uid]);
+
+    useEffect(() => {
+      if (!loaded) return;
+      setSaveStatus("saving");
+      if (saveTimer.current) clearTimeout(saveTimer.current);
+      saveTimer.current = setTimeout(() => {
+        saveUserData(user.uid, { exercises, machineSettings, workouts, cardioExercises, cardioWorkouts })
+          .then(() => setSaveStatus("saved"));
+      }, 1500);
+    }, [exercises, machineSettings, workouts, cardioExercises, cardioWorkouts, loaded]);
+
+    function showToast(msg) {
+      if (toastTimer.current) clearTimeout(toastTimer.current);
+      setToast({ visible:true, msg });
+      toastTimer.current = setTimeout(() => setToast({ visible:false, msg }), 1800);
+    }
+
+    function saveMachineSettings(name, value) {
+      setMachineSettings(prev => ({ ...prev, [name]: value }));
+      showToast("Settings saved!");
+    }
+
+    const todayStrength = workouts[TODAY] || [];
+    const todayCardio   = cardioWorkouts[TODAY] || [];
+    const allDates = [...new Set([...Object.keys(workouts), ...Object.keys(cardioWorkouts)])].sort().reverse();
+
+    function addStrength() {
+      if (!selEx) return;
+      const sets = Array.from({ length:numSets }, () => ({ weight:"", reps:"" }));
+      setWorkouts(prev => ({ ...prev, [TODAY]: [{ id:Date.now(), name:selEx, sets }, ...(prev[TODAY]||[])] }));
+      showToast("Added!");
+    }
+    function addSet(entryId) {
+      setWorkouts(prev => {
+        const day = [...(prev[TODAY]||[])];
+        const ei = day.findIndex(e => e.id === entryId);
+        if (ei < 0) return prev;
+        day[ei] = { ...day[ei], sets:[...day[ei].sets, { weight:"", reps:"" }] };
+        return { ...prev, [TODAY]:day };
+      });
+    }
+    function updateSet(entryId, si, field, value) {
+      setWorkouts(prev => {
+        const day = [...(prev[TODAY]||[])];
+        const ei = day.findIndex(e => e.id === entryId);
+        if (ei < 0) return prev;
+        day[ei] = { ...day[ei], sets:day[ei].sets.map((s,i) => i===si?{...s,[field]:value}:s) };
+        return { ...prev, [TODAY]:day };
+      });
+    }
+    function onRepsBlur(val) {
+      if (val && val.trim()) { setWatchVisible(true); setWatchKey(k=>k+1); }
+    }
+    function getLastStrength(name) {
+      for (const d of Object.keys(workouts).filter(d=>d<TODAY).sort().reverse()) {
+        const e = workouts[d]?.find(e=>e.name===name);
+        if (e) return { date:d, sets:e.sets };
+      }
+      return null;
+    }
+    function getStrengthHistory(name) {
+      return Object.keys(workouts).filter(d=>workouts[d]?.some(e=>e.name===name))
+        .sort().reverse().map(d=>({ date:d, sets:workouts[d].find(e=>e.name===name).sets }));
+    }
+    function addCardio() {
+      if (!selCardio || !cardioDuration) return;
+      setCardioWorkouts(prev => ({ ...prev, [TODAY]: [{ id:Date.now(), name:selCardio, duration:cardioDuration, distance:cardioDistance }, ...(prev[TODAY]||[])] }));
+      setCardioDuration(""); setCardioDistance("");
+      showToast("Added!");
+    }
+    function getLastCardio(name) {
+      for (const d of Object.keys(cardioWorkouts).filter(d=>d<TODAY).sort().reverse()) {
+        const e = cardioWorkouts[d]?.find(e=>e.name===name);
+        if (e) return { date:d, duration:e.duration, distance:e.distance };
+      }
+      return null;
+    }
+    function getCardioHistory(name) {
+      return Object.keys(cardioWorkouts).filter(d=>cardioWorkouts[d]?.some(e=>e.name===name))
+        .sort().reverse().map(d=>({ date:d, ...cardioWorkouts[d].find(e=>e.name===name) }));
+    }
+    function addEx(val, list, setter, setVal) {
+      const t = val.trim();
+      if (!t || list.includes(t)) return;
+      setter(prev => [...prev, t].sort((a,b)=>a.localeCompare(b)));
+      setVal("");
+    }
+
+    if (!loaded) return (
+      <div style={{ display:"flex", alignItems:"center", justifyContent:"center", minHeight:"100vh", background:BG }}>
+        <div style={{ color:SUBTEXT, fontFamily:"Oswald,sans-serif", fontSize:28, letterSpacing:4 }}>LOADING...</div>
+      </div>
+    );
+
+    const P    = 14;
+    const card = { background:CARD, borderRadius:16, padding:20, display:"flex", flexDirection:"column", gap:22, border:`2px solid ${BORDER}` };
+    const col  = { display:"flex", flexDirection:"column", gap:18 };
+
+    return (
+      <div style={{ background:BG, color:BLACK, minHeight:"100vh", width:"100%" }}>
+        {toast.visible && <Toast message={toast.msg} visible={toast.visible} />}
+        {watchVisible && <Stopwatch watchKey={watchKey} onDismiss={() => setWatchVisible(false)} />}
+
+        {/* HEADER */}
+        <header style={{ padding:`18px ${P}px 14px`, borderBottom:`4px solid ${ORANGE}`, display:"flex", alignItems:"center", justifyContent:"space-between", background:CARD }}>
+          <div>
+            <div style={{ fontFamily:"Oswald,sans-serif", fontSize:48, fontWeight:700, letterSpacing:5, color:ORANGE, lineHeight:1 }}>IRON LOG</div>
+            <div style={{ fontSize:19, color:SUBTEXT, textTransform:"uppercase", letterSpacing:1, marginTop:4, fontWeight:700 }}>
+              {new Date().toLocaleDateString("en-US",{ weekday:"long", month:"long", day:"numeric" })}
+            </div>
+          </div>
+          <div style={{ display:"flex", flexDirection:"column", alignItems:"flex-end", gap:8 }}>
+            <div style={{ fontSize:16, color:saveStatus==="saving"?"#d97706":"#bbb", fontFamily:"Oswald,sans-serif", letterSpacing:1, fontWeight:700 }}>
+              {saveStatus==="saving"?"● SAVING":"● SAVED"}
+            </div>
+            <button onClick={() => auth.signOut()} style={{ ...iconBtn, fontSize:17, padding:"8px 16px" }}>Sign out</button>
+          </div>
+        </header>
+
+        {/* NAV */}
+        <nav style={{ display:"flex", background:CARD, borderBottom:`2px solid ${BORDER}` }}>
+          {[["log","📋 LOG"],["history","📊 HISTORY"],["exercises","⚙️ EXERCISES"]].map(([t,label]) => (
+            <button key={t} onClick={() => setTab(t)}
+              style={{ flex:1, padding:"22px 4px", background:"none", border:"none", borderBottom:tab===t?`6px solid ${ORANGE}`:"6px solid transparent", color:tab===t?ORANGE:SUBTEXT, fontFamily:"Oswald,sans-serif", fontSize:18, fontWeight:700, letterSpacing:1, cursor:"pointer" }}>
+              {label}
+            </button>
+          ))}
+        </nav>
+
+        <main style={{ padding:P }}>
+
+          {/* ── LOG TAB ── */}
+          {tab === "log" && (
+            <div style={{ ...col, gap:28 }}>
+
+              {/* CARDIO */}
+              <div style={col}>
+                <SectionHeader color={BLUE} label="CARDIO" />
+                <div style={card}>
+                  <div style={slabel}>SELECT ACTIVITY</div>
+                  <select value={selCardio} onChange={e=>setSelCardio(e.target.value)} style={selSt(selCardio)}>
+                    <option value="">— Select Activity —</option>
+                    {cardioExercises.map(ex=><option key={ex} value={ex}>{ex}</option>)}
+                  </select>
+                  {selCardio && <LastTimeBanner last={getLastCardio(selCardio)} isCardio />}
+                  <div style={{ display:"flex", gap:14 }}>
+                    <div style={{ flex:1 }}>
+                      <div style={{ ...slabel, marginBottom:10 }}>DURATION (min)</div>
+                      <input type="number" inputMode="numeric" placeholder="0" value={cardioDuration} onChange={e=>setCardioDuration(e.target.value)} style={inSt} />
+                    </div>
+                    <div style={{ flex:1 }}>
+                      <div style={{ ...slabel, marginBottom:10 }}>DISTANCE <span style={{ fontSize:15, color:"#aaa" }}>(mi, opt.)</span></div>
+                      <input type="number" inputMode="decimal" placeholder="0" value={cardioDistance} onChange={e=>setCardioDistance(e.target.value)} style={inSt} />
+                    </div>
+                  </div>
+                  <button onClick={addCardio} disabled={!selCardio||!cardioDuration} style={bigBtn(selCardio&&cardioDuration,true)}>+ ADD CARDIO</button>
+                </div>
+                {todayCardio.map(c=>(
+                  <div key={c.id} style={{ background:CARD, borderRadius:16, border:`2px solid ${BORDER}`, borderLeft:`8px solid ${BLUE}`, padding:"20px 18px", display:"flex", alignItems:"center" }}>
+                    <div style={{ flex:1 }}>
+                      <div style={{ fontFamily:"Oswald,sans-serif", fontSize:34, fontWeight:700, color:BLACK }}>{c.name}</div>
+                      <div style={{ marginTop:12, display:"flex", gap:12 }}>
+                        <span style={{ background:"#dbeafe", color:BLUE, padding:"10px 24px", borderRadius:28, fontSize:30, fontWeight:700 }}>{c.duration} min</span>
+                        {c.distance&&<span style={{ background:CARD2, color:BLACK, padding:"10px 24px", borderRadius:28, fontSize:30, fontWeight:700, border:`2px solid ${BORDER}` }}>{c.distance} mi</span>}
+                      </div>
+                    </div>
+                    <button onClick={()=>setCardioWorkouts(prev=>({...prev,[TODAY]:prev[TODAY].filter(e=>e.id!==c.id)}))} style={iconBtn}>✕</button>
+                  </div>
+                ))}
+              </div>
+
+              <div style={{ borderTop:`3px solid ${BORDER}` }} />
+
+              {/* WEIGHTS */}
+              <div style={col}>
+                <SectionHeader color={ORANGE} label="WEIGHTS" />
+                <div style={card}>
+                  <div style={slabel}>SELECT EXERCISE</div>
+                  <select value={selEx} onChange={e=>setSelEx(e.target.value)} style={selSt(selEx)}>
+                    <option value="">— Select Exercise —</option>
+                    {exercises.map(ex=><option key={ex} value={ex}>{ex}</option>)}
+                  </select>
+
+                  {/* Machine settings banner — shown if settings exist */}
+                  {selEx && <MachineSettingsBanner settings={machineSettings[selEx]} />}
+                  {/* Last time banner */}
+                  {selEx && <LastTimeBanner last={getLastStrength(selEx)} isCardio={false} />}
+
+                  <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", padding:"8px 0" }}>
+                    <span style={{ fontFamily:"Oswald,sans-serif", fontSize:28, letterSpacing:2, color:BLACK, fontWeight:700 }}>SETS</span>
+                    <div style={{ display:"flex", alignItems:"center", gap:30 }}>
+                      <button onClick={()=>setNumSets(s=>Math.max(1,s-1))} style={{ width:76, height:76, background:CARD2, border:`2px solid ${BORDER}`, borderRadius:16, color:BLACK, fontSize:50, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", fontWeight:700 }}>−</button>
+                      <span style={{ fontFamily:"Oswald,sans-serif", fontSize:64, fontWeight:700, color:BLACK, minWidth:64, textAlign:"center" }}>{numSets}</span>
+                      <button onClick={()=>setNumSets(s=>Math.min(10,s+1))} style={{ width:76, height:76, background:CARD2, border:`2px solid ${BORDER}`, borderRadius:16, color:BLACK, fontSize:50, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", fontWeight:700 }}>+</button>
+                    </div>
+                  </div>
+                  <button onClick={addStrength} disabled={!selEx} style={bigBtn(selEx,false)}>+ ADD TO WORKOUT</button>
+                </div>
+
+                {todayStrength.map(entry=>(
+                  <div key={entry.id} style={{ background:CARD, borderRadius:16, overflow:"hidden", border:`2px solid ${BORDER}` }}>
+                    <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", padding:"20px 18px", background:CARD2, borderBottom:`2px solid ${BORDER}` }}>
+                      <span style={{ fontFamily:"Oswald,sans-serif", fontSize:34, fontWeight:700, color:BLACK }}>{entry.name}</span>
+                      <button onClick={()=>setWorkouts(prev=>({...prev,[TODAY]:prev[TODAY].filter(e=>e.id!==entry.id)}))} style={iconBtn}>✕</button>
+                    </div>
+                    <SetTable sets={entry.sets} entryId={entry.id} onUpdate={updateSet} onRepsBlur={onRepsBlur} />
+                    <div style={{ padding:"14px 16px", borderTop:`2px solid ${BORDER}`, background:CARD }}>
+                      <button onClick={()=>addSet(entry.id)} style={{ width:"100%", padding:"18px 0", background:CARD2, border:`2px solid ${ORANGE}`, borderRadius:12, color:ORANGE, fontFamily:"Oswald,sans-serif", fontSize:26, fontWeight:700, letterSpacing:1, cursor:"pointer" }}>
+                        + ADD SET
+                      </button>
+                    </div>
+                  </div>
+                ))}
+
+                {todayStrength.length===0 && todayCardio.length===0 && (
+                  <div style={{ textAlign:"center", color:SUBTEXT, fontSize:26, padding:"36px 0 52px", fontWeight:700 }}>Nothing logged yet today.</div>
+                )}
+              </div>
+              <div style={{ height:watchVisible?220:0 }} />
+            </div>
+          )}
+
+          {/* ── HISTORY TAB ── */}
+          {tab === "history" && (
+            <div style={col}>
+              <div style={{ display:"flex", border:`2px solid ${BORDER}`, borderRadius:16, overflow:"hidden" }}>
+                {[["date","BY DATE"],["exercise","BY EXERCISE"]].map(([v,label])=>(
+                  <button key={v} onClick={()=>setHistView(v)} style={{ flex:1, padding:24, border:"none", cursor:"pointer", background:histView===v?ORANGE:CARD, color:histView===v?"#fff":SUBTEXT, fontFamily:"Oswald,sans-serif", fontSize:24, fontWeight:700, letterSpacing:1 }}>{label}</button>
+                ))}
+              </div>
+              {histView==="date" && (
+                allDates.length===0
+                  ?<div style={{ textAlign:"center", color:SUBTEXT, fontSize:28, padding:"56px 0", fontWeight:700 }}>No workout history yet.</div>
+                  :allDates.map(date=><DateCard key={date} date={date} strength={workouts[date]} cardio={cardioWorkouts[date]} />)
+              )}
+              {histView==="exercise" && (
+                <div style={col}>
+                  <div style={{ display:"flex", border:`2px solid ${BORDER}`, borderRadius:14, overflow:"hidden" }}>
+                    {[["strength","WEIGHTS",ORANGE],["cardio","CARDIO",BLUE]].map(([v,label,bg])=>(
+                      <button key={v} onClick={()=>setHistType(v)} style={{ flex:1, padding:22, border:"none", cursor:"pointer", background:histType===v?bg:CARD, color:histType===v?"#fff":SUBTEXT, fontFamily:"Oswald,sans-serif", fontSize:22, fontWeight:700, letterSpacing:1 }}>{label}</button>
+                    ))}
+                  </div>
+                  {histType==="strength" && <>
+                    <select value={histEx} onChange={e=>setHistEx(e.target.value)} style={selSt(histEx)}>
+                      <option value="">— Select Exercise —</option>
+                      {exercises.map(ex=><option key={ex} value={ex}>{ex}</option>)}
+                    </select>
+                    {histEx&&(()=>{
+                      const hist=getStrengthHistory(histEx);
+                      return hist.length===0
+                        ?<div style={{ textAlign:"center", color:SUBTEXT, fontSize:26, padding:"40px 0", fontWeight:700 }}>No history yet.</div>
+                        :hist.map(({date,sets})=>(
+                          <div key={date} style={{ background:CARD, borderRadius:16, overflow:"hidden", border:`2px solid ${BORDER}` }}>
+                            <div style={{ padding:"18px 18px", background:CARD2, borderBottom:`2px solid ${BORDER}`, fontFamily:"Oswald,sans-serif", fontSize:26, fontWeight:700, color:ORANGE }}>{formatDate(date)}</div>
+                            <SetTable sets={sets} readonly />
+                          </div>
+                        ));
+                    })()}
+                  </>}
+                  {histType==="cardio" && <>
+                    <select value={histCardioEx} onChange={e=>setHistCardioEx(e.target.value)} style={selSt(histCardioEx)}>
+                      <option value="">— Select Activity —</option>
+                      {cardioExercises.map(ex=><option key={ex} value={ex}>{ex}</option>)}
+                    </select>
+                    {histCardioEx&&(()=>{
+                      const hist=getCardioHistory(histCardioEx);
+                      return hist.length===0
+                        ?<div style={{ textAlign:"center", color:SUBTEXT, fontSize:26, padding:"40px 0", fontWeight:700 }}>No history yet.</div>
+                        :hist.map(({date,duration,distance})=>(
+                          <div key={date} style={{ background:CARD, borderRadius:16, border:`2px solid ${BORDER}`, borderLeft:`8px solid ${BLUE}`, padding:"20px 18px", display:"flex", alignItems:"center", gap:14 }}>
+                            <span style={{ fontFamily:"Oswald,sans-serif", fontSize:24, color:BLACK, fontWeight:700, flex:1 }}>{formatDate(date)}</span>
+                            <span style={{ background:"#dbeafe", color:BLUE, padding:"10px 22px", borderRadius:28, fontSize:28, fontWeight:700 }}>{duration} min</span>
+                            {distance&&<span style={{ background:CARD2, color:BLACK, padding:"10px 22px", borderRadius:28, fontSize:28, fontWeight:700, border:`2px solid ${BORDER}` }}>{distance} mi</span>}
+                          </div>
+                        ));
+                    })()}
+                  </>}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* ── EXERCISES TAB ── */}
+          {tab === "exercises" && (
+            <div style={{ ...col, gap:28 }}>
+              <div style={col}>
+                <SectionHeader color={BLUE} label="CARDIO ACTIVITIES" />
+                <div style={card}>
+                  <input type="text" value={newCardioEx} onChange={e=>setNewCardioEx(e.target.value)}
+                    onKeyDown={e=>e.key==="Enter"&&addEx(newCardioEx,cardioExercises,setCardioExercises,setNewCardioEx)}
+                    placeholder="e.g. Stairs, Treadmill..."
+                    style={{ width:"100%", background:CARD, border:`3px solid ${BORDER}`, borderRadius:14, color:BLACK, fontFamily:"Barlow,sans-serif", fontSize:30, fontWeight:700, padding:"20px 18px" }} />
+                  <button disabled={!newCardioEx.trim()||cardioExercises.includes(newCardioEx.trim())}
+                    onClick={()=>addEx(newCardioEx,cardioExercises,setCardioExercises,setNewCardioEx)}
+                    style={bigBtn(newCardioEx.trim()&&!cardioExercises.includes(newCardioEx.trim()),true)}>+ ADD ACTIVITY</button>
+                </div>
+                {cardioExercises.length===0
+                  ?<div style={{ color:SUBTEXT, fontSize:26, padding:"10px 0", fontWeight:700 }}>No activities added yet.</div>
+                  :cardioExercises.map(ex=>(
+                    <div key={ex} style={{ display:"flex", alignItems:"center", justifyContent:"space-between", padding:"20px 18px", background:CARD, borderRadius:14, border:`2px solid ${BORDER}`, borderLeft:`8px solid ${BLUE}` }}>
+                      <span style={{ fontSize:30, color:BLACK, fontFamily:"Barlow,sans-serif", fontWeight:700 }}>{ex}</span>
+                      <button onClick={()=>setCardioExercises(prev=>prev.filter(e=>e!==ex))} style={iconBtn}>✕</button>
+                    </div>
+                  ))
+                }
+              </div>
+
+              <div style={{ borderTop:`3px solid ${BORDER}` }} />
+
+              <div style={col}>
+                <SectionHeader color={ORANGE} label="STRENGTH EXERCISES" />
+                <div style={card}>
+                  <input type="text" value={newEx} onChange={e=>setNewEx(e.target.value)}
+                    onKeyDown={e=>e.key==="Enter"&&addEx(newEx,exercises,setExercises,setNewEx)}
+                    placeholder="e.g. Bench Press, Squat..."
+                    style={{ width:"100%", background:CARD, border:`3px solid ${BORDER}`, borderRadius:14, color:BLACK, fontFamily:"Barlow,sans-serif", fontSize:30, fontWeight:700, padding:"20px 18px" }} />
+                  <button disabled={!newEx.trim()||exercises.includes(newEx.trim())}
+                    onClick={()=>addEx(newEx,exercises,setExercises,setNewEx)}
+                    style={bigBtn(newEx.trim()&&!exercises.includes(newEx.trim()),false)}>+ ADD EXERCISE</button>
+                </div>
+
+                {exercises.length===0
+                  ?<div style={{ color:SUBTEXT, fontSize:26, padding:"10px 0", fontWeight:700 }}>No exercises added yet.</div>
+                  :exercises.map(ex=>(
+                    <ExItem key={ex} name={ex} accent={ORANGE}
+                      settings={machineSettings[ex]}
+                      onDelete={()=>setExercises(prev=>prev.filter(e=>e!==ex))}
+                      onSaveSettings={saveMachineSettings}
+                    />
+                  ))
+                }
+              </div>
+            </div>
+          )}
+        </main>
+      </div>
+    );
+  }
+
+  function Root() {
+    const [user, setUser] = useState(undefined);
+    useEffect(() => { const unsub=auth.onAuthStateChanged(u=>setUser(u||null)); return unsub; }, []);
+    if (user===undefined) return <div style={{ display:"flex", alignItems:"center", justifyContent:"center", minHeight:"100vh", background:BG }}><div style={{ color:SUBTEXT, fontFamily:"Oswald,sans-serif", fontSize:28, letterSpacing:4 }}>LOADING...</div></div>;
+    if (!user) return <SignIn />;
+    return <App user={user} />;
+  }
+
+  ReactDOM.createRoot(document.getElementById("root")).render(<Root />);
+</script>
+</body>
+</html>

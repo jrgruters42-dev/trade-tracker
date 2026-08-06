@@ -1,0 +1,44 @@
+name: Test and deploy to Firebase Hosting
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "public/**"
+      - "tests/**"
+      - "package.json"
+      - "firebase.json"
+      - ".firebaserc"
+      - ".github/workflows/firebase-hosting.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: firebase-hosting-production
+  cancel-in-progress: true
+
+jobs:
+  test-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Run safety tests
+        run: npm test
+
+      - name: Deploy production site
+        uses: FirebaseExtended/action-hosting-deploy@v0
+        with:
+          repoToken: "${{ secrets.GITHUB_TOKEN }}"
+          firebaseServiceAccount: "${{ secrets.FIREBASE_SERVICE_ACCOUNT_TRADE_TRACKER_36E7A }}"
+          channelId: live
+          projectId: trade-tracker-36e7a
