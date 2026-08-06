@@ -2269,6 +2269,14 @@
                         <label title="Risk Level: % of account risked on this trade (Entry - Stop) × Shares ÷ Account Size × 100">Risk Level</label>
                         <input type="number" id="editInitialWeight" step="0.001" required>
                     </div>
+                    <div class="form-group">
+                        <label title="50-Day Simple Moving Average ($)">50 SMA ($) <span style="font-size:0.75em; color:#6b7280; font-weight:normal;">(optional)</span></label>
+                        <input type="number" id="editSma50" step="0.01" placeholder="e.g. 75.50">
+                    </div>
+                    <div class="form-group">
+                        <label title="20-Day Average True Range ($)">20-day ATR ($) <span style="font-size:0.75em; color:#6b7280; font-weight:normal;">(optional)</span></label>
+                        <input type="number" id="editAtr20" step="0.01" placeholder="e.g. 2.45">
+                    </div>
                 </div>
                 <button type="submit">Save Changes</button>
             </form>
@@ -5783,6 +5791,8 @@
             document.getElementById('editCurrentStop').value = pos.currentStop;
             document.getElementById('editShares').value = pos.shares;
             document.getElementById('editInitialWeight').value = pos.initialWeight;
+            document.getElementById('editSma50').value = pos.sma50 ? Number(pos.sma50).toFixed(2) : '';
+            document.getElementById('editAtr20').value = pos.atr20 ? Number(pos.atr20).toFixed(2) : '';
             document.getElementById('editPositionModal').style.display = 'block';
         }
 
@@ -6527,6 +6537,17 @@
                 pos.currentStop = parseFloat(document.getElementById('editCurrentStop').value);
                 const newShares = parseInt(document.getElementById('editShares').value);
                 pos.initialWeight = parseFloat(document.getElementById('editInitialWeight').value);
+
+                const rawSma50 = parseFloat(document.getElementById('editSma50').value);
+                const rawAtr20 = parseFloat(document.getElementById('editAtr20').value);
+                if (!isNaN(rawSma50) && rawSma50 > 0) {
+                    pos.sma50 = rawSma50;
+                    pos.technicalUpdatedAt = Date.now();
+                }
+                if (!isNaN(rawAtr20) && rawAtr20 > 0) {
+                    pos.atr20 = rawAtr20;
+                    pos.technicalUpdatedAt = Date.now();
+                }
 
                 if (!pos.partialSells || pos.partialSells.length === 0) {
                     pos.shares = newShares;
