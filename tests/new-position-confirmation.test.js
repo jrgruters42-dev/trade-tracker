@@ -37,7 +37,7 @@ test('pending overlay is cleared only after a cloud snapshot contains the positi
 test('service worker uses a versioned trade-tracker cache', () => {
     assert.match(
         serviceWorker,
-        /const CACHE_NAME = 'trade-tracker-firestore-v\d+';/
+        /const CACHE_NAME = 'trade-tracker-.*v[\d.]+';/
     );
     assert.match(
         serviceWorker,

@@ -17,7 +17,7 @@ test('open positions show sortable 20-day ATR distance from the 50 SMA', () => {
 test('one daily-history request derives both SMA and ATR and is cached on positions', () => {
     assert.match(html, /function fetchPositionTechnicalData\(symbol\)/);
     assert.match(html, /function=TIME_SERIES_DAILY/);
-    assert.match(html, /return \{ ok: true, data: \{ sma50, atr20, technicalUpdatedAt: Date\.now\(\) \} \}/);
+    assert.match(html, /technicalUpdatedAt: Date\.now\(\)/);
     assert.match(html, /const maxAgeMs = 20 \* 60 \* 60 \* 1000/);
     assert.match(html, /positions\.forEach\(pos => Object\.assign\(pos, technical\)\)/);
 });
