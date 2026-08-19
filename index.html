@@ -836,7 +836,7 @@
     <div class="container">
         <h1 style="margin-bottom: 10px; font-size: 1.8em; display: flex; align-items: center; gap: 10px;">
             <span>📊 Trade Tracker</span>
-            <span id="appVersionBadge" style="font-size: 0.45em; font-weight: 700; background: #e0e7ff; color: #3730a3; padding: 3px 9px; border-radius: 12px; border: 1px solid #c7d2fe; letter-spacing: 0.5px; vertical-align: middle;">v1.0.4</span>
+            <span id="appVersionBadge" style="font-size: 0.45em; font-weight: 700; background: #e0e7ff; color: #3730a3; padding: 3px 9px; border-radius: 12px; border: 1px solid #c7d2fe; letter-spacing: 0.5px; vertical-align: middle;">v1.0.5</span>
         </h1>
 
         <!-- Sync Status -->
@@ -2197,6 +2197,90 @@
             <p style="margin-top:24px; font-size:0.75em; color:#9ca3af;">Your data is private and only accessible with your Google account</p>
         </div>
     </div>
+    <!-- Verify Entry Price Modal for Position Sizing Auto-Add -->
+    <div id="verifyEntryPriceModal" class="modal" onclick="if(event.target===this)closeModal('verifyEntryPriceModal')">
+        <div class="modal-content" style="max-width: 520px; border-radius: 12px; padding: 24px;">
+            <div class="modal-header" style="margin-bottom: 16px; border-bottom: 1px solid #e5e7eb; padding-bottom: 12px;">
+                <div>
+                    <h2 style="font-size: 1.25em; margin: 0; color: #1e1b4b; display: flex; align-items: center; gap: 8px;">
+                        <span>🎯</span> Confirm Position Entry
+                    </h2>
+                    <div style="font-size: 0.82em; color: #6b7280; margin-top: 4px;">
+                        Verify or adjust your actual entry fill price before saving.
+                    </div>
+                </div>
+                <span class="close" onclick="closeModal('verifyEntryPriceModal')">&times;</span>
+            </div>
+
+            <form id="verifyEntryPriceForm">
+                <input type="hidden" id="verifyAccountType">
+
+                <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px 14px; margin-bottom: 16px; display: flex; justify-content: space-between; align-items: center;">
+                    <div>
+                        <div style="font-size: 0.72em; text-transform: uppercase; letter-spacing: 0.5px; color: #64748b; font-weight: 700;">Stock Symbol</div>
+                        <div id="verifySymbolDisplay" style="font-size: 1.4em; font-weight: 800; color: #4338ca;">—</div>
+                    </div>
+                    <div style="text-align: right;">
+                        <div style="font-size: 0.72em; text-transform: uppercase; letter-spacing: 0.5px; color: #64748b; font-weight: 700;">Target Account</div>
+                        <div id="verifyAccountBadge" style="font-size: 0.85em; font-weight: 700; color: #047857; background: #d1fae5; padding: 2px 8px; border-radius: 6px; display: inline-block; margin-top: 2px;">Trading Account</div>
+                    </div>
+                </div>
+
+                <div class="form-grid" style="grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 14px;">
+                    <div class="form-group" style="grid-column: 1 / -1;">
+                        <label for="verifyEntryPriceInput" style="font-weight: 700; color: #1e293b; font-size: 0.9em; display: flex; justify-content: space-between;">
+                            <span>Actual Entry Price ($)</span>
+                            <span style="font-weight: normal; font-size: 0.8em; color: #6366f1;">✏️ Edit if fill price varied</span>
+                        </label>
+                        <input type="number" id="verifyEntryPriceInput" step="0.01" min="0.01" required
+                               style="font-size: 1.15em; font-weight: 700; color: #4338ca; border: 2px solid #818cf8; background: #eef2ff; border-radius: 6px; padding: 8px 12px; width: 100%;"
+                               oninput="updateVerifyModalCalculations()">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="verifyStopPriceInput" style="font-size: 0.85em; color: #475569; font-weight: 600;">Initial Stop Loss ($)</label>
+                        <input type="number" id="verifyStopPriceInput" step="0.01" min="0.01" required
+                               style="font-size: 1em; font-weight: 600; border: 1px solid #cbd5e1; border-radius: 6px; padding: 6px 10px; width: 100%;"
+                               oninput="updateVerifyModalCalculations()">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="verifySharesInput" style="font-size: 0.85em; color: #475569; font-weight: 600;">Shares (QTY)</label>
+                        <input type="number" id="verifySharesInput" step="1" min="1" required
+                               style="font-size: 1em; font-weight: 600; border: 1px solid #cbd5e1; border-radius: 6px; padding: 6px 10px; width: 100%;"
+                               oninput="updateVerifyModalCalculations()">
+                    </div>
+                </div>
+
+                <div id="verifyStopWarning" style="display: none; background: #fef2f2; border-left: 4px solid #ef4444; padding: 6px 10px; border-radius: 4px; font-size: 0.82em; color: #991b1b; margin-bottom: 12px; font-weight: 600;"></div>
+
+                <!-- Live Risk Preview Box -->
+                <div style="background: #fffbeb; border: 1px solid #fef3c7; border-radius: 8px; padding: 12px; margin-bottom: 18px;">
+                    <div style="font-size: 0.75em; font-weight: 700; text-transform: uppercase; color: #92400e; margin-bottom: 6px;">Live Trade Metrics</div>
+                    <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; font-size: 0.82em; text-align: center;">
+                        <div style="background: white; padding: 6px 4px; border-radius: 4px; border: 1px solid #fde68a;">
+                            <div style="color: #6b7280; font-size: 0.75em;">Risk / Share</div>
+                            <div id="verifyRiskPerShare" style="font-weight: 700; color: #b45309; font-size: 1.05em;">$0.00</div>
+                        </div>
+                        <div style="background: white; padding: 6px 4px; border-radius: 4px; border: 1px solid #fde68a;">
+                            <div style="color: #6b7280; font-size: 0.75em;">Total Dollar Risk</div>
+                            <div id="verifyTotalDollarRisk" style="font-weight: 700; color: #b45309; font-size: 1.05em;">$0.00</div>
+                        </div>
+                        <div style="background: white; padding: 6px 4px; border-radius: 4px; border: 1px solid #fde68a;">
+                            <div style="color: #6b7280; font-size: 0.75em;">Account Risk %</div>
+                            <div id="verifyAccountRiskPct" style="font-weight: 700; color: #b45309; font-size: 1.05em;">0.000%</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div style="display: flex; gap: 10px; justify-content: flex-end;">
+                    <button type="button" class="btn-secondary" onclick="closeModal('verifyEntryPriceModal')" style="padding: 9px 18px; font-size: 0.9em;">Cancel</button>
+                    <button type="submit" class="btn-success" style="padding: 9px 22px; font-size: 0.9em; font-weight: 700; background: #059669;">✓ Confirm &amp; Save Position</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <!-- Other Modals (partial sell, update stop, close position, edit) -->
     <div id="partialSellModal" class="modal">
         <div class="modal-content">
@@ -10414,8 +10498,91 @@
             }
         }
 
-        // Auto-add position directly from sizing table
-        async function autoAddPositionFromSizing(symbol, entryPrice, initialStop, shares, initialWeight, accountType) {
+        // Live calculations for the Verify Entry Price Modal
+        function updateVerifyModalCalculations() {
+            const entryVal = parseFloat(document.getElementById('verifyEntryPriceInput')?.value) || 0;
+            const stopVal = parseFloat(document.getElementById('verifyStopPriceInput')?.value) || 0;
+            const sharesVal = parseInt(document.getElementById('verifySharesInput')?.value, 10) || 0;
+            const accountType = document.getElementById('verifyAccountType')?.value || 'Trading Account';
+
+            let accountBase = getAccountSize();
+            if (accountType === 'My Roth') {
+                const r = parseFloat(document.getElementById('myRoth')?.value);
+                if (r > 0) accountBase = r;
+            } else if (accountType === 'Wife Roth') {
+                const w = parseFloat(document.getElementById('wifeRoth')?.value);
+                if (w > 0) accountBase = w;
+            }
+
+            const riskPerShare = Math.max(0, entryVal - stopVal);
+            const totalDollarRisk = riskPerShare * sharesVal;
+            const riskPct = accountBase > 0 ? (totalDollarRisk / accountBase) * 100 : 0;
+
+            const rpsEl = document.getElementById('verifyRiskPerShare');
+            const tdrEl = document.getElementById('verifyTotalDollarRisk');
+            const arpEl = document.getElementById('verifyAccountRiskPct');
+
+            if (rpsEl) rpsEl.textContent = `$${riskPerShare.toFixed(2)}`;
+            if (tdrEl) tdrEl.textContent = `$${totalDollarRisk.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+            if (arpEl) arpEl.textContent = `${riskPct.toFixed(3)}%`;
+
+            const warningEl = document.getElementById('verifyStopWarning');
+            if (warningEl) {
+                if (stopVal >= entryVal && entryVal > 0) {
+                    warningEl.style.display = 'block';
+                    warningEl.textContent = '⚠️ Initial stop loss must be lower than the entry price';
+                } else {
+                    warningEl.style.display = 'none';
+                }
+            }
+        }
+        window.updateVerifyModalCalculations = updateVerifyModalCalculations;
+
+        // Open Verify Entry Price Modal
+        function openVerifyEntryModal(symbol, entryPrice, initialStop, shares, initialWeight, accountType) {
+            const cleanSymbol = String(symbol || '').trim().toUpperCase();
+            const cleanEntry = parseFloat(entryPrice) || 0;
+            const cleanStop = parseFloat(initialStop) || 0;
+            const cleanShares = parseInt(shares, 10) || 0;
+            const targetAccount = accountType || 'Trading Account';
+
+            const symDisp = document.getElementById('verifySymbolDisplay');
+            const acctBadge = document.getElementById('verifyAccountBadge');
+            const acctTypeInp = document.getElementById('verifyAccountType');
+            const entryInp = document.getElementById('verifyEntryPriceInput');
+            const stopInp = document.getElementById('verifyStopPriceInput');
+            const sharesInp = document.getElementById('verifySharesInput');
+
+            if (symDisp) symDisp.textContent = cleanSymbol;
+            if (acctBadge) acctBadge.textContent = targetAccount;
+            if (acctTypeInp) acctTypeInp.value = targetAccount;
+            if (entryInp) entryInp.value = cleanEntry > 0 ? cleanEntry.toFixed(2) : '';
+            if (stopInp) stopInp.value = cleanStop > 0 ? cleanStop.toFixed(2) : '';
+            if (sharesInp) sharesInp.value = cleanShares > 0 ? cleanShares : '';
+
+            updateVerifyModalCalculations();
+
+            const modal = document.getElementById('verifyEntryPriceModal');
+            if (modal) {
+                modal.style.display = 'block';
+                setTimeout(() => {
+                    if (entryInp) {
+                        entryInp.focus();
+                        entryInp.select();
+                    }
+                }, 50);
+            }
+        }
+        window.openVerifyEntryModal = openVerifyEntryModal;
+
+        // Auto-add position directly from sizing table (opens confirmation/verification dialog)
+        function autoAddPositionFromSizing(symbol, entryPrice, initialStop, shares, initialWeight, accountType) {
+            openVerifyEntryModal(symbol, entryPrice, initialStop, shares, initialWeight, accountType);
+        }
+        window.autoAddPositionFromSizing = autoAddPositionFromSizing;
+
+        // Commit and persist position to Firebase with durable transaction checkpoint
+        async function commitPositionFromSizing(symbol, entryPrice, initialStop, shares, initialWeight, accountType) {
             if (!symbol || !entryPrice || !initialStop || !shares || shares <= 0) {
                 alert('Please check the symbol, price, stop loss, and shares before adding.');
                 return;
@@ -10532,7 +10699,45 @@
 
             updateAllDisplays();
         }
-        window.autoAddPositionFromSizing = autoAddPositionFromSizing;
+        window.commitPositionFromSizing = commitPositionFromSizing;
+
+        // Initialize Verify Entry Price Modal Form Listener
+        const verifyEntryForm = document.getElementById('verifyEntryPriceForm');
+        if (verifyEntryForm) {
+            verifyEntryForm.addEventListener('submit', function(e) {
+                e.preventDefault();
+                const symbol = document.getElementById('verifySymbolDisplay')?.textContent || '';
+                const entryPrice = parseFloat(document.getElementById('verifyEntryPriceInput')?.value);
+                const initialStop = parseFloat(document.getElementById('verifyStopPriceInput')?.value);
+                const shares = parseInt(document.getElementById('verifySharesInput')?.value, 10);
+                const accountType = document.getElementById('verifyAccountType')?.value || 'Trading Account';
+
+                if (!symbol || isNaN(entryPrice) || isNaN(initialStop) || isNaN(shares) || shares <= 0) {
+                    alert('Please enter valid symbol, entry price, stop loss, and share count.');
+                    return;
+                }
+                if (initialStop >= entryPrice) {
+                    alert('Initial stop loss must be lower than the entry price.');
+                    return;
+                }
+
+                let accountBase = getAccountSize();
+                if (accountType === 'My Roth') {
+                    const r = parseFloat(document.getElementById('myRoth')?.value);
+                    if (r > 0) accountBase = r;
+                } else if (accountType === 'Wife Roth') {
+                    const w = parseFloat(document.getElementById('wifeRoth')?.value);
+                    if (w > 0) accountBase = w;
+                }
+
+                const riskPerShare = entryPrice - initialStop;
+                const totalRisk = riskPerShare * shares;
+                const calculatedRiskPct = accountBase > 0 ? (totalRisk / accountBase) * 100 : 0;
+
+                closeModal('verifyEntryPriceModal');
+                commitPositionFromSizing(symbol, entryPrice, initialStop, shares, calculatedRiskPct, accountType);
+            });
+        }
 
         // Generate Stock Profile Table
         function generateStockProfileTable(stockNum, symbol, price, stop, adrPct) {
@@ -10591,7 +10796,7 @@
                 </div>
 
                 <div style="margin-bottom: 12px; padding: 8px 12px; background: #eef2ff; border-radius: 6px; border-left: 4px solid #6366f1; font-size: 0.85em; color: #3730a3;">
-                    💡 <strong>Auto-Add Position:</strong> Click any share button below to automatically fill the form and add <strong>${safeSymbolEscaped}</strong> with its entry price ($${price.toFixed(2)}), stop loss ($${stop.toFixed(2)}), shares, and calculated risk level.
+                    💡 <strong>Auto-Add Position:</strong> Click any share button below to verify/adjust your actual entry fill price and add <strong>${safeSymbolEscaped}</strong> to your open positions.
                 </div>
             `;
 
@@ -10611,11 +10816,11 @@
                     <thead>
                         <tr>
                             <th>Risk/Position Level</th>
-                            <th title="Click any share button below to auto-add this position">Trading Account<br/>Shares <span style="font-size: 0.75em; color: #4f46e5;">(click to add)</span></th>
+                            <th title="Click any share button below to verify entry price & auto-add">Trading Account<br/>Shares <span style="font-size: 0.75em; color: #4f46e5;">(click to add)</span></th>
                             <th>Trading Account<br/>Acct Wt%</th>
-                            <th title="Click any share button below to auto-add this position">My Roth<br/>Shares <span style="font-size: 0.75em; color: #4f46e5;">(click to add)</span></th>
+                            <th title="Click any share button below to verify entry price & auto-add">My Roth<br/>Shares <span style="font-size: 0.75em; color: #4f46e5;">(click to add)</span></th>
                             <th>My Roth<br/>Acct Wt%</th>
-                            <th title="Click any share button below to auto-add this position">Wife Roth<br/>Shares <span style="font-size: 0.75em; color: #4f46e5;">(click to add)</span></th>
+                            <th title="Click any share button below to verify entry price & auto-add">Wife Roth<br/>Shares <span style="font-size: 0.75em; color: #4f46e5;">(click to add)</span></th>
                             <th>Wife Roth<br/>Acct Wt%</th>
                         </tr>
                     </thead>
@@ -10675,7 +10880,7 @@
                             <td style="text-align: center; padding: 4px 6px;">
                                 <button type="button" class="btn-shares-click"
                                     onclick="autoAddPositionFromSizing('${safeSymbolEscaped}', ${price}, ${stop}, ${sh}, ${rk.toFixed(4)}, '${acctLabel}')"
-                                    title="Click to auto-add ${safeSymbolEscaped}: ${sh.toLocaleString()} shares @ $${price.toFixed(2)}, stop $${stop.toFixed(2)}, risk ${rk.toFixed(3)}% (${acctLabel})">
+                                    title="Click to verify entry price & add ${safeSymbolEscaped}: ${sh.toLocaleString()} shares @ $${price.toFixed(2)} (${acctLabel})">
                                     <span>➕</span> <span>${sh.toLocaleString()}</span>
                                 </button>
                             </td>

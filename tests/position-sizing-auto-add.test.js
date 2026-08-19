@@ -10,12 +10,26 @@ test('sizing table generates clickable share buttons with stock symbol, entry, s
     assert.match(html, /class="btn-shares-click"/);
     assert.match(html, /onclick="autoAddPositionFromSizing\('/);
     assert.match(html, /function autoAddPositionFromSizing\(symbol, entryPrice, initialStop, shares, initialWeight, accountType\)/);
+    assert.match(html, /openVerifyEntryModal\(symbol, entryPrice, initialStop, shares, initialWeight, accountType\)/);
 });
 
-test('autoAddPositionFromSizing updates form fields, session storage, and persists via saveToFirebase', () => {
-    const fnStart = html.indexOf('async function autoAddPositionFromSizing(');
-    assert.ok(fnStart > 0, 'autoAddPositionFromSizing function must be defined');
-    const fnEnd = html.indexOf('window.autoAddPositionFromSizing = autoAddPositionFromSizing;', fnStart);
+test('verifyEntryPriceModal provides editable entry price with live risk metrics and validation', () => {
+    assert.match(html, /<div id="verifyEntryPriceModal" class="modal"/);
+    assert.match(html, /<form id="verifyEntryPriceForm">/);
+    assert.match(html, /<input type="number" id="verifyEntryPriceInput"/);
+    assert.match(html, /<input type="number" id="verifyStopPriceInput"/);
+    assert.match(html, /<input type="number" id="verifySharesInput"/);
+    assert.match(html, /id="verifyRiskPerShare"/);
+    assert.match(html, /id="verifyTotalDollarRisk"/);
+    assert.match(html, /id="verifyAccountRiskPct"/);
+    assert.match(html, /function updateVerifyModalCalculations\(\)/);
+    assert.match(html, /function openVerifyEntryModal\(/);
+});
+
+test('commitPositionFromSizing updates form fields, session storage, and persists via saveToFirebase', () => {
+    const fnStart = html.indexOf('async function commitPositionFromSizing(');
+    assert.ok(fnStart > 0, 'commitPositionFromSizing function must be defined');
+    const fnEnd = html.indexOf('window.commitPositionFromSizing = commitPositionFromSizing;', fnStart);
     const fnCode = html.slice(fnStart, fnEnd);
 
     // Verifies form fields are updated
@@ -35,8 +49,9 @@ test('autoAddPositionFromSizing updates form fields, session storage, and persis
     assert.match(fnCode, /updateAllDisplays\(\)/);
 });
 
-test('header badge and service worker cache match v1.0.4', () => {
-    assert.match(html, /id="appVersionBadge"[^>]*>v1\.0\.4<\/span>/);
+test('header badge and service worker cache match v1.0.5', () => {
+    assert.match(html, /id="appVersionBadge"[^>]*>v1\.0\.5<\/span>/);
     const serviceWorker = fs.readFileSync(path.join(__dirname, '..', 'public', 'service-worker.js'), 'utf8');
-    assert.match(serviceWorker, /const CACHE_NAME = 'trade-tracker-v1\.0\.4';/);
+    assert.match(serviceWorker, /const CACHE_NAME = 'trade-tracker-v1\.0\.5';/);
 });
+
