@@ -541,6 +541,35 @@
             font-size: 12px;
         }
 
+        .btn-shares-click {
+            background: #eef2ff;
+            color: #4338ca;
+            border: 1px solid #c7d2fe;
+            padding: 4px 8px;
+            border-radius: 6px;
+            font-weight: 700;
+            font-size: 0.9em;
+            cursor: pointer;
+            transition: all 0.15s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            justify-content: center;
+            white-space: nowrap;
+        }
+
+        .btn-shares-click:hover {
+            background: #4338ca !important;
+            color: #ffffff !important;
+            border-color: #3730a3 !important;
+            transform: translateY(-1px);
+            box-shadow: 0 2px 6px rgba(67, 56, 202, 0.25);
+        }
+
+        .btn-shares-click:active {
+            transform: translateY(0);
+        }
+
         /* ── Mobile Responsive (phone only, under 768px) ─────────────────── */
         @media (max-width: 768px) {
 
@@ -807,7 +836,7 @@
     <div class="container">
         <h1 style="margin-bottom: 10px; font-size: 1.8em; display: flex; align-items: center; gap: 10px;">
             <span>📊 Trade Tracker</span>
-            <span id="appVersionBadge" style="font-size: 0.45em; font-weight: 700; background: #e0e7ff; color: #3730a3; padding: 3px 9px; border-radius: 12px; border: 1px solid #c7d2fe; letter-spacing: 0.5px; vertical-align: middle;">v1.0.3</span>
+            <span id="appVersionBadge" style="font-size: 0.45em; font-weight: 700; background: #e0e7ff; color: #3730a3; padding: 3px 9px; border-radius: 12px; border: 1px solid #c7d2fe; letter-spacing: 0.5px; vertical-align: middle;">v1.0.4</span>
         </h1>
 
         <!-- Sync Status -->
@@ -10385,6 +10414,126 @@
             }
         }
 
+        // Auto-add position directly from sizing table
+        async function autoAddPositionFromSizing(symbol, entryPrice, initialStop, shares, initialWeight, accountType) {
+            if (!symbol || !entryPrice || !initialStop || !shares || shares <= 0) {
+                alert('Please check the symbol, price, stop loss, and shares before adding.');
+                return;
+            }
+
+            const cleanSymbol = String(symbol).trim().toUpperCase();
+            const cleanShares = parseInt(shares, 10);
+            const cleanEntry = parseFloat(entryPrice);
+            const cleanStop = parseFloat(initialStop);
+            const cleanWeight = parseFloat(initialWeight) || 0;
+
+            // Fill form inputs
+            const symbolEl = document.getElementById('symbol');
+            const entryEl = document.getElementById('entryPrice');
+            const stopEl = document.getElementById('initialStop');
+            const sharesEl = document.getElementById('shares');
+            const weightEl = document.getElementById('initialWeight');
+
+            if (symbolEl) {
+                symbolEl.value = cleanSymbol;
+                symbolEl.dispatchEvent(new Event('input', { bubbles: true }));
+            }
+            if (entryEl) {
+                entryEl.value = cleanEntry.toFixed(2);
+                entryEl.dispatchEvent(new Event('input', { bubbles: true }));
+            }
+            if (stopEl) {
+                stopEl.value = cleanStop.toFixed(2);
+                stopEl.dispatchEvent(new Event('input', { bubbles: true }));
+            }
+            if (sharesEl) {
+                sharesEl.value = cleanShares;
+                sharesEl.dispatchEvent(new Event('input', { bubbles: true }));
+            }
+            if (weightEl) {
+                weightEl.value = cleanWeight.toFixed(3);
+                weightEl.dispatchEvent(new Event('input', { bubbles: true }));
+            }
+
+            // Save to sessionStorage form cache
+            const formData = {
+                symbol: cleanSymbol,
+                entryPrice: cleanEntry.toFixed(2),
+                initialStop: cleanStop.toFixed(2),
+                shares: String(cleanShares),
+                initialWeight: cleanWeight.toFixed(3)
+            };
+            sessionStorage.setItem('addPositionFormData', JSON.stringify(formData));
+
+            // Create new position object
+            const position = {
+                id: allocatePositionId(),
+                symbol: cleanSymbol,
+                entryPrice: cleanEntry,
+                currentPrice: cleanEntry,
+                initialStop: cleanStop,
+                currentStop: cleanStop,
+                shares: cleanShares,
+                initialShares: cleanShares,
+                initialWeight: cleanWeight,
+                entryDate: getTodayLocal(),
+                partialSells: [],
+                hedges: [],
+                peakR: 0
+            };
+
+            openPositions.push(position);
+            TradeFirestoreSync.ensureIdentities({ openPositions });
+            pendingPositionOverlays.set(position._syncId, JSON.parse(JSON.stringify(position)));
+
+            updateSyncStatus('Saving...', true);
+
+            try {
+                const confirmedCheckpoint = await saveToFirebase(true);
+                const confirmedPosition = (confirmedCheckpoint.data.openPositions || [])
+                    .find(item => item._syncId === position._syncId);
+                if (!confirmedPosition) {
+                    throw new Error('The completed Firestore transaction did not contain the new position.');
+                }
+                syncCheckpoint = confirmedCheckpoint;
+                loadDataFromFirebase(confirmedCheckpoint.data);
+
+                // Show confirmation popup with details
+                const confirmation = document.createElement('div');
+                confirmation.style.cssText = 'position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: #10b981; color: white; padding: 24px 36px; border-radius: 12px; font-weight: 700; font-size: 1.25em; z-index: 10000; box-shadow: 0 10px 25px rgba(0,0,0,0.35); text-align: center; max-width: 90vw;';
+                const accountLabel = accountType ? ` · ${accountType}` : '';
+                confirmation.innerHTML = `
+                    <div style="font-size: 1.25em; margin-bottom: 8px;">✓ ${cleanSymbol} SAVED!</div>
+                    <div style="font-size: 0.85em; font-weight: 500; opacity: 0.95; margin-bottom: 12px;">
+                        ${cleanShares.toLocaleString()} shares @ $${cleanEntry.toFixed(2)} | Stop $${cleanStop.toFixed(2)} | Risk ${cleanWeight.toFixed(3)}%${accountLabel}
+                    </div>
+                    <button onclick="switchTab('open-positions'); if (this.parentElement) this.parentElement.remove();" style="background: white; color: #059669; border: none; padding: 6px 14px; border-radius: 6px; font-size: 0.75em; font-weight: 700; cursor: pointer; box-shadow: 0 2px 4px rgba(0,0,0,0.15);">
+                        View in Open Positions →
+                    </button>
+                `;
+                document.body.appendChild(confirmation);
+                setTimeout(() => { if (confirmation.parentElement) confirmation.remove(); }, 3500);
+
+                updateSyncStatus('Synced ✓', true);
+                const timeStr = new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+                const lastSavedEl = document.getElementById('lastSavedTime');
+                if (lastSavedEl) lastSavedEl.textContent = `Last saved: ${timeStr}`;
+            } catch (error) {
+                console.error('Save error on auto-add:', error);
+                const errorMsg = document.createElement('div');
+                errorMsg.style.cssText = 'position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: #ef4444; color: white; padding: 25px 45px; border-radius: 12px; font-weight: 700; font-size: 1.3em; z-index: 10000; box-shadow: 0 8px 16px rgba(0,0,0,0.4);';
+                errorMsg.textContent = `✗ SAVE FAILED!`;
+                document.body.appendChild(errorMsg);
+                setTimeout(() => errorMsg.remove(), 5000);
+
+                updateSyncStatus('Save error', false);
+                alert(`❌ SAVE NOT CONFIRMED for ${cleanSymbol}!\n\nError: ${error.message}\n\nThe position remains visible on this device.`);
+            }
+
+            updateAllDisplays();
+        }
+        window.autoAddPositionFromSizing = autoAddPositionFromSizing;
+
         // Generate Stock Profile Table
         function generateStockProfileTable(stockNum, symbol, price, stop, adrPct) {
             const accountSize = getAccountSize();
@@ -10392,7 +10541,8 @@
             const wifeRoth = parseFloat(document.getElementById('wifeRoth').value) || 0;
 
             const riskPerShare = price - stop;
-            const stockRiskPercent = (riskPerShare / price) * 100;
+            const stockRiskPercent = price > 0 ? (riskPerShare / price) * 100 : 0;
+            const safeSymbolEscaped = String(symbol).replace(/\\/g, '\\\\').replace(/'/g, "\\'");
 
             // ADR% pill
             let adrHtml = '';
@@ -10440,7 +10590,10 @@
                     ${adrHtml}
                 </div>
 
-                <table style="margin-bottom: 20px;">`;
+                <div style="margin-bottom: 12px; padding: 8px 12px; background: #eef2ff; border-radius: 6px; border-left: 4px solid #6366f1; font-size: 0.85em; color: #3730a3;">
+                    💡 <strong>Auto-Add Position:</strong> Click any share button below to automatically fill the form and add <strong>${safeSymbolEscaped}</strong> with its entry price ($${price.toFixed(2)}), stop loss ($${stop.toFixed(2)}), shares, and calculated risk level.
+                </div>
+            `;
 
             const riskLevels = [
                 { label: 'Risking 1% of account',     percent: 1.0,   isRisk: true },
@@ -10458,11 +10611,11 @@
                     <thead>
                         <tr>
                             <th>Risk/Position Level</th>
-                            <th>Trading Account<br/>Shares</th>
+                            <th title="Click any share button below to auto-add this position">Trading Account<br/>Shares <span style="font-size: 0.75em; color: #4f46e5;">(click to add)</span></th>
                             <th>Trading Account<br/>Acct Wt%</th>
-                            <th>My Roth<br/>Shares</th>
+                            <th title="Click any share button below to auto-add this position">My Roth<br/>Shares <span style="font-size: 0.75em; color: #4f46e5;">(click to add)</span></th>
                             <th>My Roth<br/>Acct Wt%</th>
-                            <th>Wife Roth<br/>Shares</th>
+                            <th title="Click any share button below to auto-add this position">Wife Roth<br/>Shares <span style="font-size: 0.75em; color: #4f46e5;">(click to add)</span></th>
                             <th>Wife Roth<br/>Acct Wt%</th>
                         </tr>
                     </thead>
@@ -10471,52 +10624,74 @@
 
             riskLevels.forEach((level, index) => {
                 let mainShares, mainWeight, myRothShares, myRothWeight, wifeRothShares, wifeRothWeight;
+                let mainRiskLevel, myRothRiskLevel, wifeRothRiskLevel;
 
                 if (level.isRisk) {
                     // Risk-based calculation
                     const mainRisk = (level.percent / 100) * accountSize;
-                    mainShares = Math.floor(mainRisk / riskPerShare);
+                    mainShares = riskPerShare > 0 ? Math.floor(mainRisk / riskPerShare) : 0;
                     const mainValue = mainShares * price;
-                    mainWeight = (mainValue / accountSize) * 100;
+                    mainWeight = accountSize > 0 ? (mainValue / accountSize) * 100 : 0;
+                    mainRiskLevel = level.percent;
 
                     const myRothRisk = myRoth > 0 ? (level.percent / 100) * myRoth : 0;
-                    myRothShares = myRoth > 0 ? Math.floor(myRothRisk / riskPerShare) : 0;
+                    myRothShares = (myRoth > 0 && riskPerShare > 0) ? Math.floor(myRothRisk / riskPerShare) : 0;
                     const myRothValue = myRothShares * price;
                     myRothWeight = myRoth > 0 ? (myRothValue / myRoth) * 100 : 0;
+                    myRothRiskLevel = level.percent;
 
                     const wifeRothRisk = wifeRoth > 0 ? (level.percent / 100) * wifeRoth : 0;
-                    wifeRothShares = wifeRoth > 0 ? Math.floor(wifeRothRisk / riskPerShare) : 0;
+                    wifeRothShares = (wifeRoth > 0 && riskPerShare > 0) ? Math.floor(wifeRothRisk / riskPerShare) : 0;
                     const wifeRothValue = wifeRothShares * price;
                     wifeRothWeight = wifeRoth > 0 ? (wifeRothValue / wifeRoth) * 100 : 0;
+                    wifeRothRiskLevel = level.percent;
                 } else {
                     // Position size calculation
                     const mainValue = (level.percent / 100) * accountSize;
-                    mainShares = Math.floor(mainValue / price);
+                    mainShares = price > 0 ? Math.floor(mainValue / price) : 0;
                     const mainActualValue = mainShares * price;
-                    mainWeight = (mainActualValue / accountSize) * 100;
+                    mainWeight = accountSize > 0 ? (mainActualValue / accountSize) * 100 : 0;
+                    mainRiskLevel = accountSize > 0 ? ((riskPerShare * mainShares) / accountSize) * 100 : 0;
 
                     const myRothValue = myRoth > 0 ? (level.percent / 100) * myRoth : 0;
-                    myRothShares = myRoth > 0 ? Math.floor(myRothValue / price) : 0;
+                    myRothShares = (myRoth > 0 && price > 0) ? Math.floor(myRothValue / price) : 0;
                     const myRothActualValue = myRothShares * price;
                     myRothWeight = myRoth > 0 ? (myRothActualValue / myRoth) * 100 : 0;
+                    myRothRiskLevel = myRoth > 0 ? ((riskPerShare * myRothShares) / myRoth) * 100 : 0;
 
                     const wifeRothValue = wifeRoth > 0 ? (level.percent / 100) * wifeRoth : 0;
-                    wifeRothShares = wifeRoth > 0 ? Math.floor(wifeRothValue / price) : 0;
+                    wifeRothShares = (wifeRoth > 0 && price > 0) ? Math.floor(wifeRothValue / price) : 0;
                     const wifeRothActualValue = wifeRothShares * price;
                     wifeRothWeight = wifeRoth > 0 ? (wifeRothActualValue / wifeRoth) * 100 : 0;
+                    wifeRothRiskLevel = wifeRoth > 0 ? ((riskPerShare * wifeRothShares) / wifeRoth) * 100 : 0;
                 }
 
                 // Alternating row colors
                 const rowStyle = index % 2 === 0 ? 'background: #f9f9f9;' : 'background: white;';
 
+                const renderShareCell = (sh, rk, acctLabel) => {
+                    if (sh > 0) {
+                        return `
+                            <td style="text-align: center; padding: 4px 6px;">
+                                <button type="button" class="btn-shares-click"
+                                    onclick="autoAddPositionFromSizing('${safeSymbolEscaped}', ${price}, ${stop}, ${sh}, ${rk.toFixed(4)}, '${acctLabel}')"
+                                    title="Click to auto-add ${safeSymbolEscaped}: ${sh.toLocaleString()} shares @ $${price.toFixed(2)}, stop $${stop.toFixed(2)}, risk ${rk.toFixed(3)}% (${acctLabel})">
+                                    <span>➕</span> <span>${sh.toLocaleString()}</span>
+                                </button>
+                            </td>
+                        `;
+                    }
+                    return `<td style="text-align: center; color: #9ca3af;">0</td>`;
+                };
+
                 html += `
                     <tr style="${rowStyle}">
                         <td><strong>${level.label}</strong></td>
-                        <td>${mainShares}</td>
+                        ${renderShareCell(mainShares, mainRiskLevel, 'Trading Account')}
                         <td>${mainWeight.toFixed(2)}%</td>
-                        <td>${myRothShares}</td>
+                        ${renderShareCell(myRothShares, myRothRiskLevel, 'My Roth')}
                         <td>${myRothWeight.toFixed(2)}%</td>
-                        <td>${wifeRothShares}</td>
+                        ${renderShareCell(wifeRothShares, wifeRothRiskLevel, 'Wife Roth')}
                         <td>${wifeRothWeight.toFixed(2)}%</td>
                     </tr>
                 `;
