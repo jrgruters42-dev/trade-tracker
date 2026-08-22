@@ -90,10 +90,11 @@
 
     function getStableRecordId(item, collectionKey) {
         if (!item || typeof item !== 'object') return null;
+        if (item._syncId) return String(item._syncId);
         if (collectionKey === 'stockProfiles') {
             const rawSlot = (item._slot !== undefined && item._slot !== null && item._slot !== '')
                 ? item._slot
-                : (item._syncId || item.id);
+                : item.id;
             if (rawSlot !== undefined && rawSlot !== null && rawSlot !== '') {
                 let slotStr = String(rawSlot).replace(/^profile-/, '');
                 if (slotStr === '0') slotStr = '1';
@@ -101,36 +102,30 @@
             }
         }
         if (collectionKey === 'openPositions') {
-            const raw = (item.id !== undefined && item.id !== null && item.id !== '') ? item.id : item._syncId;
-            if (raw !== undefined && raw !== null && raw !== '') {
-                return 'position-' + String(raw).replace(/^position-/, '');
+            if (item.id !== undefined && item.id !== null && item.id !== '') {
+                return 'position-' + String(item.id).replace(/^position-/, '');
             }
         }
         if (collectionKey === 'closedTrades') {
-            const raw = (item.id !== undefined && item.id !== null && item.id !== '') ? item.id : item._syncId;
-            if (raw !== undefined && raw !== null && raw !== '') {
-                return 'trade-' + String(raw).replace(/^trade-/, '');
+            if (item.id !== undefined && item.id !== null && item.id !== '') {
+                return 'trade-' + String(item.id).replace(/^trade-/, '');
             }
         }
         if (collectionKey === 'cashFlows') {
-            const raw = (item.id !== undefined && item.id !== null && item.id !== '') ? item.id : item._syncId;
-            if (raw !== undefined && raw !== null && raw !== '') {
-                return 'cash-flow-' + String(raw).replace(/^cash-flow-/, '');
+            if (item.id !== undefined && item.id !== null && item.id !== '') {
+                return 'cash-flow-' + String(item.id).replace(/^cash-flow-/, '');
             }
         }
         if (collectionKey === 'dailyEquity') {
-            const raw = item.date || item._syncId;
-            if (raw !== undefined && raw !== null && raw !== '') {
-                return 'equity-' + String(raw).replace(/^equity-/, '');
+            if (item.date !== undefined && item.date !== null && item.date !== '') {
+                return 'equity-' + String(item.date).replace(/^equity-/, '');
             }
         }
         if (collectionKey === 'dailyEquityEntries') {
-            const raw = item.date || item._syncId;
-            if (raw !== undefined && raw !== null && raw !== '') {
-                return 'journal-' + String(raw).replace(/^journal-/, '');
+            if (item.date !== undefined && item.date !== null && item.date !== '') {
+                return 'journal-' + String(item.date).replace(/^journal-/, '');
             }
         }
-        if (item._syncId) return String(item._syncId);
         if (item.id !== undefined && item.id !== null && item.id !== '') return String(item.id);
         if (item.date !== undefined && item.date !== null && item.date !== '') return String(item.date);
         if (item._slot !== undefined && item._slot !== null && item._slot !== '') return String(item._slot);

@@ -276,3 +276,52 @@ test('circuit breaker: correctly matching token authorizes its intended deletion
     assert.equal(result.safe, true);
 });
 
+test('circuit breaker: changing date on a journal entry preserves _syncId and allows save without deletion token', () => {
+    const checkpoint = mockValidCheckpoint();
+    const proposed = JSON.parse(JSON.stringify(checkpoint.data));
+    // User updates date from 2026-01-01 to 2026-01-02 on dailyEquityEntries
+    proposed.dailyEquityEntries[0].date = '2026-01-02';
+    proposed.dailyEquityEntries[0].fomo = 1.45;
+    proposed.dailyEquityEntries[0].accountValue = 252000;
+
+    const result = safety.validatePayloadSafety(proposed, checkpoint);
+    assert.equal(result.safe, true);
+});
+
+test('circuit breaker: changing date on dailyEquity curve preserves _syncId and allows save without deletion token', () => {
+    const checkpoint = mockValidCheckpoint();
+    const proposed = JSON.parse(JSON.stringify(checkpoint.data));
+    // User updates date on dailyEquity curve
+    proposed.dailyEquity[0].date = '2026-01-02';
+    proposed.dailyEquity[0].accountValue = 252000;
+
+    const result = safety.validatePayloadSafety(proposed, checkpoint);
+    assert.equal(result.safe, true);
+});
+
+test('circuit breaker: editing FOMO, balances, and journal date followed by closing a position succeeds', () => {
+    const checkpoint = mockValidCheckpoint();
+    const proposed = JSON.parse(JSON.stringify(checkpoint.data));
+
+    // Step 1: Update FOMO, account value, and date on journal entry
+    proposed.dailyEquityEntries[0].fomo = 2.1;
+    proposed.dailyEquityEntries[0].date = '2026-01-05';
+    proposed.dailyEquityEntries[0].accountValue = 255000;
+    proposed.accountSize = 255000;
+
+    // Step 2: Close position-1 (convert to closed trade and remove from open positions)
+    const closedPos = proposed.openPositions.shift();
+    proposed.closedTrades.push({
+        _syncId: 'trade-closed-1',
+        symbol: closedPos.symbol,
+        entryPrice: closedPos.entryPrice,
+        exitPrice: 160,
+        exitDate: '2026-01-05'
+    });
+
+    const token = safety.issueDeletionToken('openPositions', closedPos._syncId, closedPos.id);
+    const result = safety.validatePayloadSafety(proposed, checkpoint, { deletionToken: token });
+    assert.equal(result.safe, true);
+});
+
+

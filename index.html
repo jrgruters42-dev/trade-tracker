@@ -836,7 +836,7 @@
     <div class="container">
         <h1 style="margin-bottom: 10px; font-size: 1.8em; display: flex; align-items: center; gap: 10px;">
             <span>📊 Trade Tracker</span>
-            <span id="appVersionBadge" style="font-size: 0.45em; font-weight: 700; background: #e0e7ff; color: #3730a3; padding: 3px 9px; border-radius: 12px; border: 1px solid #c7d2fe; letter-spacing: 0.5px; vertical-align: middle;">v1.0.5</span>
+            <span id="appVersionBadge" style="font-size: 0.45em; font-weight: 700; background: #e0e7ff; color: #3730a3; padding: 3px 9px; border-radius: 12px; border: 1px solid #c7d2fe; letter-spacing: 0.5px; vertical-align: middle;">v1.0.6</span>
         </h1>
 
         <!-- Sync Status -->
@@ -873,7 +873,7 @@
                     <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px;">
                         <div class="form-group" style="margin-bottom: 0;">
                             <label style="font-size: 10px;" title="Current total equity in your main trading account. Update this daily after market close.">Trading Account ($)</label>
-                            <input type="number" id="accountSize" value="250000" style="padding: 4px; font-size: 12px;" onchange="saveToFirebase(); saveToFirebase(); updateAllDisplays();">
+                            <input type="number" id="accountSize" value="250000" style="padding: 4px; font-size: 12px;" onchange="saveToFirebase(); updateAllDisplays();">
                         </div>
                         <div class="form-group" style="margin-bottom: 0;">
                             <label style="font-size: 10px;" title="Current value of your personal Roth IRA. Tracked separately from trading account for YTD comparison.">My Roth ($)</label>
@@ -5614,18 +5614,23 @@
             const existingIndex = dailyEquity.findIndex(snap => snap.date === today);
 
             if (existingIndex !== -1) {
+                const prev = dailyEquity[existingIndex];
                 dailyEquity[existingIndex] = {
                     date: today,
                     accountValue: accountValue,
                     accountSize: accountSize,
-                    openPnL: totalOpenPnL
+                    openPnL: totalOpenPnL,
+                    _syncId: prev && prev._syncId ? prev._syncId : `equity-${today}`,
+                    _syncOrder: prev && Number.isFinite(prev._syncOrder) ? prev._syncOrder : existingIndex
                 };
             } else {
                 dailyEquity.push({
                     date: today,
                     accountValue: accountValue,
                     accountSize: accountSize,
-                    openPnL: totalOpenPnL
+                    openPnL: totalOpenPnL,
+                    _syncId: `equity-${today}`,
+                    _syncOrder: dailyEquity.length
                 });
             }
 
