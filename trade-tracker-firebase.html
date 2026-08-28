@@ -2538,7 +2538,12 @@
         // Update all prices
         async function updateAllPrices() {
             if (openPositions.length === 0) {
-                alert('No open positions to update');
+                await updateSPYPrice();
+                const lastUpdateEl = document.getElementById('lastUpdate');
+                if (lastUpdateEl) {
+                    const now = new Date().toLocaleTimeString();
+                    lastUpdateEl.textContent = `Last updated: ${now} (0 positions)`;
+                }
                 return;
             }
 

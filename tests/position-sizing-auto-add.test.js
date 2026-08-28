@@ -49,9 +49,17 @@ test('commitPositionFromSizing updates form fields, session storage, and persist
     assert.match(fnCode, /updateAllDisplays\(\)/);
 });
 
-test('header badge and service worker cache match v1.0.6', () => {
-    assert.match(html, /id="appVersionBadge"[^>]*>v1\.0\.6<\/span>/);
+test('header badge and service worker cache match v1.0.7', () => {
+    assert.match(html, /id="appVersionBadge"[^>]*>v1\.0\.7<\/span>/);
     const serviceWorker = fs.readFileSync(path.join(__dirname, '..', 'public', 'service-worker.js'), 'utf8');
-    assert.match(serviceWorker, /const CACHE_NAME = 'trade-tracker-v1\.0\.6';/);
+    assert.match(serviceWorker, /const CACHE_NAME = 'trade-tracker-v1\.0\.7';/);
+});
+
+test('updateAllPrices does not alert when openPositions is empty', () => {
+    const fnStart = html.indexOf('async function updateAllPrices()');
+    const fnEnd = html.indexOf('// Auto-refresh handler', fnStart);
+    const fnBody = html.slice(fnStart, fnEnd);
+    assert.doesNotMatch(fnBody, /alert\(['"]No open positions to update['"]\)/);
+    assert.match(fnBody, /if\s*\(\s*openPositions\.length\s*===\s*0\s*\)\s*\{/);
 });
 

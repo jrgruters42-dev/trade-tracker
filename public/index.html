@@ -836,7 +836,7 @@
     <div class="container">
         <h1 style="margin-bottom: 10px; font-size: 1.8em; display: flex; align-items: center; gap: 10px;">
             <span>📊 Trade Tracker</span>
-            <span id="appVersionBadge" style="font-size: 0.45em; font-weight: 700; background: #e0e7ff; color: #3730a3; padding: 3px 9px; border-radius: 12px; border: 1px solid #c7d2fe; letter-spacing: 0.5px; vertical-align: middle;">v1.0.6</span>
+            <span id="appVersionBadge" style="font-size: 0.45em; font-weight: 700; background: #e0e7ff; color: #3730a3; padding: 3px 9px; border-radius: 12px; border: 1px solid #c7d2fe; letter-spacing: 0.5px; vertical-align: middle;">v1.0.7</span>
         </h1>
 
         <!-- Sync Status -->
@@ -5898,7 +5898,12 @@
         // Update all prices
         async function updateAllPrices() {
             if (openPositions.length === 0) {
-                alert('No open positions to update');
+                await updateSPYPrice();
+                const lastUpdateEl = document.getElementById('lastUpdate');
+                if (lastUpdateEl) {
+                    const now = new Date().toLocaleTimeString();
+                    lastUpdateEl.textContent = `Last updated: ${now} (0 positions)`;
+                }
                 return;
             }
 
