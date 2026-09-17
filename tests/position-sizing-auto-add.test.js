@@ -49,10 +49,28 @@ test('commitPositionFromSizing updates form fields, session storage, and persist
     assert.match(fnCode, /updateAllDisplays\(\)/);
 });
 
-test('header badge and service worker cache match v1.0.7', () => {
-    assert.match(html, /id="appVersionBadge"[^>]*>v1\.0\.7<\/span>/);
+test('header badge and service worker cache match v1.0.8', () => {
+    assert.match(html, /id="appVersionBadge"[^>]*>v1\.0\.8<\/span>/);
     const serviceWorker = fs.readFileSync(path.join(__dirname, '..', 'public', 'service-worker.js'), 'utf8');
-    assert.match(serviceWorker, /const CACHE_NAME = 'trade-tracker-v1\.0\.7';/);
+    assert.match(serviceWorker, /const CACHE_NAME = 'trade-tracker-v1\.0\.8';/);
+});
+
+test('partial sales editing and deletion features are present and integrated', () => {
+    // Modals
+    assert.match(html, /id="editPartialSellModal"/);
+    assert.match(html, /id="editPartialSellForm"/);
+    assert.match(html, /id="editPartialDeleteBtn"/);
+    assert.match(html, /id="partialSellHistoryList"/);
+    assert.match(html, /id="editPositionPartialsList"/);
+    assert.match(html, /id="editClosedPartialsList"/);
+
+    // Functions
+    assert.match(html, /function openEditPartialSellModal\(/);
+    assert.match(html, /function deletePartialSell\(/);
+    assert.match(html, /function renderExistingPartialSells\(/);
+    assert.match(html, /function renderEditPositionPartials\(/);
+    assert.match(html, /function renderClosedTradePartials\(/);
+    assert.match(html, /function recalculateClosedTradeWithPartials\(/);
 });
 
 test('updateAllPrices does not alert when openPositions is empty', () => {

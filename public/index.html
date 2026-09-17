@@ -836,7 +836,7 @@
     <div class="container">
         <h1 style="margin-bottom: 10px; font-size: 1.8em; display: flex; align-items: center; gap: 10px;">
             <span>📊 Trade Tracker</span>
-            <span id="appVersionBadge" style="font-size: 0.45em; font-weight: 700; background: #e0e7ff; color: #3730a3; padding: 3px 9px; border-radius: 12px; border: 1px solid #c7d2fe; letter-spacing: 0.5px; vertical-align: middle;">v1.0.7</span>
+            <span id="appVersionBadge" style="font-size: 0.45em; font-weight: 700; background: #e0e7ff; color: #3730a3; padding: 3px 9px; border-radius: 12px; border: 1px solid #c7d2fe; letter-spacing: 0.5px; vertical-align: middle;">v1.0.8</span>
         </h1>
 
         <!-- Sync Status -->
@@ -2282,23 +2282,104 @@
     </div>
 
     <!-- Other Modals (partial sell, update stop, close position, edit) -->
-    <div id="partialSellModal" class="modal">
-        <div class="modal-content">
+    <div id="partialSellModal" class="modal" onclick="if(event.target===this)closeModal('partialSellModal')">
+        <div class="modal-content" style="max-width: 560px;">
             <div class="modal-header">
-                <h2>Partial Sell</h2>
+                <h2 id="partialSellModalTitle">Partial Sell</h2>
                 <span class="close" onclick="closeModal('partialSellModal')">&times;</span>
             </div>
+
+            <!-- Position context box -->
+            <div id="partialSellContext" style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px 14px; margin-bottom: 16px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                    <span id="partialSellSymbol" style="font-size: 1.15em; font-weight: 800; color: #1e40af;">—</span>
+                    <span style="font-size: 0.88em; color: #475569;">Current Price: <strong id="partialSellCurrentPrice">$0.00</strong></span>
+                </div>
+                <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; font-size: 0.85em; color: #475569;">
+                    <div>Entry: <strong id="partialSellEntryPrice">$0.00</strong></div>
+                    <div>Remaining: <strong id="partialSellRemainingShares" style="color: #0f172a;">0</strong> sh</div>
+                    <div>Current Stop: <strong id="partialSellInitialStop">$0.00</strong></div>
+                </div>
+            </div>
+
             <form id="partialSellForm">
                 <input type="hidden" id="partialSellId">
                 <div class="form-group">
-                    <label>Shares to Sell</label>
-                    <input type="number" id="partialShares" step="1" required>
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                        <label style="margin: 0;">Shares to Sell</label>
+                        <div style="display: flex; gap: 4px;">
+                            <button type="button" class="btn-secondary" style="padding: 1px 6px; font-size: 0.72em;" onclick="setPartialSharesPct(0.25)">25%</button>
+                            <button type="button" class="btn-secondary" style="padding: 1px 6px; font-size: 0.72em;" onclick="setPartialSharesPct(0.3333)">33%</button>
+                            <button type="button" class="btn-secondary" style="padding: 1px 6px; font-size: 0.72em;" onclick="setPartialSharesPct(0.5)">50%</button>
+                            <button type="button" class="btn-secondary" style="padding: 1px 6px; font-size: 0.72em;" onclick="setPartialSharesPct('max')">Max</button>
+                        </div>
+                    </div>
+                    <input type="number" id="partialShares" step="1" min="1" required>
                 </div>
                 <div class="form-group">
-                    <label>Sell Price</label>
-                    <input type="number" id="partialPrice" step="0.01" required>
+                    <label>Sell Price ($)</label>
+                    <input type="number" id="partialPrice" step="0.01" min="0.01" required>
                 </div>
-                <button type="submit">Execute Partial Sell</button>
+                <div class="form-group">
+                    <label>Date of Sale <span style="font-size:0.8em; color:#64748b; font-weight:normal;">(optional)</span></label>
+                    <input type="date" id="partialDate">
+                </div>
+                <button type="submit" class="btn-success" style="width: 100%;">Execute Partial Sell</button>
+            </form>
+
+            <!-- Recorded Partial Sales on this Position -->
+            <div id="partialSellRecordedSection" style="margin-top: 22px; padding-top: 16px; border-top: 1px solid #e2e8f0;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                    <h3 style="font-size: 0.95em; font-weight: 700; color: #1e293b; margin: 0;">Recorded Partial Sales</h3>
+                    <span id="partialSellHistoryCount" style="font-size: 0.8em; color: #64748b;"></span>
+                </div>
+                <div id="partialSellHistoryList"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Dedicated Edit Partial Sale Modal -->
+    <div id="editPartialSellModal" class="modal" onclick="if(event.target===this)closeModal('editPartialSellModal')" style="z-index: 1050;">
+        <div class="modal-content" style="max-width: 480px;">
+            <div class="modal-header">
+                <h2 id="editPartialModalHeading">✏️ Edit Partial Sale</h2>
+                <span class="close" onclick="closeModal('editPartialSellModal')">&times;</span>
+            </div>
+            <form id="editPartialSellForm">
+                <input type="hidden" id="editPartialTargetType">
+                <input type="hidden" id="editPartialPosId">
+                <input type="hidden" id="editPartialIndex">
+
+                <div id="editPartialContextBox" style="background:#f1f5f9; border:1px solid #cbd5e1; border-radius:6px; padding:10px 12px; margin-bottom:12px; font-size:0.85em;">
+                    <div style="display:flex; justify-content:space-between; margin-bottom:4px;">
+                        <span style="font-weight:700; color:#0f172a;" id="editPartialContextSymbol">—</span>
+                        <span style="color:#475569;">Entry: <strong id="editPartialContextEntry">$0.00</strong></span>
+                    </div>
+                    <div id="editPartialContextNote" style="color:#64748b; font-size:0.95em;"></div>
+                </div>
+
+                <div class="form-group">
+                    <label for="editPartialShares">Shares Sold</label>
+                    <input type="number" id="editPartialShares" step="1" min="1" required>
+                </div>
+                <div class="form-group">
+                    <label for="editPartialPrice">Sell Price ($)</label>
+                    <input type="number" id="editPartialPrice" step="0.01" min="0.01" required>
+                </div>
+                <div class="form-group">
+                    <label for="editPartialDate">Date of Sale</label>
+                    <input type="date" id="editPartialDate" required>
+                </div>
+
+                <div id="editPartialPnlPreview" style="margin-bottom:14px; padding:8px 12px; border-radius:6px; background:#f0fdf4; border:1px solid #bbf7d0; font-size:0.85em; font-weight:600; text-align:center;">
+                    —
+                </div>
+
+                <div style="display:flex; gap:8px;">
+                    <button type="submit" class="btn-success" style="flex:2;">💾 Save Changes</button>
+                    <button type="button" class="btn-danger" id="editPartialDeleteBtn" style="flex:1;">🗑️ Delete</button>
+                    <button type="button" class="btn-secondary" onclick="closeModal('editPartialSellModal')" style="flex:1;">Cancel</button>
+                </div>
             </form>
         </div>
     </div>
@@ -2391,6 +2472,16 @@
                         <input type="number" id="editAtr20" step="0.01" placeholder="e.g. 2.45">
                     </div>
                 </div>
+
+                <!-- Recorded Partial Sales Section inside Edit Position -->
+                <div id="editPositionPartialsSection" style="margin-top: 14px; padding-top: 12px; border-top: 1px solid #e2e8f0; margin-bottom: 14px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                        <label style="font-weight: 700; color: #1e293b; margin: 0;">Recorded Partial Sales</label>
+                        <button type="button" class="btn-success" style="padding: 2px 8px; font-size: 0.75em;" onclick="openPartialSellModalFromEdit()">+ Record Partial</button>
+                    </div>
+                    <div id="editPositionPartialsList"></div>
+                </div>
+
                 <button type="submit">Save Changes</button>
             </form>
         </div>
@@ -2446,6 +2537,16 @@
                         <input type="number" id="editClosedRMultiple" step="any" required>
                     </div>
                 </div>
+
+                <!-- Recorded Partial Sales Section inside Edit Closed Trade -->
+                <div id="editClosedPartialsSection" style="margin-top: 14px; padding-top: 12px; border-top: 1px solid #e2e8f0; margin-bottom: 12px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                        <label style="font-weight: 700; color: #1e293b; margin: 0;">Recorded Partial Sales</label>
+                        <button type="button" class="btn-success" style="padding: 2px 8px; font-size: 0.75em;" onclick="openAddClosedPartialModal()">+ Add Partial</button>
+                    </div>
+                    <div id="editClosedPartialsList"></div>
+                </div>
+
                 <div style="background: #f0f9ff; padding: 10px; border-radius: 6px; margin-bottom: 10px; font-size: 0.9em;">
                     <strong>💡 Enter Original Shares above then click:</strong>
                     <button type="button" onclick="recalcSingleClosedTrade()" class="btn-success" style="margin-left:8px; padding:4px 10px; font-size:0.9em;">⚡ Recalc R & P&L from prices</button>
@@ -5969,16 +6070,373 @@
             autoRefreshInterval = setInterval(updateAllPrices, 60000);
         }
 
+        // Partial Sale Helpers and Managers
+        function setPartialSharesPct(pct) {
+            const rawId = document.getElementById('partialSellId').value;
+            const pos = openPositions.find(p => p.id === parseInt(rawId) || String(p.id) === String(rawId));
+            if (!pos || pos.shares <= 1) return;
+
+            const input = document.getElementById('partialShares');
+            if (pct === 'max') {
+                input.value = Math.max(1, pos.shares - 1);
+            } else {
+                const calculated = Math.floor(pos.shares * pct);
+                input.value = Math.min(Math.max(1, calculated), Math.max(1, pos.shares - 1));
+            }
+        }
+
+        function renderExistingPartialSells(pos) {
+            const listEl = document.getElementById('partialSellHistoryList');
+            const countEl = document.getElementById('partialSellHistoryCount');
+            if (!listEl) return;
+
+            if (!pos.partialSells || pos.partialSells.length === 0) {
+                if (countEl) countEl.textContent = '0 recorded';
+                listEl.innerHTML = '<div style="color:#64748b; font-size:0.85em; padding:8px 0;">No partial sales recorded yet on this position.</div>';
+                return;
+            }
+
+            if (countEl) countEl.textContent = `${pos.partialSells.length} recorded`;
+            let html = '<div style="max-height: 180px; overflow-y: auto; font-size: 0.85em;">';
+            pos.partialSells.forEach((sell, idx) => {
+                const dateStr = sell.date ? (sell.date.includes('T') ? sell.date.split('T')[0] : sell.date) : '—';
+                const pnl = (Number(sell.price) - Number(pos.entryPrice)) * Number(sell.shares);
+                const pnlSign = pnl >= 0 ? '+' : '';
+                html += `
+                    <div style="display: flex; justify-content: space-between; align-items: center; padding: 6px 8px; border-bottom: 1px solid #f1f5f9; background: ${idx % 2 === 0 ? '#ffffff' : '#f8fafc'};">
+                        <div style="line-height: 1.3;">
+                            <strong>${sell.shares} sh</strong> @ $${Number(sell.price).toFixed(2)}
+                            <span style="color:#64748b; font-size:0.9em; margin-left:4px;">(${dateStr})</span>
+                            <div style="font-size: 0.9em; color: ${pnl >= 0 ? '#16a34a' : '#dc2626'}; font-weight: 600;">
+                                ${pnlSign}$${Math.round(pnl).toLocaleString()} realized
+                            </div>
+                        </div>
+                        <div style="display: flex; gap: 4px;">
+                            <button type="button" class="btn-secondary" style="padding: 2px 7px; font-size: 0.78em;" onclick="openEditPartialSellModal({ type: 'open', posId: ${pos.id}, index: ${idx} })">✏️ Edit</button>
+                            <button type="button" class="btn-danger" style="padding: 2px 7px; font-size: 0.78em;" onclick="deletePartialSell('open', ${pos.id}, ${idx})">🗑️</button>
+                        </div>
+                    </div>`;
+            });
+            html += '</div>';
+            listEl.innerHTML = html;
+        }
+
+        function renderEditPositionPartials(pos) {
+            const listEl = document.getElementById('editPositionPartialsList');
+            if (!listEl) return;
+
+            if (!pos.partialSells || pos.partialSells.length === 0) {
+                listEl.innerHTML = '<div style="color:#64748b; font-size:0.85em; padding:4px 0;">No partial sales recorded yet.</div>';
+                return;
+            }
+
+            let html = '<div style="max-height: 140px; overflow-y: auto; font-size: 0.85em;">';
+            pos.partialSells.forEach((sell, idx) => {
+                const dateStr = sell.date ? (sell.date.includes('T') ? sell.date.split('T')[0] : sell.date) : '—';
+                const pnl = (Number(sell.price) - Number(pos.entryPrice)) * Number(sell.shares);
+                html += `
+                    <div style="display: flex; justify-content: space-between; align-items: center; padding: 4px 6px; border-bottom: 1px solid #f1f5f9;">
+                        <div>
+                            <strong>${sell.shares} sh</strong> @ $${Number(sell.price).toFixed(2)}
+                            <span style="color:#64748b; font-size:0.9em;">(${dateStr})</span>
+                            <span style="color:${pnl >= 0 ? '#16a34a' : '#dc2626'}; font-weight:600; margin-left:4px;">
+                                ${pnl >= 0 ? '+' : ''}$${Math.round(pnl).toLocaleString()}
+                            </span>
+                        </div>
+                        <div style="display: flex; gap: 4px;">
+                            <button type="button" class="btn-secondary" style="padding: 2px 6px; font-size: 0.75em;" onclick="openEditPartialSellModal({ type: 'open', posId: ${pos.id}, index: ${idx} })">✏️ Edit</button>
+                            <button type="button" class="btn-danger" style="padding: 2px 6px; font-size: 0.75em;" onclick="deletePartialSell('open', ${pos.id}, ${idx})">🗑️</button>
+                        </div>
+                    </div>`;
+            });
+            html += '</div>';
+            listEl.innerHTML = html;
+        }
+
+        function openPartialSellModalFromEdit() {
+            const rawId = document.getElementById('editPositionId').value;
+            closeModal('editPositionModal');
+            openPartialSellModal(rawId);
+        }
+
+        function renderClosedTradePartials(trade, index) {
+            const listEl = document.getElementById('editClosedPartialsList');
+            if (!listEl) return;
+
+            if (!trade.partialSells || trade.partialSells.length === 0) {
+                listEl.innerHTML = '<div style="color:#64748b; font-size:0.85em; padding:4px 0;">No partial sales recorded for this trade.</div>';
+                return;
+            }
+
+            let html = '<div style="max-height: 140px; overflow-y: auto; font-size: 0.85em;">';
+            trade.partialSells.forEach((sell, idx) => {
+                const dateStr = sell.date ? (sell.date.includes('T') ? sell.date.split('T')[0] : sell.date) : '—';
+                const pnl = (Number(sell.price) - Number(trade.entryPrice)) * Number(sell.shares);
+                html += `
+                    <div style="display: flex; justify-content: space-between; align-items: center; padding: 4px 6px; border-bottom: 1px solid #f1f5f9;">
+                        <div>
+                            <strong>${sell.shares} sh</strong> @ $${Number(sell.price).toFixed(2)}
+                            <span style="color:#64748b; font-size:0.9em;">(${dateStr})</span>
+                            <span style="color:${pnl >= 0 ? '#16a34a' : '#dc2626'}; font-weight:600; margin-left:4px;">
+                                ${pnl >= 0 ? '+' : ''}$${Math.round(pnl).toLocaleString()}
+                            </span>
+                        </div>
+                        <div style="display: flex; gap: 4px;">
+                            <button type="button" class="btn-secondary" style="padding: 2px 6px; font-size: 0.75em;" onclick="openEditPartialSellModal({ type: 'closed', posId: ${index}, index: ${idx} })">✏️ Edit</button>
+                            <button type="button" class="btn-danger" style="padding: 2px 6px; font-size: 0.75em;" onclick="deletePartialSell('closed', ${index}, ${idx})">🗑️</button>
+                        </div>
+                    </div>`;
+            });
+            html += '</div>';
+            listEl.innerHTML = html;
+        }
+
+        function openAddClosedPartialModal() {
+            const index = parseInt(document.getElementById('editClosedTradeIndex').value);
+            openEditPartialSellModal({ type: 'closed', posId: index, index: -1 });
+        }
+
+        function updateEditPartialPnlPreview(entryPrice) {
+            const shares = parseFloat(document.getElementById('editPartialShares').value) || 0;
+            const price = parseFloat(document.getElementById('editPartialPrice').value) || 0;
+            const previewEl = document.getElementById('editPartialPnlPreview');
+            if (!previewEl) return;
+
+            if (shares <= 0 || price <= 0 || !entryPrice) {
+                previewEl.textContent = 'Enter shares and price to preview realized gain/loss.';
+                previewEl.style.color = '#64748b';
+                previewEl.style.background = '#f8fafc';
+                previewEl.style.borderColor = '#e2e8f0';
+                return;
+            }
+
+            const pnl = (price - entryPrice) * shares;
+            const pct = ((price - entryPrice) / entryPrice) * 100;
+            const isGain = pnl >= 0;
+            previewEl.textContent = `Realized: ${isGain ? '+' : ''}$${Math.round(pnl).toLocaleString()} (${isGain ? '+' : ''}${pct.toFixed(2)}%)`;
+            previewEl.style.color = isGain ? '#15803d' : '#b91c1c';
+            previewEl.style.background = isGain ? '#f0fdf4' : '#fef2f2';
+            previewEl.style.borderColor = isGain ? '#bbf7d0' : '#fecaca';
+        }
+
+        function openEditPartialSellModal(target) {
+            const type = target.type || 'open';
+            const posId = target.posId;
+            const idx = target.index;
+
+            document.getElementById('editPartialTargetType').value = type;
+            document.getElementById('editPartialPosId').value = posId;
+            document.getElementById('editPartialIndex').value = idx;
+
+            const deleteBtn = document.getElementById('editPartialDeleteBtn');
+
+            if (type === 'open') {
+                const pos = openPositions.find(p => p.id === posId || String(p.id) === String(posId));
+                if (!pos) {
+                    alert('Position not found');
+                    return;
+                }
+                const sell = pos.partialSells && pos.partialSells[idx];
+                if (!sell) {
+                    alert('Partial sale record not found');
+                    return;
+                }
+
+                document.getElementById('editPartialModalHeading').textContent = `✏️ Edit Partial Sale — ${pos.symbol}`;
+                document.getElementById('editPartialContextSymbol').textContent = `${pos.symbol}`;
+                document.getElementById('editPartialContextEntry').textContent = `$${Number(pos.entryPrice).toFixed(2)}`;
+                const maxAvail = pos.shares + sell.shares;
+                document.getElementById('editPartialContextNote').textContent = `Currently ${pos.shares} remaining shares (max available for this partial: ${maxAvail - 1})`;
+
+                const sharesInput = document.getElementById('editPartialShares');
+                sharesInput.value = sell.shares;
+                sharesInput.max = maxAvail - 1;
+                document.getElementById('editPartialPrice').value = Number(sell.price).toFixed(2);
+                document.getElementById('editPartialDate').value = sell.date ? (sell.date.includes('T') ? sell.date.split('T')[0] : sell.date) : getTodayLocal();
+
+                deleteBtn.style.display = 'inline-block';
+                deleteBtn.onclick = function() {
+                    deletePartialSell('open', pos.id, idx);
+                    closeModal('editPartialSellModal');
+                };
+
+                updateEditPartialPnlPreview(pos.entryPrice);
+            } else {
+                const trade = closedTrades[posId];
+                if (!trade) {
+                    alert('Closed trade not found');
+                    return;
+                }
+
+                document.getElementById('editPartialContextSymbol').textContent = `${trade.symbol} (Closed)`;
+                document.getElementById('editPartialContextEntry').textContent = `$${Number(trade.entryPrice).toFixed(2)}`;
+
+                if (idx === -1) {
+                    // Adding new partial to closed trade
+                    document.getElementById('editPartialModalHeading').textContent = `➕ Add Partial Sale — ${trade.symbol}`;
+                    document.getElementById('editPartialContextNote').textContent = `Entry: $${Number(trade.entryPrice).toFixed(2)} | Exit: $${Number(trade.exitPrice).toFixed(2)}`;
+                    document.getElementById('editPartialShares').value = '';
+                    document.getElementById('editPartialShares').removeAttribute('max');
+                    document.getElementById('editPartialPrice').value = Number(trade.exitPrice).toFixed(2);
+                    document.getElementById('editPartialDate').value = trade.exitDate || getTodayLocal();
+                    deleteBtn.style.display = 'none';
+                } else {
+                    const sell = trade.partialSells && trade.partialSells[idx];
+                    if (!sell) {
+                        alert('Partial sale record not found');
+                        return;
+                    }
+                    document.getElementById('editPartialModalHeading').textContent = `✏️ Edit Partial Sale — ${trade.symbol}`;
+                    document.getElementById('editPartialContextNote').textContent = `Entry: $${Number(trade.entryPrice).toFixed(2)} | Exit: $${Number(trade.exitPrice).toFixed(2)}`;
+                    document.getElementById('editPartialShares').value = sell.shares;
+                    document.getElementById('editPartialShares').removeAttribute('max');
+                    document.getElementById('editPartialPrice').value = Number(sell.price).toFixed(2);
+                    document.getElementById('editPartialDate').value = sell.date ? (sell.date.includes('T') ? sell.date.split('T')[0] : sell.date) : (trade.exitDate || getTodayLocal());
+                    deleteBtn.style.display = 'inline-block';
+                    deleteBtn.onclick = function() {
+                        deletePartialSell('closed', posId, idx);
+                        closeModal('editPartialSellModal');
+                    };
+                }
+
+                updateEditPartialPnlPreview(trade.entryPrice);
+            }
+
+            document.getElementById('editPartialSellModal').style.display = 'block';
+        }
+
+        function recalculateClosedTradeWithPartials(trade) {
+            const entryPrice = trade.entryPrice;
+            const exitPrice = trade.exitPrice;
+            const initialStop = trade.initialStop || (entryPrice * 0.97);
+
+            let totalShares = trade.initialShares;
+            const partialSharesSum = (trade.partialSells || []).reduce((acc, s) => acc + (parseInt(s.shares) || 0), 0);
+
+            if (!totalShares || totalShares <= partialSharesSum) {
+                totalShares = partialSharesSum > 0 ? partialSharesSum * 2 : 100;
+                trade.initialShares = totalShares;
+            }
+
+            const remainingShares = Math.max(0, totalShares - partialSharesSum);
+            let totalPnLDollars = (exitPrice - entryPrice) * remainingShares;
+
+            if (trade.partialSells && trade.partialSells.length > 0) {
+                trade.partialSells.forEach(sell => {
+                    totalPnLDollars += (sell.price - entryPrice) * sell.shares;
+                });
+            }
+
+            const originalCost = entryPrice * totalShares;
+            const initialRiskDollars = (entryPrice - initialStop) * totalShares;
+
+            if (initialRiskDollars > 0) {
+                trade.rMultiple = totalPnLDollars / initialRiskDollars;
+            }
+            if (originalCost > 0) {
+                trade.pnlPercent = (totalPnLDollars / originalCost) * 100;
+            }
+            if (trade.accountWeight && trade.accountWeight > 0) {
+                trade.portfolioPnlPercent = (trade.pnlPercent * trade.accountWeight) / 100;
+            }
+        }
+
+        function deletePartialSell(targetType, posId, index) {
+            if (targetType === 'open') {
+                const pos = openPositions.find(p => p.id === posId || String(p.id) === String(posId));
+                if (!pos || !pos.partialSells || !pos.partialSells[index]) {
+                    alert('Partial sale record not found.');
+                    return;
+                }
+
+                const sell = pos.partialSells[index];
+                if (!confirm(`Are you sure you want to delete this partial sale (${sell.shares} shares @ $${sell.price})? This will restore ${sell.shares} shares back to your open position.`)) {
+                    return;
+                }
+
+                // Restore shares to open position
+                pos.shares += sell.shares;
+                pos.partialSells.splice(index, 1);
+                if (pos.partialSells.length === 0) {
+                    delete pos.partialSells;
+                }
+
+                const totalPartials = (pos.partialSells || []).reduce((acc, s) => acc + (parseInt(s.shares) || 0), 0);
+                pos.initialShares = pos.shares + totalPartials;
+
+                saveToFirebase();
+                saveDailySnapshot();
+                updateAllDisplays();
+
+                // Refresh modal views if open
+                if (document.getElementById('partialSellModal').style.display === 'block') {
+                    openPartialSellModal(pos.id);
+                }
+                if (document.getElementById('editPositionModal').style.display === 'block') {
+                    openEditPositionModal(pos.id);
+                }
+            } else {
+                const tradeIndex = parseInt(posId);
+                const trade = closedTrades[tradeIndex];
+                if (!trade || !trade.partialSells || !trade.partialSells[index]) {
+                    alert('Partial sale record not found.');
+                    return;
+                }
+
+                const sell = trade.partialSells[index];
+                if (!confirm(`Are you sure you want to delete this partial sale (${sell.shares} shares @ $${sell.price})?`)) {
+                    return;
+                }
+
+                trade.partialSells.splice(index, 1);
+                if (trade.partialSells.length === 0) {
+                    delete trade.partialSells;
+                }
+
+                recalculateClosedTradeWithPartials(trade);
+                saveToFirebase();
+                updateAllDisplays();
+
+                if (document.getElementById('editClosedTradeModal').style.display === 'block') {
+                    openEditClosedTradeModal(tradeIndex);
+                }
+            }
+        }
+
         // Modal functions
         function openPartialSellModal(id) {
-            document.getElementById('partialSellId').value = id;
+            const rawId = id;
+            const pos = openPositions.find(p => p.id === parseInt(rawId) || String(p.id) === String(rawId));
+            if (!pos) {
+                alert('Position not found');
+                return;
+            }
+
+            document.getElementById('partialSellId').value = pos.id;
+            const modalTitle = document.getElementById('partialSellModalTitle');
+            if (modalTitle) modalTitle.textContent = `Partial Sell — ${pos.symbol}`;
+            document.getElementById('partialSellSymbol').textContent = `${pos.symbol}`;
+            document.getElementById('partialSellCurrentPrice').textContent = `$${Number(pos.currentPrice || 0).toFixed(2)}`;
+            document.getElementById('partialSellEntryPrice').textContent = `$${Number(pos.entryPrice || 0).toFixed(2)}`;
+            document.getElementById('partialSellRemainingShares').textContent = pos.shares;
+            document.getElementById('partialSellInitialStop').textContent = `$${Number(pos.currentStop || 0).toFixed(2)}`;
+
+            const sharesInput = document.getElementById('partialShares');
+            sharesInput.value = '';
+            sharesInput.max = Math.max(1, pos.shares - 1);
+            document.getElementById('partialPrice').value = Number(pos.currentPrice || 0).toFixed(2);
+            document.getElementById('partialDate').value = getTodayLocal();
+
+            renderExistingPartialSells(pos);
             document.getElementById('partialSellModal').style.display = 'block';
         }
 
         function openUpdateStopModal(id) {
             document.getElementById('updateStopId').value = id;
-            const pos = openPositions.find(p => p.id === id);
-            document.getElementById('newStopPrice').value = pos.currentStop;
+            const pos = openPositions.find(p => p.id === id || String(p.id) === String(id));
+            if (pos) {
+                document.getElementById('newStopPrice').value = pos.currentStop;
+            }
             document.getElementById('updateStopModal').style.display = 'block';
         }
 
@@ -5986,13 +6444,13 @@
             document.getElementById('closePositionId').value = id;
             document.getElementById('exitDate').value = getTodayLocal();
             // Pre-populate notes from saved position notes
-            const pos = openPositions.find(p => p.id === id);
+            const pos = openPositions.find(p => p.id === id || String(p.id) === String(id));
             document.getElementById('tradeNotes').value = (pos && pos.notes) ? pos.notes : '';
             document.getElementById('closePositionModal').style.display = 'block';
         }
 
         function openEditPositionModal(id) {
-            const pos = openPositions.find(p => p.id === id);
+            const pos = openPositions.find(p => p.id === id || String(p.id) === String(id));
             if (!pos) return;
 
             document.getElementById('editPositionId').value = id;
@@ -6005,6 +6463,7 @@
             document.getElementById('editInitialWeight').value = pos.initialWeight;
             document.getElementById('editSma50').value = pos.sma50 ? Number(pos.sma50).toFixed(2) : '';
             document.getElementById('editAtr20').value = pos.atr20 ? Number(pos.atr20).toFixed(2) : '';
+            renderEditPositionPartials(pos);
             document.getElementById('editPositionModal').style.display = 'block';
         }
 
@@ -6026,6 +6485,7 @@
             document.getElementById('editClosedNotes').value = trade.notes || '';
             document.getElementById('recalcPreview').textContent = '';
             document.getElementById('recalcPreview').style.color = '';
+            renderClosedTradePartials(trade, index);
             document.getElementById('editClosedTradeModal').style.display = 'block';
         }
 
@@ -6582,11 +7042,15 @@
             const id = parseInt(rawId);
             const shares = parseInt(document.getElementById('partialShares').value);
             const price = parseFloat(document.getElementById('partialPrice').value);
+            const dateVal = document.getElementById('partialDate').value || getTodayLocal();
 
             const pos = openPositions.find(p => p.id === id || String(p.id) === String(rawId));
             if (pos && shares < pos.shares) {
                 if (!pos.partialSells) pos.partialSells = [];
-                pos.partialSells.push({ shares, price, date: new Date().toISOString() });
+                pos.partialSells.push({ shares, price, date: dateVal });
+                if (!pos.initialShares) {
+                    pos.initialShares = pos.shares;
+                }
                 pos.shares -= shares;
 
                 saveToFirebase();
@@ -6597,8 +7061,113 @@
             } else if (!pos) {
                 alert('Position not found');
             } else {
-                alert('Invalid partial sell amount');
+                alert(`Invalid partial sell amount. Cannot sell ${shares} shares with only ${pos.shares} remaining. To exit all remaining shares, use Close.`);
             }
+        });
+
+        // Edit partial sell form submit
+        document.getElementById('editPartialSellForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+
+            const type = document.getElementById('editPartialTargetType').value;
+            const rawId = document.getElementById('editPartialPosId').value;
+            const idx = parseInt(document.getElementById('editPartialIndex').value);
+            const newShares = parseInt(document.getElementById('editPartialShares').value);
+            const newPrice = parseFloat(document.getElementById('editPartialPrice').value);
+            const newDate = document.getElementById('editPartialDate').value || getTodayLocal();
+
+            if (isNaN(newShares) || newShares <= 0) {
+                alert('Please enter a valid share quantity greater than 0.');
+                return;
+            }
+            if (isNaN(newPrice) || newPrice <= 0) {
+                alert('Please enter a valid price greater than 0.');
+                return;
+            }
+
+            if (type === 'open') {
+                const pos = openPositions.find(p => p.id === parseInt(rawId) || String(p.id) === String(rawId));
+                if (!pos || !pos.partialSells || !pos.partialSells[idx]) {
+                    alert('Position or partial sale record not found.');
+                    return;
+                }
+
+                const oldSell = pos.partialSells[idx];
+                const maxAvailable = pos.shares + oldSell.shares;
+
+                if (newShares >= maxAvailable) {
+                    alert(`Cannot sell ${newShares} shares. There are only ${maxAvailable} total shares on this position. To exit all remaining shares, close the position.`);
+                    return;
+                }
+
+                // Adjust position shares
+                pos.shares = maxAvailable - newShares;
+                pos.partialSells[idx] = {
+                    shares: newShares,
+                    price: newPrice,
+                    date: newDate
+                };
+
+                // Keep initialShares consistent
+                const totalPartials = pos.partialSells.reduce((acc, s) => acc + (parseInt(s.shares) || 0), 0);
+                pos.initialShares = pos.shares + totalPartials;
+
+                saveToFirebase();
+                saveDailySnapshot();
+                updateAllDisplays();
+                closeModal('editPartialSellModal');
+
+                // Refresh any open modal lists
+                renderExistingPartialSells(pos);
+                renderEditPositionPartials(pos);
+                if (document.getElementById('editPositionModal').style.display === 'block') {
+                    openEditPositionModal(pos.id);
+                }
+            } else {
+                const tradeIndex = parseInt(rawId);
+                const trade = closedTrades[tradeIndex];
+                if (!trade) {
+                    alert('Closed trade not found.');
+                    return;
+                }
+
+                if (!trade.partialSells) trade.partialSells = [];
+
+                if (idx === -1) {
+                    // Adding new partial to closed trade
+                    trade.partialSells.push({
+                        shares: newShares,
+                        price: newPrice,
+                        date: newDate
+                    });
+                } else {
+                    trade.partialSells[idx] = {
+                        shares: newShares,
+                        price: newPrice,
+                        date: newDate
+                    };
+                }
+
+                recalculateClosedTradeWithPartials(trade);
+                saveToFirebase();
+                updateAllDisplays();
+                closeModal('editPartialSellModal');
+
+                // Refresh closed trade modal if open
+                if (document.getElementById('editClosedTradeModal').style.display === 'block') {
+                    openEditClosedTradeModal(tradeIndex);
+                }
+            }
+        });
+
+        // Edit partial sell inputs live preview listeners
+        document.getElementById('editPartialShares').addEventListener('input', function() {
+            const entryText = document.getElementById('editPartialContextEntry').textContent.replace('$', '');
+            updateEditPartialPnlPreview(parseFloat(entryText));
+        });
+        document.getElementById('editPartialPrice').addEventListener('input', function() {
+            const entryText = document.getElementById('editPartialContextEntry').textContent.replace('$', '');
+            updateEditPartialPnlPreview(parseFloat(entryText));
         });
 
         // Update stop
@@ -7241,7 +7810,7 @@
 
             openPositions.forEach(pos => {
                 if (pos.partialSells && pos.partialSells.length > 0) {
-                    pos.partialSells.forEach(sell => {
+                    pos.partialSells.forEach((sell, idx) => {
                         totalPartialSales++;
                         const profit = (sell.price - pos.entryPrice) * sell.shares;
                         totalPartialsLocked += profit;
@@ -7251,25 +7820,57 @@
                         const pctDiff = (currentPriceDiff / sell.price) * 100;
 
                         harvestList.push({
+                            type: 'open',
+                            posId: pos.id,
+                            index: idx,
                             date: sell.date || 'Unknown',
                             symbol: pos.symbol,
                             shares: sell.shares,
                             price: sell.price,
                             locked: profit,
                             currentPrice: pos.currentPrice,
-                            pctDiff: pctDiff
+                            pctDiff: pctDiff,
+                            status: 'Open'
                         });
                     });
                 }
             });
+
+            // Also check closedTrades partials if any
+            if (typeof closedTrades !== 'undefined' && Array.isArray(closedTrades)) {
+                closedTrades.forEach((trade, tradeIdx) => {
+                    if (trade.partialSells && trade.partialSells.length > 0) {
+                        trade.partialSells.forEach((sell, idx) => {
+                            totalPartialSales++;
+                            const profit = (sell.price - trade.entryPrice) * sell.shares;
+                            totalPartialsLocked += profit;
+                            const currentPriceDiff = trade.exitPrice - sell.price;
+                            const pctDiff = (currentPriceDiff / sell.price) * 100;
+
+                            harvestList.push({
+                                type: 'closed',
+                                posId: tradeIdx,
+                                index: idx,
+                                date: sell.date || trade.exitDate || 'Unknown',
+                                symbol: trade.symbol,
+                                shares: sell.shares,
+                                price: sell.price,
+                                locked: profit,
+                                currentPrice: trade.exitPrice,
+                                pctDiff: pctDiff,
+                                status: 'Closed'
+                            });
+                        });
+                    }
+                });
+            }
 
             // Sort by date (newest first)
             harvestList.sort((a, b) => b.date.localeCompare(a.date));
 
             // Display stats
             if (totalPartialSales > 0) {
-                const avgLocked = totalPartialsLocked / totalPartialSales;
-                statsEl.innerHTML = `<strong>This Period:</strong> ${totalPartialSales} partial sales • $${totalPartialsLocked.toLocaleString()} realized from partials`;
+                statsEl.innerHTML = `<strong>This Period:</strong> ${totalPartialSales} partial sales • $${Math.round(totalPartialsLocked).toLocaleString()} realized from partials`;
             } else {
                 statsEl.innerHTML = `<em>No partial sales recorded yet.</em>`;
             }
@@ -7277,11 +7878,16 @@
             // Display list
             if (harvestList.length > 0) {
                 let html = '<div style="font-size: 0.85em;">';
-                harvestList.slice(0, 10).forEach(item => {
+                harvestList.slice(0, 15).forEach(item => {
                     const emoji = item.pctDiff > 0 ? '✅' : item.pctDiff < -5 ? '🎯' : '😐';
-                    html += `<div style="padding: 6px; border-bottom: 1px solid #e5e7eb;">`;
-                    html += `<strong>${item.date}:</strong> ${item.symbol} sold ${item.shares} @ $${item.price.toFixed(2)} → Locked $${item.locked.toLocaleString()} ${emoji}<br>`;
-                    html += `<span style="font-size: 0.9em; opacity: 0.8;">Current price: $${item.currentPrice.toFixed(2)} (${item.pctDiff >= 0 ? '+' : ''}${item.pctDiff.toFixed(1)}%)</span>`;
+                    const dateDisplay = item.date.includes('T') ? item.date.split('T')[0] : item.date;
+                    html += `<div style="padding: 8px 6px; border-bottom: 1px solid #e5e7eb; display: flex; justify-content: space-between; align-items: center; gap: 8px;">`;
+                    html += `<div><strong>${dateDisplay}:</strong> ${item.symbol} sold ${item.shares} @ $${Number(item.price).toFixed(2)} → Locked $${Math.round(item.locked).toLocaleString()} ${emoji}<br>`;
+                    html += `<span style="font-size: 0.9em; opacity: 0.8;">${item.status === 'Open' ? 'Current price' : 'Final exit'}: $${Number(item.currentPrice).toFixed(2)} (${item.pctDiff >= 0 ? '+' : ''}${item.pctDiff.toFixed(1)}%)</span></div>`;
+                    html += `<div style="display: flex; gap: 4px; white-space: nowrap;">`;
+                    html += `<button type="button" class="btn-secondary" style="padding: 2px 7px; font-size: 0.8em;" onclick="openEditPartialSellModal({ type: '${item.type}', posId: ${item.posId}, index: ${item.index} })">✏️ Edit</button>`;
+                    html += `<button type="button" class="btn-danger" style="padding: 2px 7px; font-size: 0.8em;" onclick="deletePartialSell('${item.type}', ${item.posId}, ${item.index})">🗑️</button>`;
+                    html += `</div>`;
                     html += `</div>`;
                 });
                 html += '</div>';
