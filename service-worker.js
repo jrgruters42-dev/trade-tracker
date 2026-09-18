@@ -1,4 +1,4 @@
-const CACHE_NAME = 'trade-tracker-v1.0.8';
+const CACHE_NAME = 'trade-tracker-v1.0.9';
 const urlsToCache = [
   './',
   './index.html',
@@ -8,10 +8,10 @@ const urlsToCache = [
 
 // Install service worker and cache files
 self.addEventListener('install', event => {
+  self.skipWaiting();
   event.waitUntil(
     caches.open(CACHE_NAME)
       .then(cache => cache.addAll(urlsToCache))
-      .then(() => self.skipWaiting())
   );
 });
 

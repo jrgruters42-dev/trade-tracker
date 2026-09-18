@@ -832,11 +832,16 @@
     </style>
 </head>
 <body>
+    <div id="pwaUpdateBanner" style="display:none; position:fixed; top:12px; right:12px; z-index:99999; background:#1e293b; color:#ffffff; padding:10px 16px; border-radius:8px; box-shadow:0 4px 16px rgba(0,0,0,0.3); font-size:13px; font-weight:600; align-items:center; gap:12px; border:1px solid #334155;">
+        <span>⚡ App update available (v1.0.9)!</span>
+        <button type="button" onclick="forceAppUpdate()" style="background:#2563eb; color:#ffffff; border:none; padding:5px 12px; border-radius:6px; cursor:pointer; font-size:12px; font-weight:700;">Update Now</button>
+        <button type="button" onclick="document.getElementById('pwaUpdateBanner').style.display='none'" style="background:transparent; color:#94a3b8; border:none; cursor:pointer; font-size:16px; line-height:1; padding:0 4px;" title="Dismiss">&times;</button>
+    </div>
     <div id="mainApp" style="display:none;">
     <div class="container">
         <h1 style="margin-bottom: 10px; font-size: 1.8em; display: flex; align-items: center; gap: 10px;">
             <span>📊 Trade Tracker</span>
-            <span id="appVersionBadge" style="font-size: 0.45em; font-weight: 700; background: #e0e7ff; color: #3730a3; padding: 3px 9px; border-radius: 12px; border: 1px solid #c7d2fe; letter-spacing: 0.5px; vertical-align: middle;">v1.0.8</span>
+            <span id="appVersionBadge" onclick="forceAppUpdate()" title="Click to reload latest version and clear cache" style="font-size: 0.45em; font-weight: 700; background: #e0e7ff; color: #3730a3; padding: 3px 9px; border-radius: 12px; border: 1px solid #c7d2fe; letter-spacing: 0.5px; vertical-align: middle; cursor: pointer;">v1.0.9</span>
         </h1>
 
         <!-- Sync Status -->
@@ -10624,7 +10629,7 @@
             const expColor = expectancy > 0 ? '#1e40af' : '#dc2626';
 
             // Projection table at different risk levels
-            const riskLevels = [0.125, 0.25, 0.5, 0.75, 1.0];
+            const riskLevels = [0.125, 0.25, 0.33, 0.5, 0.75, 1.0];
 
             results.innerHTML = `
                 <!-- Expectancy breakdown -->
@@ -11420,6 +11425,7 @@
                 { label: 'Risking 1% of account',     percent: 1.0,   isRisk: true },
                 { label: 'Risking 0.75% of account',  percent: 0.75,  isRisk: true },
                 { label: 'Risking 0.5% of account',   percent: 0.5,   isRisk: true },
+                { label: 'Risking 0.33% of account',  percent: 0.33,  isRisk: true },
                 { label: 'Risking 0.25% of account',  percent: 0.25,  isRisk: true },
                 { label: 'Risking 0.125% of account', percent: 0.125, isRisk: true },
                 { label: '25% Position Size',         percent: 25,    isRisk: false },
@@ -11592,13 +11598,55 @@
         };
     </script>
 
-    <!-- PWA Service Worker Registration -->
+    <!-- PWA Service Worker Registration & Cache Management -->
     <script>
+        window.forceAppUpdate = async function() {
+            try {
+                if ('serviceWorker' in navigator) {
+                    const registrations = await navigator.serviceWorker.getRegistrations();
+                    for (const reg of registrations) {
+                        await reg.unregister();
+                    }
+                }
+                if ('caches' in window) {
+                    const cacheKeys = await caches.keys();
+                    for (const key of cacheKeys) {
+                        await caches.delete(key);
+                    }
+                }
+            } catch (err) {
+                console.warn('Error clearing service worker or caches:', err);
+            }
+            const targetUrl = new URL(window.location.href);
+            targetUrl.searchParams.set('_v', Date.now().toString());
+            window.location.href = targetUrl.toString();
+        };
+
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
                 navigator.serviceWorker.register('./service-worker.js')
                     .then(registration => {
                         console.log('✅ PWA: Service Worker registered successfully');
+
+                        function showUpdatePrompt() {
+                            const banner = document.getElementById('pwaUpdateBanner');
+                            if (banner) banner.style.display = 'flex';
+                        }
+
+                        if (registration.waiting) {
+                            showUpdatePrompt();
+                        }
+
+                        registration.addEventListener('updatefound', () => {
+                            const newWorker = registration.installing;
+                            if (newWorker) {
+                                newWorker.addEventListener('statechange', () => {
+                                    if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                                        showUpdatePrompt();
+                                    }
+                                });
+                            }
+                        });
 
                         // Check for updates every time the page loads
                         registration.update();
@@ -11606,6 +11654,14 @@
                     .catch(error => {
                         console.log('PWA: Service Worker registration failed:', error);
                     });
+
+                let refreshing = false;
+                navigator.serviceWorker.addEventListener('controllerchange', () => {
+                    if (!refreshing) {
+                        refreshing = true;
+                        window.location.reload();
+                    }
+                });
             });
         }
     </script>
