@@ -833,7 +833,7 @@
 </head>
 <body>
     <div id="pwaUpdateBanner" style="display:none; position:fixed; top:12px; right:12px; z-index:99999; background:#1e293b; color:#ffffff; padding:10px 16px; border-radius:8px; box-shadow:0 4px 16px rgba(0,0,0,0.3); font-size:13px; font-weight:600; align-items:center; gap:12px; border:1px solid #334155;">
-        <span>⚡ App update available (v1.0.9)!</span>
+        <span>⚡ App update available (v1.0.10)!</span>
         <button type="button" onclick="forceAppUpdate()" style="background:#2563eb; color:#ffffff; border:none; padding:5px 12px; border-radius:6px; cursor:pointer; font-size:12px; font-weight:700;">Update Now</button>
         <button type="button" onclick="document.getElementById('pwaUpdateBanner').style.display='none'" style="background:transparent; color:#94a3b8; border:none; cursor:pointer; font-size:16px; line-height:1; padding:0 4px;" title="Dismiss">&times;</button>
     </div>
@@ -841,7 +841,7 @@
     <div class="container">
         <h1 style="margin-bottom: 10px; font-size: 1.8em; display: flex; align-items: center; gap: 10px;">
             <span>📊 Trade Tracker</span>
-            <span id="appVersionBadge" onclick="forceAppUpdate()" title="Click to reload latest version and clear cache" style="font-size: 0.45em; font-weight: 700; background: #e0e7ff; color: #3730a3; padding: 3px 9px; border-radius: 12px; border: 1px solid #c7d2fe; letter-spacing: 0.5px; vertical-align: middle; cursor: pointer;">v1.0.9</span>
+            <span id="appVersionBadge" onclick="forceAppUpdate()" title="Click to reload latest version and clear cache" style="font-size: 0.45em; font-weight: 700; background: #e0e7ff; color: #3730a3; padding: 3px 9px; border-radius: 12px; border: 1px solid #c7d2fe; letter-spacing: 0.5px; vertical-align: middle; cursor: pointer;">v1.0.10</span>
         </h1>
 
         <!-- Sync Status -->
@@ -3239,12 +3239,35 @@
                     <div style="display:flex;gap:8px;flex-wrap:wrap;">
                         <button class="btn-success" onclick="downloadConflictCopy()">⬇️ Download My Copy</button>
                         <button class="btn-secondary" onclick="loadCloudConflictVersion()">☁️ Load Cloud Version</button>
+                        <button class="btn-danger" onclick="overwriteCloudWithLocal()" style="background:#dc2626;color:white;font-weight:700;">⚠️ Keep My Inputs & Overwrite Cloud</button>
                         <button class="btn-secondary" onclick="closeConflictDialog()">Cancel</button>
                     </div>
                 </div>`;
             document.body.appendChild(dialog);
         }
 
+        
+        async function overwriteCloudWithLocal() {
+            if (!confirm("Are you sure you want to overwrite cloud data with your current screen inputs?")) return;
+            try {
+                updateSyncStatus("Overwriting cloud…", true);
+                closeConflictDialog();
+                remoteConflictDetected = false;
+                pendingRemoteData = null;
+                pendingRemoteCheckpoint = null;
+                // Re-fetch latest cloud checkpoint baseline so array IDs align, but force local values
+                const latestCheckpoint = await syncStore.load();
+                syncCheckpoint = latestCheckpoint;
+                await saveToFirebase(true, { force: true, overwrite: true });
+                updateSyncStatus("Synced ✓", true);
+                alert("✅ Cloud successfully updated with your inputs!");
+            } catch (error) {
+                console.error("Overwrite failed:", error);
+                alert("❌ Overwrite failed: " + error.message);
+                updateSyncStatus("Save failed", false);
+            }
+        }
+  
         function downloadConflictCopy() {
             const envelope = TradeSyncSafety.makeBackupEnvelope(buildFirebaseData(), {
                 type: 'conflict-local-copy',
@@ -3289,8 +3312,8 @@
                 wifeRothJan1: parseFloat(document.getElementById('wifeRothJan1').value),
                 spyJan1: parseFloat(document.getElementById('spyJan1').value),
                 lookbackPeriod: parseInt(document.getElementById('lookbackPeriod').value) || 15,
-                apiKey: document.getElementById('apiKey').value,
-                alphaVantageKey: document.getElementById('alphaVantageKey')?.value || '',
+                apiKey: document.getElementById('apiKey').value || (syncCheckpoint && syncCheckpoint.data && syncCheckpoint.data.apiKey) || '',
+                alphaVantageKey: document.getElementById('alphaVantageKey')?.value || (syncCheckpoint && syncCheckpoint.data && syncCheckpoint.data.alphaVantageKey) || '',
                 stockProfiles: stockProfiles,
                 calculatorSettings: buildCalculatorSettings(),
                 marketConditions: {

@@ -588,7 +588,7 @@
                     conflicts.push(...fieldConflicts);
                     return Object.assign({}, operation, { payload });
                 });
-                if (conflicts.length) throw new FirestoreConflictError(conflicts);
+                if (!options.force && !options.overwrite && conflicts.length) throw new FirestoreConflictError(conflicts);
 
                 const committedVersions = {};
                 committedOperations.forEach((operation, index) => {
