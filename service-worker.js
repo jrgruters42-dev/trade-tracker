@@ -1,4 +1,4 @@
-const CACHE_NAME = 'trade-tracker-v1.0.13';
+const CACHE_NAME = 'trade-tracker-v1.0.14';
 const urlsToCache = [
   './',
   './index.html',

@@ -49,10 +49,10 @@ test('commitPositionFromSizing updates form fields, session storage, and persist
     assert.match(fnCode, /updateAllDisplays\(\)/);
 });
 
-test('header badge and service worker cache match v1.0.13', () => {
-    assert.match(html, /id="appVersionBadge"[^>]*>v1\.0\.13<\/span>/);
+test('header badge and service worker cache match v1.0.14', () => {
+    assert.match(html, /id="appVersionBadge"[^>]*>v1\.0\.14<\/span>/);
     const serviceWorker = fs.readFileSync(path.join(__dirname, '..', 'public', 'service-worker.js'), 'utf8');
-    assert.match(serviceWorker, /const CACHE_NAME = 'trade-tracker-v1\.0\.13';/);
+    assert.match(serviceWorker, /const CACHE_NAME = 'trade-tracker-v1\.0\.14';/);
 });
 
 test('position sizing tables include risking 0.33% of account line', () => {
