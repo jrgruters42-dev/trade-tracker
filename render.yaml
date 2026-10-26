@@ -1,0 +1,16 @@
+services:
+  - type: web
+    name: trade-tracker-mcp
+    runtime: node
+    plan: free
+    buildCommand: "cd mcp-server && npm install"
+    startCommand: "cd mcp-server && node standalone-sse-server.js"
+    envVars:
+      - key: FIREBASE_PROJECT_ID
+        value: trade-tracker-36e7a
+      - key: USER_EMAIL
+        value: jrgruters42@gmail.com
+      - key: MCP_SECRET_KEY
+        generateValue: true
+      - key: FIREBASE_SERVICE_ACCOUNT_KEY
+        sync: false

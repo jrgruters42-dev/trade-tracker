@@ -11,7 +11,7 @@ import admin from 'firebase-admin';
 const app = express();
 app.use(cors());
 
-const PORT = process.env.PORT || 3001;
+const PORT = process.env.PORT || 3000;
 const TARGET_USER_EMAIL = process.env.USER_EMAIL || 'jrgruters42@gmail.com';
 const EXPECTED_KEY = process.env.MCP_SECRET_KEY || 'trade-tracker-mcp-key';
 
@@ -21,7 +21,12 @@ if (!admin.apps.length) {
       const sa = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_KEY);
       admin.initializeApp({ credential: admin.credential.cert(sa) });
     } catch (e) {
-      admin.initializeApp({ projectId: 'trade-tracker-36e7a' });
+      try {
+        const sa = JSON.parse(Buffer.from(process.env.FIREBASE_SERVICE_ACCOUNT_KEY, 'base64').toString('utf8'));
+        admin.initializeApp({ credential: admin.credential.cert(sa) });
+      } catch (err) {
+        admin.initializeApp({ projectId: 'trade-tracker-36e7a' });
+      }
     }
   } else {
     admin.initializeApp({ projectId: 'trade-tracker-36e7a' });
@@ -257,11 +262,18 @@ function createMcpServer() {
 
 const transports = new Map();
 
-app.get('/mcp', async (req, res) => {
+// Root health check endpoint for cloud hosts (Render, Railway, Fly)
+app.get('/', (req, res) => {
+  res.send('Trade Tracker Remote MCP Server is active. Connect to /mcp or /sse');
+});
+
+// Primary MCP SSE Connectors: /mcp and /sse
+const handleSse = async (req, res) => {
   const authHeader = req.headers['authorization'] || '';
   const queryKey = req.query.key;
 
   if (
+    EXPECTED_KEY &&
     authHeader !== `Bearer ${EXPECTED_KEY}` &&
     req.headers['x-mcp-key'] !== EXPECTED_KEY &&
     queryKey !== EXPECTED_KEY
@@ -269,7 +281,7 @@ app.get('/mcp', async (req, res) => {
     return res.status(401).json({ error: 'Unauthorized. Provide valid key.' });
   }
 
-  const transport = new SSEServerTransport('/mcp/messages', res);
+  const transport = new SSEServerTransport('/messages', res);
   const server = createMcpServer();
   await server.connect(transport);
 
@@ -279,9 +291,13 @@ app.get('/mcp', async (req, res) => {
   transport.onclose = () => {
     transports.delete(sessionId);
   };
-});
+};
 
-app.post('/mcp/messages', async (req, res) => {
+app.get('/mcp', handleSse);
+app.get('/sse', handleSse);
+
+// Message handler for client JSON-RPC commands
+app.post(['/messages', '/mcp/messages'], async (req, res) => {
   const sessionId = req.query.sessionId;
   if (!sessionId || !transports.has(sessionId)) {
     return res.status(404).send('Session not found or expired.');
@@ -290,6 +306,6 @@ app.post('/mcp/messages', async (req, res) => {
   await transport.handlePostMessage(req, res);
 });
 
-app.listen(PORT, () => {
+app.listen(PORT, '0.0.0.0', () => {
   console.log(`Standalone MCP Server running on port ${PORT}`);
 });
