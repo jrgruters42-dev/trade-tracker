@@ -1,0 +1,17 @@
+{
+  "name": "trade-tracker-mcp-server",
+  "version": "1.0.0",
+  "description": "Model Context Protocol (MCP) server for Caruso/Minervini Trade Tracker Firestore Journal",
+  "main": "index.js",
+  "bin": {
+    "trade-tracker-mcp": "./index.js"
+  },
+  "type": "module",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.6.1",
+    "firebase-admin": "^13.1.0"
+  }
+}
