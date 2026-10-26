@@ -1,5 +1,4 @@
-name: Test and deploy to Firebase Hosting
-
+name: Test and deploy to Firebase Hosting and Functions
 on:
   push:
     branches:
@@ -7,6 +6,7 @@ on:
     paths:
       - "public/**"
       - "tests/**"
+      - "functions/**"
       - "package.json"
       - "firebase.json"
       - ".firebaserc"
@@ -26,15 +26,12 @@ jobs:
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
-
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 22
-
       - name: Run safety tests
         run: npm test
-
       - name: Deploy production site
         uses: FirebaseExtended/action-hosting-deploy@v0
         with:
