@@ -833,7 +833,7 @@
 </head>
 <body>
     <div id="pwaUpdateBanner" style="display:none; position:fixed; top:12px; right:12px; z-index:99999; background:#1e293b; color:#ffffff; padding:10px 16px; border-radius:8px; box-shadow:0 4px 16px rgba(0,0,0,0.3); font-size:13px; font-weight:600; align-items:center; gap:12px; border:1px solid #334155;">
-        <span>⚡ App update available (v1.0.15)!</span>
+        <span>⚡ App update available (v1.0.16)!</span>
         <button type="button" onclick="forceAppUpdate()" style="background:#2563eb; color:#ffffff; border:none; padding:5px 12px; border-radius:6px; cursor:pointer; font-size:12px; font-weight:700;">Update Now</button>
         <button type="button" onclick="document.getElementById('pwaUpdateBanner').style.display='none'" style="background:transparent; color:#94a3b8; border:none; cursor:pointer; font-size:16px; line-height:1; padding:0 4px;" title="Dismiss">&times;</button>
     </div>
@@ -841,7 +841,7 @@
     <div class="container">
         <h1 style="margin-bottom: 10px; font-size: 1.8em; display: flex; align-items: center; gap: 10px;">
             <span>📊 Trade Tracker</span>
-            <span id="appVersionBadge" onclick="forceAppUpdate()" title="Click to reload latest version and clear cache" style="font-size: 0.45em; font-weight: 700; background: #e0e7ff; color: #3730a3; padding: 3px 9px; border-radius: 12px; border: 1px solid #c7d2fe; letter-spacing: 0.5px; vertical-align: middle; cursor: pointer;">v1.0.15</span>
+            <span id="appVersionBadge" onclick="forceAppUpdate()" title="Click to reload latest version and clear cache" style="font-size: 0.45em; font-weight: 700; background: #e0e7ff; color: #3730a3; padding: 3px 9px; border-radius: 12px; border: 1px solid #c7d2fe; letter-spacing: 0.5px; vertical-align: middle; cursor: pointer;">v1.0.16</span>
         </h1>
 
         <!-- Sync Status -->
@@ -854,7 +854,7 @@
                 </div>
             </div>
             <div class="sync-actions" style="display: flex; gap: 5px; align-items: center;">
-                <button onclick="quickSnapshotFromMain()" class="btn-success" style="padding:5px 10px; font-size:11px; font-weight:700;" title="Log today's snapshot without popup">⚡ Log Today</button>
+                <button id="quickLogTodayBtn" onclick="quickSnapshotFromMain()" class="btn-success" style="padding:5px 10px; font-size:11px; font-weight:700;" title="Log snapshot without popup">⚡ Log Today</button>
                 <button onclick="forceSaveToFirebase()" class="btn-secondary btn-small" title="Force save all data to Firebase">💾 Save</button>
                 <button onclick="downloadLatestBackup()" class="btn-secondary btn-small" title="Download a current JSON backup without API keys">⬇️ Backup</button>
                 <button onclick="forceLoadFromFirebase()" class="btn-secondary btn-small" title="Force reload all data from Firebase">🔄 Reload</button>
@@ -875,7 +875,11 @@
                 <!-- Current Values (for daily updates) -->
                 <div style="background: #f0f9ff; padding: 8px; border-radius: 6px; border: 2px solid #667eea; margin-bottom: 8px;">
                     <div style="font-weight: bold; color: #667eea; margin-bottom: 6px; font-size: 0.8em;" title="Update these fields each day after market close to keep your equity curve and YTD calculations accurate.">📊 Daily Update</div>
-                    <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px;">
+                    <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px;">
+                        <div class="form-group" style="margin-bottom: 0;">
+                            <label style="font-size: 10px;" title="Date of entry for daily equity logging. Defaults to today.">Entry Date</label>
+                            <input type="date" id="snapshotDate" style="padding: 4px; font-size: 12px;">
+                        </div>
                         <div class="form-group" style="margin-bottom: 0;">
                             <label style="font-size: 10px;" title="Current total equity in your main trading account. Update this daily after market close.">Trading Account ($)</label>
                             <input type="number" id="accountSize" value="250000" style="padding: 4px; font-size: 12px;" onchange="saveToFirebase(); updateAllDisplays();">
@@ -2562,6 +2566,54 @@
                     <textarea id="editClosedNotes" rows="3"></textarea>
                 </div>
                 <button type="submit">Save Changes</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Edit Daily Equity Journal Modal (DOM modal replacing prompt/alert) -->
+    <div id="editJournalModal" class="modal" onclick="if(event.target===this)closeModal('editJournalModal')">
+        <div class="modal-content" style="max-width: 480px; border-radius: 12px; padding: 24px;">
+            <div class="modal-header" style="margin-bottom: 16px; border-bottom: 1px solid #e5e7eb; padding-bottom: 12px;">
+                <h2 id="editJournalModalTitle" style="font-size: 1.25em; margin: 0; color: #1e1b4b;">📅 Edit Daily Entry</h2>
+                <span class="close" onclick="closeModal('editJournalModal')">&times;</span>
+            </div>
+            <form id="editJournalForm" onsubmit="event.preventDefault(); saveJournalEntryFromModal();">
+                <input type="hidden" id="editJournalOriginalDate">
+                <div class="form-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                    <div class="form-group" style="grid-column: span 2;">
+                        <label style="font-size: 11px; font-weight: 700; color: #374151;">Date</label>
+                        <input type="date" id="editJournalDate" name="date" required style="padding: 6px; font-size: 13px; width: 100%; border: 1px solid #d1d5db; border-radius: 6px;">
+                    </div>
+                    <div class="form-group">
+                        <label style="font-size: 11px; font-weight: 700; color: #374151;">Account Value ($)</label>
+                        <input type="number" id="editJournalAccountValue" name="accountValue" step="0.01" required style="padding: 6px; font-size: 13px; width: 100%; border: 1px solid #d1d5db; border-radius: 6px;">
+                    </div>
+                    <div class="form-group">
+                        <label style="font-size: 11px; font-weight: 700; color: #374151;">Total Risk (%)</label>
+                        <input type="number" id="editJournalTotalRisk" name="totalRisk" step="0.01" style="padding: 6px; font-size: 13px; width: 100%; border: 1px solid #d1d5db; border-radius: 6px;">
+                    </div>
+                    <div class="form-group">
+                        <label style="font-size: 11px; font-weight: 700; color: #374151;">Drawdown (%)</label>
+                        <input type="number" id="editJournalDrawdown" name="drawdown" step="0.01" style="padding: 6px; font-size: 13px; width: 100%; border: 1px solid #d1d5db; border-radius: 6px;">
+                    </div>
+                    <div class="form-group">
+                        <label style="font-size: 11px; font-weight: 700; color: #374151;">Exposure (%)</label>
+                        <input type="number" id="editJournalExposure" name="exposure" step="0.01" style="padding: 6px; font-size: 13px; width: 100%; border: 1px solid #d1d5db; border-radius: 6px;">
+                    </div>
+                    <div class="form-group" style="grid-column: span 2;">
+                        <label style="font-size: 11px; font-weight: 700; color: #374151;">FOMO / $NCFD</label>
+                        <input type="text" id="editJournalFomo" name="fomo" placeholder="e.g. 54.20 or Fear" style="padding: 6px; font-size: 13px; width: 100%; border: 1px solid #d1d5db; border-radius: 6px;">
+                    </div>
+                    <div class="form-group" style="grid-column: span 2;">
+                        <label style="font-size: 11px; font-weight: 700; color: #374151;">Notes</label>
+                        <textarea id="editJournalNotes" name="notes" rows="3" placeholder="Daily market notes..." style="padding: 6px; font-size: 12px; width: 100%; border-radius: 6px; border: 1px solid #d1d5db;"></textarea>
+                    </div>
+                </div>
+                <div id="editJournalError" style="color: #dc2626; font-size: 12px; margin-top: 8px; display: none;"></div>
+                <div style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 16px;">
+                    <button type="button" id="cancelJournalEditBtn" class="btn-secondary" onclick="closeModal('editJournalModal')">Cancel</button>
+                    <button type="submit" id="saveJournalEditBtn" class="btn-success" style="font-weight: 700;">💾 Save</button>
+                </div>
             </form>
         </div>
     </div>
@@ -5227,80 +5279,9 @@
         let dailyEquityEntries = [];
 
         // Add today's daily equity entry
-        // Quick Snapshot with manual $NCFD entry
+        // Quick Snapshot (delegates to non-blocking quickSnapshotFromMain)
         async function quickSnapshotWithNCFD() {
-            const today = getTodayLocal();
-
-            // Check if entry already exists for today
-            const existingEntry = dailyEquityEntries.find(entry => entry.date === today);
-            if (existingEntry) {
-                if (!confirm(`An entry for ${today} already exists. Replace it?`)) {
-                    return;
-                }
-            }
-
-            // Prompt for $NCFD closing price
-            const ncfdInput = prompt('Enter $NCFD closing price (FOMO):', '');
-            if (!ncfdInput) {
-                alert('Snapshot cancelled - no FOMO value provided.');
-                return;
-            }
-
-            const ncfdPrice = parseFloat(ncfdInput);
-            if (isNaN(ncfdPrice)) {
-                alert('Invalid price entered. Please enter a number.');
-                return;
-            }
-
-            // Get current values
-            const accountSize = getAccountSize();
-
-            // Calculate current portfolio stats
-            let totalPortfolioRisk = 0;
-            let totalExposure = 0;
-            let totalDrawdown = 0;
-
-            openPositions.forEach(pos => {
-                const metrics = calculatePositionMetrics(pos);
-                totalPortfolioRisk += metrics.portfolioCapitalRisk;
-                totalExposure += metrics.accountWeight;
-                totalDrawdown += metrics.portfolioDrawdown;
-            });
-
-            // Create entry
-            const newEntry = {
-                date: today,
-                accountValue: accountSize,
-                drawdown: totalDrawdown,
-                exposure: totalExposure,
-                fomo: ncfdPrice,
-                notes: 'Quick Snapshot',
-                dailyChange: 0 // Will be calculated
-            };
-
-            // Remove existing entry if replacing
-            if (existingEntry) {
-                if (existingEntry._syncId) newEntry._syncId = existingEntry._syncId;
-                if (Number.isFinite(existingEntry._syncOrder)) newEntry._syncOrder = existingEntry._syncOrder;
-                const index = dailyEquityEntries.findIndex(e => e.date === today);
-                dailyEquityEntries.splice(index, 1);
-            }
-
-            // Add new entry
-            dailyEquityEntries.push(newEntry);
-
-            // Sort by date DESCENDING (newest first) - matches display order
-            dailyEquityEntries.sort((a, b) => new Date(b.date) - new Date(a.date));
-
-            // Recalculate daily changes
-            recalculateDailyChanges();
-
-            // Save and update
-            saveToFirebase();
-            saveDailySnapshot();
-            updateDailyEquityTable();
-
-            alert(`✅ Snapshot saved!\n\nDate: ${today}\nAccount: $${accountSize.toLocaleString()}\nFOMO ($NCFD): $${ncfdPrice.toFixed(2)}\nDrawdown: ${totalDrawdown.toFixed(2)}%\nExposure: ${totalExposure.toFixed(2)}%`);
+            await quickSnapshotFromMain();
         }
 
         function addDailyEquityEntry() {
@@ -5362,63 +5343,23 @@
             updateDailyEquityTable();
         }
 
-        // Add entry for a specific date
+        // Add entry for a specific date (opens DOM modal without native prompt/alert)
         function addCustomDateEntry() {
-            const dateInput = prompt('Enter date (YYYY-MM-DD):', getTodayLocal());
-            if (!dateInput) return;
+            const titleEl = document.getElementById('editJournalModalTitle');
+            if (titleEl) titleEl.textContent = '📅 Add Entry for Specific Date';
+            document.getElementById('editJournalOriginalDate').value = '';
+            document.getElementById('editJournalDate').value = getTodayLocal();
+            document.getElementById('editJournalAccountValue').value = getAccountSize();
+            document.getElementById('editJournalTotalRisk').value = '0';
+            document.getElementById('editJournalDrawdown').value = '0';
+            document.getElementById('editJournalExposure').value = '0';
+            document.getElementById('editJournalFomo').value = '';
+            document.getElementById('editJournalNotes').value = '';
 
-            // Validate date format
-            const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
-            if (!dateRegex.test(dateInput)) {
-                alert('Invalid date format. Please use YYYY-MM-DD (e.g., 2026-02-23)');
-                return;
-            }
+            const errEl = document.getElementById('editJournalError');
+            if (errEl) { errEl.style.display = 'none'; errEl.textContent = ''; }
 
-            const targetDate = dateInput;
-
-            // Check if entry for this date already exists
-            const existingEntry = dailyEquityEntries.find(entry => entry.date === targetDate);
-            if (existingEntry) {
-                if (!confirm(`An entry for ${targetDate} already exists. Replace it?`)) {
-                    return;
-                }
-                dailyEquityEntries = dailyEquityEntries.filter(entry => entry.date !== targetDate);
-            }
-
-            const accountValue = prompt(`Account Value for ${targetDate}:`, '');
-            if (!accountValue) return;
-
-            const drawdown = prompt(`Drawdown % for ${targetDate} (optional):`, '0');
-            const exposure = prompt(`Exposure % for ${targetDate} (optional):`, '0');
-            const fomo = prompt(`FOMO for ${targetDate} (optional):`, '');
-            const notes = prompt(`Notes for ${targetDate} (optional):`, '');
-
-            // Create new entry
-            const newEntry = {
-                date: targetDate,
-                accountValue: parseFloat(accountValue),
-                dailyChange: 0, // Will be calculated
-                drawdown: parseFloat(drawdown) || 0,
-                exposure: parseFloat(exposure) || 0,
-                fomo: fomo || '',
-                notes: notes || ''
-            };
-
-            if (existingEntry) {
-                if (existingEntry._syncId) newEntry._syncId = existingEntry._syncId;
-                if (Number.isFinite(existingEntry._syncOrder)) newEntry._syncOrder = existingEntry._syncOrder;
-            }
-
-            dailyEquityEntries.push(newEntry);
-            dailyEquityEntries.sort((a, b) => new Date(b.date) - new Date(a.date));
-
-            // Recalculate all daily changes
-            recalculateDailyChanges();
-
-            saveToFirebase();
-            updateDailyEquityTable();
-
-            alert(`✅ Entry added for ${targetDate}!\n\nDaily % changes have been recalculated for all entries.`);
+            document.getElementById('editJournalModal').style.display = 'block';
         }
 
         // Update the daily equity table
@@ -5509,8 +5450,8 @@
                             ${notesDisplay ? `<div class="notes-tooltip" id="tooltip-${index}">${notesDisplay}</div>` : ''}
                         </td>
                         <td>
-                            <button class="btn-secondary btn-small" onclick="editJournalEntry('${entry.date}')" style="margin-right:5px;">Edit</button>
-                            <button class="btn-danger btn-small" onclick="deleteDailyEquityEntry('${entry.date}')">Delete</button>
+                            <button class="btn-secondary btn-small btn-edit-journal" onclick="editJournalEntry('${entry.date}')" data-date="${entry.date}" style="margin-right:5px;">Edit</button>
+                            <button class="btn-danger btn-small btn-delete-journal" onclick="deleteDailyEquityEntry('${entry.date}')" data-date="${entry.date}">Delete</button>
                         </td>
                     </tr>
                 `;
@@ -5533,47 +5474,124 @@
                 }
             });
         }
-        // Edit daily note with a modal/prompt
+        // Edit daily note (opens DOM modal without native prompt)
         function editDailyNote(date, currentNotes) {
-            const newNotes = prompt('Edit your notes for ' + date + ':', currentNotes);
-            if (newNotes !== null) {
-                updateDailyEquityEntry(date, 'notes', newNotes);
-                updateDailyEquityTable();
-            }
+            editJournalEntry(date);
+            const notesInput = document.getElementById('editJournalNotes');
+            if (notesInput) notesInput.focus();
         }
 
-        // Edit entire journal entry
+        // Edit entire journal entry via DOM modal (zero window.prompt / window.alert)
         function editJournalEntry(date) {
             const entry = dailyEquityEntries.find(e => e.date === date);
             if (!entry) return;
 
-            const newDate = prompt('Date (YYYY-MM-DD):', entry.date);
-            if (newDate === null) return;
-            if (newDate !== date && dailyEquityEntries.find(e => e.date === newDate)) {
-                alert('An entry already exists for ' + newDate); return;
+            const titleEl = document.getElementById('editJournalModalTitle');
+            if (titleEl) titleEl.textContent = '📅 Edit Daily Entry (' + entry.date + ')';
+            document.getElementById('editJournalOriginalDate').value = entry.date;
+            document.getElementById('editJournalDate').value = entry.date;
+            document.getElementById('editJournalAccountValue').value = entry.accountValue;
+            document.getElementById('editJournalTotalRisk').value = entry.totalRisk !== undefined ? entry.totalRisk : 0;
+            document.getElementById('editJournalDrawdown').value = entry.drawdown !== undefined ? entry.drawdown : 0;
+            document.getElementById('editJournalExposure').value = entry.exposure !== undefined ? entry.exposure : 0;
+            document.getElementById('editJournalFomo').value = entry.fomo || '';
+            document.getElementById('editJournalNotes').value = entry.notes || '';
+
+            const errEl = document.getElementById('editJournalError');
+            if (errEl) { errEl.style.display = 'none'; errEl.textContent = ''; }
+
+            document.getElementById('editJournalModal').style.display = 'block';
+        }
+
+        // Save daily entry changes from DOM modal
+        async function saveJournalEntryFromModal() {
+            const origDate = (document.getElementById('editJournalOriginalDate')?.value || '').trim();
+            const newDate = (document.getElementById('editJournalDate')?.value || '').trim();
+            const accountVal = parseFloat(document.getElementById('editJournalAccountValue')?.value);
+            const totalRisk = parseFloat(document.getElementById('editJournalTotalRisk')?.value) || 0;
+            const drawdown = parseFloat(document.getElementById('editJournalDrawdown')?.value) || 0;
+            const exposure = parseFloat(document.getElementById('editJournalExposure')?.value) || 0;
+            const fomo = (document.getElementById('editJournalFomo')?.value || '').trim();
+            const notes = (document.getElementById('editJournalNotes')?.value || '').trim();
+            const errEl = document.getElementById('editJournalError');
+
+            if (!newDate) {
+                if (errEl) { errEl.textContent = 'Please choose a valid date.'; errEl.style.display = 'block'; }
+                return;
             }
 
-            const newAccountValue = prompt('Account Value for ' + newDate + ':', entry.accountValue);
-            if (newAccountValue === null) return;
+            if (isNaN(accountVal)) {
+                if (errEl) { errEl.textContent = 'Please enter a valid account value.'; errEl.style.display = 'block'; }
+                return;
+            }
 
-            const newTotalRisk = prompt('Total Risk % for ' + newDate + ':', entry.totalRisk ? entry.totalRisk.toFixed(2) : '0');
-            if (newTotalRisk === null) return;
+            if (!origDate) {
+                // Adding a brand new entry
+                const existingIdx = dailyEquityEntries.findIndex(e => e.date === newDate);
+                if (existingIdx !== -1) {
+                    const existing = dailyEquityEntries[existingIdx];
+                    existing.accountValue = accountVal;
+                    existing.totalRisk = totalRisk;
+                    existing.drawdown = drawdown;
+                    existing.exposure = exposure;
+                    existing.fomo = fomo;
+                    existing.notes = notes;
+                } else {
+                    dailyEquityEntries.push({
+                        date: newDate,
+                        accountValue: accountVal,
+                        drawdown: drawdown,
+                        exposure: exposure,
+                        totalRisk: totalRisk,
+                        fomo: fomo,
+                        notes: notes,
+                        dailyChange: 0,
+                        _syncId: 'journal-' + newDate,
+                        _syncOrder: Date.now()
+                    });
+                }
+            } else {
+                // Editing an existing entry
+                if (newDate !== origDate && dailyEquityEntries.some(e => e.date === newDate)) {
+                    if (errEl) {
+                        errEl.textContent = 'An entry already exists for ' + newDate + '. Choose a different date.';
+                        errEl.style.display = 'block';
+                    }
+                    return;
+                }
+                const entry = dailyEquityEntries.find(e => e.date === origDate);
+                if (entry) {
+                    entry.date = newDate;
+                    entry.accountValue = accountVal;
+                    entry.totalRisk = totalRisk;
+                    entry.drawdown = drawdown;
+                    entry.exposure = exposure;
+                    entry.fomo = fomo;
+                    entry.notes = notes;
+                }
 
-            const newFomo = prompt('FOMO for ' + newDate + ':', entry.fomo || '');
-            if (newFomo === null) return;
+                // Also keep matching dailyEquity curve item synchronized
+                const eqItem = dailyEquity.find(e => e.date === origDate);
+                if (eqItem) {
+                    eqItem.date = newDate;
+                    eqItem.accountValue = accountVal;
+                }
+            }
 
-            const newNotes = prompt('Notes for ' + newDate + ':', entry.notes || '');
-            if (newNotes === null) return;
-
-            entry.date         = newDate;
-            entry.accountValue = parseFloat(newAccountValue);
-            entry.totalRisk    = parseFloat(newTotalRisk) || 0;
-            entry.fomo         = newFomo;
-            entry.notes        = newNotes;
+            dailyEquityEntries.sort((a, b) => new Date(b.date) - new Date(a.date));
+            dailyEquity.sort((a, b) => new Date(a.date) - new Date(b.date));
 
             recalculateDailyChanges();
             saveToFirebase();
             updateDailyEquityTable();
+            closeModal('editJournalModal');
+
+            // Non-blocking toast notification
+            const toast = document.createElement('div');
+            toast.style.cssText = 'position:fixed;bottom:30px;right:30px;background:#10b981;color:white;padding:12px 20px;border-radius:8px;font-weight:700;font-size:0.9em;z-index:9999;box-shadow:0 4px 12px rgba(0,0,0,0.2);';
+            toast.textContent = '✅ Daily entry for ' + newDate + ' saved!';
+            document.body.appendChild(toast);
+            setTimeout(() => toast.remove(), 3000);
         }
 
         // Recalculate daily % changes for all entries
@@ -5728,10 +5746,10 @@
             }, 1000);
         }
 
-        // Save daily snapshot
-        function saveDailySnapshot(autoSave = true) {
+        // Save daily snapshot (supports optional customDate)
+        function saveDailySnapshot(autoSave = true, customDate = null) {
             const accountSize = getAccountSize();
-            const today = getTodayLocal();
+            const dateToUse = customDate || getTodayLocal();
 
             let totalOpenPnL = 0;
             openPositions.forEach(pos => {
@@ -5740,25 +5758,25 @@
             });
 
             const accountValue = accountSize + totalOpenPnL;
-            const existingIndex = dailyEquity.findIndex(snap => snap.date === today);
+            const existingIndex = dailyEquity.findIndex(snap => snap.date === dateToUse);
 
             if (existingIndex !== -1) {
                 const prev = dailyEquity[existingIndex];
                 dailyEquity[existingIndex] = {
-                    date: today,
+                    date: dateToUse,
                     accountValue: accountValue,
                     accountSize: accountSize,
                     openPnL: totalOpenPnL,
-                    _syncId: prev && prev._syncId ? prev._syncId : `equity-${today}`,
+                    _syncId: prev && prev._syncId ? prev._syncId : `equity-${dateToUse}`,
                     _syncOrder: prev && Number.isFinite(prev._syncOrder) ? prev._syncOrder : existingIndex
                 };
             } else {
                 dailyEquity.push({
-                    date: today,
+                    date: dateToUse,
                     accountValue: accountValue,
                     accountSize: accountSize,
                     openPnL: totalOpenPnL,
-                    _syncId: `equity-${today}`,
+                    _syncId: `equity-${dateToUse}`,
                     _syncOrder: dailyEquity.length
                 });
             }
@@ -9008,22 +9026,15 @@
             if (input) { input.style.borderColor = borderColor; input.style.color = color; input.style.fontWeight = '800'; }
         }
 
-        // Quick snapshot from main page — no popup, uses ncfdInput value directly
+        // Quick snapshot from main page — no popup, uses snapshotDate and ncfdInput directly
         async function quickSnapshotFromMain() {
-            const today = getTodayLocal();
+            const dateInput = document.getElementById('snapshotDate');
+            const targetDate = (dateInput && dateInput.value) ? dateInput.value : getTodayLocal();
             const ncfdVal = parseFloat(document.getElementById('ncfdInput')?.value);
 
-            if (isNaN(ncfdVal) || ncfdVal === 0) {
-                if (!confirm('$NCFD value is empty. Save snapshot without it?')) return;
-            }
-
-            // Check if entry already exists for today
-            const existingEntry = dailyEquityEntries.find(entry => entry.date === today);
-            if (existingEntry) {
-                if (!confirm(`A snapshot for ${today} already exists. Replace it?`)) return;
-                const idx = dailyEquityEntries.findIndex(e => e.date === today);
-                dailyEquityEntries.splice(idx, 1);
-            }
+            // Check if entry already exists for targetDate - replace/update in-place without blocking confirm popup
+            const existingIdx = dailyEquityEntries.findIndex(entry => entry.date === targetDate);
+            const existingEntry = existingIdx !== -1 ? dailyEquityEntries[existingIdx] : null;
 
             const accountSize = getAccountSize();
             let totalExposure = 0, totalDrawdown = 0;
@@ -9036,32 +9047,34 @@
             });
 
             const newEntry = {
-                date: today,
+                date: targetDate,
                 accountValue: accountSize,
                 drawdown: totalDrawdown,
                 exposure: totalExposure,
                 totalRisk: totalPortfolioRisk,
-                fomo: isNaN(ncfdVal) ? '' : ncfdVal,
-                notes: 'Daily snapshot',
+                fomo: isNaN(ncfdVal) ? (existingEntry && existingEntry.fomo ? existingEntry.fomo : '') : ncfdVal,
+                notes: existingEntry && existingEntry.notes ? existingEntry.notes : 'Daily snapshot',
                 dailyChange: 0
             };
 
             if (existingEntry) {
                 if (existingEntry._syncId) newEntry._syncId = existingEntry._syncId;
                 if (Number.isFinite(existingEntry._syncOrder)) newEntry._syncOrder = existingEntry._syncOrder;
+                dailyEquityEntries[existingIdx] = newEntry;
+            } else {
+                dailyEquityEntries.push(newEntry);
             }
 
-            dailyEquityEntries.push(newEntry);
             dailyEquityEntries.sort((a, b) => new Date(b.date) - new Date(a.date));
             recalculateDailyChanges();
             saveToFirebase();
-            saveDailySnapshot();
+            saveDailySnapshot(true, targetDate);
             updateDailyEquityTable();
 
             // Brief confirmation toast (no blocking alert)
             const toast = document.createElement('div');
             toast.style.cssText = 'position:fixed;bottom:30px;right:30px;background:#10b981;color:white;padding:12px 20px;border-radius:8px;font-weight:700;font-size:0.9em;z-index:9999;box-shadow:0 4px 12px rgba(0,0,0,0.2);';
-            toast.textContent = `✅ Snapshot saved — ${today}`;
+            toast.textContent = `✅ Snapshot saved — ${targetDate}`;
             document.body.appendChild(toast);
             setTimeout(() => toast.remove(), 3000);
         }
@@ -11601,6 +11614,12 @@
 
                 // Auto-save disabled - data saves when you make changes
                 // This prevents save/load loops that cause data loss
+
+                // Initialize snapshotDate with today
+                const snapDateInput = document.getElementById('snapshotDate');
+                if (snapDateInput && !snapDateInput.value) {
+                    snapDateInput.value = getTodayLocal();
+                }
 
                 // Update SPY YTD on page load (with delay to ensure Firebase data is loaded)
                 setTimeout(() => {
