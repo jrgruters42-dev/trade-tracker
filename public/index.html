@@ -573,16 +573,40 @@
         /* ── Mobile Responsive (phone only, under 768px) ─────────────────── */
         @media (max-width: 768px) {
 
-            /* Hide heavy sections on mobile */
+            /* Hide heavy cards from Open Positions dashboard on mobile */
             #rewardReadinessCard,
             #tradeQualityCard,
-            .tab-nav,
-            #performanceStatsCard,
-            #equity-curves,
-            #closed-trades,
-            #what-if,
-            #options-hedge {
+            #performanceStatsCard {
                 display: none !important;
+            }
+
+            /* Ensure tab contents display properly on mobile when active */
+            .tab-content.active {
+                display: block !important;
+            }
+
+            /* Equity Curves mobile styling */
+            #equity-curves.tab-content.active {
+                display: block !important;
+            }
+            #equity-curves .stats-grid {
+                grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+                gap: 8px !important;
+            }
+            #dailyEquityTable {
+                width: max-content;
+                min-width: 100%;
+                font-size: 11px;
+            }
+            #dailyEquityTable th,
+            #dailyEquityTable td {
+                padding: 6px 8px;
+                white-space: nowrap;
+            }
+            #closedEquityCurve,
+            #accountValueCurve {
+                min-height: 280px;
+                width: 100%;
             }
 
             /* Use the real desktop navigation on phones. It scrolls sideways so
@@ -833,7 +857,7 @@
 </head>
 <body>
     <div id="pwaUpdateBanner" style="display:none; position:fixed; top:12px; right:12px; z-index:99999; background:#1e293b; color:#ffffff; padding:10px 16px; border-radius:8px; box-shadow:0 4px 16px rgba(0,0,0,0.3); font-size:13px; font-weight:600; align-items:center; gap:12px; border:1px solid #334155;">
-        <span>⚡ App update available (v1.0.16)!</span>
+        <span>⚡ App update available (v1.0.17)!</span>
         <button type="button" onclick="forceAppUpdate()" style="background:#2563eb; color:#ffffff; border:none; padding:5px 12px; border-radius:6px; cursor:pointer; font-size:12px; font-weight:700;">Update Now</button>
         <button type="button" onclick="document.getElementById('pwaUpdateBanner').style.display='none'" style="background:transparent; color:#94a3b8; border:none; cursor:pointer; font-size:16px; line-height:1; padding:0 4px;" title="Dismiss">&times;</button>
     </div>
@@ -841,7 +865,7 @@
     <div class="container">
         <h1 style="margin-bottom: 10px; font-size: 1.8em; display: flex; align-items: center; gap: 10px;">
             <span>📊 Trade Tracker</span>
-            <span id="appVersionBadge" onclick="forceAppUpdate()" title="Click to reload latest version and clear cache" style="font-size: 0.45em; font-weight: 700; background: #e0e7ff; color: #3730a3; padding: 3px 9px; border-radius: 12px; border: 1px solid #c7d2fe; letter-spacing: 0.5px; vertical-align: middle; cursor: pointer;">v1.0.16</span>
+            <span id="appVersionBadge" onclick="forceAppUpdate()" title="Click to reload latest version and clear cache" style="font-size: 0.45em; font-weight: 700; background: #e0e7ff; color: #3730a3; padding: 3px 9px; border-radius: 12px; border: 1px solid #c7d2fe; letter-spacing: 0.5px; vertical-align: middle; cursor: pointer;">v1.0.17</span>
         </h1>
 
         <!-- Sync Status -->
@@ -2074,13 +2098,13 @@
                 <h2 style="margin-bottom: 15px;">Daily Equity Tracking</h2>
 
                 <!-- Add Daily Entry Button -->
-                <div style="margin-bottom: 15px;">
+                <div style="margin-bottom: 15px; display: flex; flex-wrap: wrap; gap: 6px; align-items: center;">
                     <button onclick="quickSnapshotWithNCFD()" class="btn-success" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); font-weight: 700;">⚡ Quick Snapshot</button>
-                    <button onclick="addDailyEquityEntry()" class="btn-success" style="margin-left: 5px;">📊 Add Today's Entry</button>
-                    <button onclick="addCustomDateEntry()" class="btn-secondary" style="margin-left: 5px;">📅 Add Entry for Specific Date</button>
-                    <button onclick="recalculateAllDailyChanges()" class="btn-secondary" style="margin-left: 5px;">🔄 Recalculate All %</button>
-                    <button onclick="archiveYearEndData()" class="btn-secondary" style="margin-left: 10px;">📦 Archive & Reset for New Year</button>
-                    <span style="margin-left: 15px; color: #666; font-size: 0.9em;">Auto-fills from current account values | <span id="entryCount">0 entries</span></span>
+                    <button onclick="addDailyEquityEntry()" class="btn-success">📊 Add Today's Entry</button>
+                    <button onclick="addCustomDateEntry()" class="btn-secondary">📅 Add Entry for Specific Date</button>
+                    <button onclick="recalculateAllDailyChanges()" class="btn-secondary">🔄 Recalculate All %</button>
+                    <button onclick="archiveYearEndData()" class="btn-secondary">📦 Archive & Reset</button>
+                    <span style="color: #666; font-size: 0.9em;">Auto-fills from account | <span id="entryCount">0 entries</span></span>
                 </div>
 
                 <!-- Daily Equity Table -->
@@ -7466,6 +7490,18 @@
             if (tabName === 'options-hedge') initHedgeCards();
             if (tabName === 'tax-tracker') updateTaxTab();
             if (tabName === 'closed-trades') { initTaxYearSelector(); }
+            if (tabName === 'equity-curves') {
+                updateEquityCurves();
+                updateDailyEquityTable();
+                setTimeout(() => {
+                    if (window.Plotly) {
+                        const c1 = document.getElementById('closedEquityCurve');
+                        const c2 = document.getElementById('accountValueCurve');
+                        if (c1 && c1.data) Plotly.Plots.resize(c1);
+                        if (c2 && c2.data) Plotly.Plots.resize(c2);
+                    }
+                }, 100);
+            }
         }
 
         // Update Safety Dashboard
